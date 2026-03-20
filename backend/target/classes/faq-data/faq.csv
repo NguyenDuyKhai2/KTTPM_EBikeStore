@@ -1,7 +1,0 @@
-id,category,question,answer,keywords,priority
-1,Shipping,How long does shipping take?,Standard shipping takes 5-7 business days.,shipping duration time,high
-2,Returns,What is the return policy?,We accept returns within 30 days of purchase.,return policy refund,high
-3,Payment,What payment methods do you accept?,We accept credit cards PayPal and Apple Pay.,payment method credit card,high
-4,Warranty,Do you offer warranty?,Yes all bikes come with a 2-year warranty.,warranty guarantee,medium
-5,Support,How do I contact support?,You can contact us via email or live chat.,contact support help,medium
-...
