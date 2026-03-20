@@ -2,6 +2,9 @@
 -- User Module Tables
 -- =====================================================
 
+CREATE SCHEMA IF NOT EXISTS ebike_user;
+CREATE SCHEMA IF NOT EXISTS ebike_auth;
+
 CREATE TABLE IF NOT EXISTS ebike_user.user_addresses (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES ebike_auth.users(id) ON DELETE CASCADE,
