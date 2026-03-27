@@ -2,11 +2,15 @@ import SectionShell from "../../components/common/SectionShell";
 
 const AdminUsersPage = () => (
   <SectionShell
-    eyebrow="Admin Users"
-    title="Review user accounts, permissions, and support-related account actions."
-    description="Separating this route early makes it easier to evolve toward PBAC-aware admin tooling later."
+    eyebrow="Người dùng quản trị"
+    title="Xem xét các tài khoản người dùng, quyền và các hành động tài khoản liên quan đến hỗ trợ."
+    description="Tách biệt tuyến đường này sớm giúp dễ dàng tiến hóa hướng tới công cụ quản trị nhận biết PBAC sau này."
   >
-    <div className="state-panel">User management table and permission controls will be added here.</div>
+    <div className="py-8 px-6">
+      <div className="p-6 bg-gray-50 rounded-lg text-center text-gray-600">
+        Bảng quản lý người dùng và kiểm soát quyền sẽ được thêm tại đây.
+      </div>
+    </div>
   </SectionShell>
 );
 

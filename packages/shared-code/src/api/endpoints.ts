@@ -1,8 +1,11 @@
 export const API_ENDPOINTS = {
   auth: {
     login: "/auth/login",
+    enhancedLogin: "/auth/login/enhanced",
     register: "/auth/register",
-    refresh: "/auth/refresh"
+    refresh: "/auth/refresh",
+    profile: "/auth/profile",
+    userFromToken: "/auth/user-from-token"
   },
   products: {
     list: "/products",

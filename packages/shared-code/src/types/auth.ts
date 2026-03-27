@@ -1,26 +1,47 @@
 export interface User {
   id: string;
+  username: string;
   email: string;
   fullName: string;
-  role: "CUSTOMER" | "ADMIN" | "STAFF";
+  roles: string[];
+  active?: boolean;
+  verified?: boolean;
 }
 
 export interface LoginRequest {
-  email: string;
+  usernameOrEmail: string;
   password: string;
 }
 
 export interface RegisterRequest {
+  username: string;
   email: string;
   password: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface EnhancedAuthResponse {
+  userId: number;
+  username: string;
+  email: string;
   fullName: string;
+  token: string;
+  roles: string[];
+  active: boolean;
+  verified: boolean;
+  issuedAt: string;
+  expiresAt: string;
 }
 
-export interface JwtToken {
-  accessToken: string;
-  refreshToken?: string;
-}
-
-export interface AuthResponse extends JwtToken {
-  user: User;
+export interface UserProfileResponse {
+  userId: number;
+  username: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  active: boolean;
+  verified: boolean;
+  roles: string[];
+  permissions: string[];
 }

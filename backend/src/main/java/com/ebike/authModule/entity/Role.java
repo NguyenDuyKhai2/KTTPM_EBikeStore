@@ -27,13 +27,7 @@ public class Role {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "user_roles",
-        schema = "ebike_auth",
-        joinColumns = @JoinColumn(name = "role_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
+    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "roles")
     private Set<User> users = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
