@@ -1,0 +1,649 @@
+{
+  "info": {
+    "_postman_id": "ebike-login-api-collection",
+    "name": "E-Bike Login API",
+    "description": "Complete API collection for E-Bike authentication system with support for Customer, Staff, Manager, and Admin roles.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('userId', jsonData.userId);",
+                  "    pm.environment.set('username', jsonData.username);",
+                  "    pm.environment.set('token', jsonData.token);",
+                  "    console.log('User registered successfully');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"johndoe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePassword123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register a new user in the system"
+          },
+          "response": []
+        },
+        {
+          "name": "Basic Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('basic_demo_token', jsonData.token);",
+                  "    console.log('Login successful - Demo token saved');",
+                  "    console.log('Note: Basic login does not return a JWT and cannot be used for protected endpoints.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"johndoe\",\n  \"password\": \"SecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Basic login with credentials. This endpoint returns a demo token for quick auth checks, not a JWT Bearer token."
+          },
+          "response": []
+        },
+        {
+          "name": "Enhanced Login (with JWT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('jwt_token', jsonData.token);",
+                  "    pm.environment.set('token_issued_at', jsonData.issuedAt);",
+                  "    pm.environment.set('token_expires_at', jsonData.expiresAt);",
+                  "    console.log('Enhanced Login successful - JWT Token saved');",
+                  "    console.log('Token expires at: ' + jsonData.expiresAt);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"johndoe\",\n  \"password\": \"SecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/enhanced",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", "enhanced"]
+            },
+            "description": "Login with JWT token and expiration time"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Role-Specific Login",
+      "item": [
+        {
+          "name": "Customer Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('customer_token', jsonData.authResponse.token);",
+                  "    pm.environment.set('customer_id', jsonData.authResponse.userId);",
+                  "    console.log('Customer Login successful');",
+                  "    console.log('Role: ' + jsonData.role);",
+                  "    console.log('Member since: ' + jsonData.roleData.memberSince);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"johndoe\",\n  \"password\": \"SecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/customer",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", "customer"]
+            },
+            "description": "Customer-specific login with customer data"
+          },
+          "response": []
+        },
+        {
+          "name": "Staff Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('staff_token', jsonData.authResponse.token);",
+                  "    pm.environment.set('staff_id', jsonData.authResponse.userId);",
+                  "    console.log('Staff Login successful');",
+                  "    console.log('Department: ' + jsonData.roleData.department);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"staff.user\",\n  \"password\": \"StaffPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/staff",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", "staff"]
+            },
+            "description": "Staff-specific login with staff data"
+          },
+          "response": []
+        },
+        {
+          "name": "Manager Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('manager_token', jsonData.authResponse.token);",
+                  "    pm.environment.set('manager_id', jsonData.authResponse.userId);",
+                  "    console.log('Manager Login successful');",
+                  "    console.log('Authority: ' + jsonData.roleData.authority);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"manager.user\",\n  \"password\": \"ManagerPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/manager",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", "manager"]
+            },
+            "description": "Manager-specific login with manager data"
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('admin_token', jsonData.authResponse.token);",
+                  "    pm.environment.set('admin_id', jsonData.authResponse.userId);",
+                  "    console.log('Admin Login successful');",
+                  "    console.log('System Authority: ' + jsonData.roleData.authority);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"admin.user\",\n  \"password\": \"AdminPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/admin",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", "admin"]
+            },
+            "description": "Admin-specific login with admin data"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Token Operations",
+      "item": [
+        {
+          "name": "Verify Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/verify-token",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-token"]
+            },
+            "description": "Verify if JWT token is valid"
+          },
+          "response": []
+        },
+        {
+          "name": "Extract Username from Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/user-from-token",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "user-from-token"]
+            },
+            "description": "Extract username from JWT token"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Profile",
+      "item": [
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/profile?usernameOrEmail=johndoe",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "profile"],
+              "query": [
+                {
+                  "key": "usernameOrEmail",
+                  "value": "johndoe"
+                }
+              ]
+            },
+            "description": "Get user profile by username or email"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile - By Email",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/profile?usernameOrEmail=john.doe@example.com",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "profile"],
+              "query": [
+                {
+                  "key": "usernameOrEmail",
+                  "value": "john.doe@example.com"
+                }
+              ]
+            },
+            "description": "Get user profile by email address"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Error Cases",
+      "item": [
+        {
+          "name": "Login - Invalid Credentials",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"johndoe\",\n  \"password\": \"WrongPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Test with invalid password - should return 401"
+          },
+          "response": []
+        },
+        {
+          "name": "Login - User Not Found",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"nonexistentuser\",\n  \"password\": \"AnyPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Test with non-existent user - should return 404"
+          },
+          "response": []
+        },
+        {
+          "name": "Register - Duplicate Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"janedoe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePassword123\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Test with existing email - should return 409 Conflict"
+          },
+          "response": []
+        },
+        {
+          "name": "Register - Weak Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"weak\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Test with password less than 6 characters - should return 400"
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Missing Fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"johndoe\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Test with missing password field - should return 400"
+          },
+          "response": []
+        },
+        {
+          "name": "Customer Login - Wrong Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"johndoe\",\n  \"password\": \"SecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/admin",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", "admin"]
+            },
+            "description": "Test role-specific login with a valid user that does not have ADMIN role - should return 403"
+          },
+          "response": []
+        },
+        {
+          "name": "Staff Login - Wrong Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"staff.user\",\n  \"password\": \"StaffPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/manager",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", "manager"]
+            },
+            "description": "Test role-specific login with a valid user that does not have MANAGER role - should return 403"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set default base URL if not already set",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:8080/api/v1');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "basic_demo_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customer_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staff_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "manager_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customer_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staff_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "manager_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_issued_at",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_expires_at",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

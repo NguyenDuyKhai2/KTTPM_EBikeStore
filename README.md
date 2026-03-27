@@ -170,6 +170,64 @@ Các file chính:
 - [backend/src/main/resources/db/migration/V1_0_3__order_tables.sql](backend/src/main/resources/db/migration/V1_0_3__order_tables.sql)
 - [backend/src/main/resources/db/migration/V1_0_5__user_tables.sql](backend/src/main/resources/db/migration/V1_0_5__user_tables.sql)
 
+## Database structure & migration workflow
+
+Mục tiêu của phần này là giúp thành viên mới biết nên xem file nào trước, file nào chạy thật, và khi thay đổi database thì phải làm theo cách nào để không làm rối lịch sử migration.
+
+### 1. Cách hiểu nhanh
+
+- thư mục `backend/src/main/resources/db/migration/` là nơi Flyway chạy thật
+- file [backend/src/main/resources/db/schema-overview.sql](backend/src/main/resources/db/schema-overview.sql) là file tổng hợp để đọc nhanh toàn bộ schema hiện tại
+- `schema-overview.sql` không thay thế migration versioned của Flyway
+- `backend/sql-init/` là nơi để các file hỗ trợ local/dev nếu nhóm cần khởi tạo nhanh môi trường
+
+### 2. Nên mở file nào khi mới vào dự án
+
+Nếu chỉ muốn hiểu “database hiện có những gì”, đọc theo thứ tự:
+
+1. [backend/src/main/resources/db/schema-overview.sql](backend/src/main/resources/db/schema-overview.sql)
+2. [backend/src/main/resources/db/migration/V1_0_0__Initial_Schema.sql](backend/src/main/resources/db/migration/V1_0_0__Initial_Schema.sql)
+3. [backend/src/main/resources/db/migration/V1_0_1__auth_tables.sql](backend/src/main/resources/db/migration/V1_0_1__auth_tables.sql)
+4. [backend/src/main/resources/db/migration/V1_0_2__product_tables.sql](backend/src/main/resources/db/migration/V1_0_2__product_tables.sql)
+5. [backend/src/main/resources/db/migration/V1_0_3__order_tables.sql](backend/src/main/resources/db/migration/V1_0_3__order_tables.sql)
+6. [backend/src/main/resources/db/migration/V1_0_5__user_tables.sql](backend/src/main/resources/db/migration/V1_0_5__user_tables.sql)
+
+### 3. Ý nghĩa của từng loại file
+
+- `V1_0_0__Initial_Schema.sql`: tạo các schema logic như `ebike_auth`, `ebike_product`, `ebike_order`, `ebike_user`, `ebike_chatbot`
+- `V1_0_1...V1_0_5`: mỗi file phụ trách một nhóm bảng theo module nghiệp vụ
+- `schema-overview.sql`: file tài liệu để nhìn toàn cảnh ở một chỗ
+
+### 4. Quy tắc khi thay đổi database
+
+- không sửa bừa các migration cũ đã được commit và có thể đã chạy ở máy người khác
+- mỗi thay đổi mới phải tạo một migration mới
+- tên file phải mô tả đúng mục đích thay đổi
+- sau khi thêm migration mới, cập nhật lại `schema-overview.sql`
+
+Ví dụ:
+
+- `V1_0_6__add_cart_tables.sql`
+- `V1_0_7__alter_products_add_brand.sql`
+- `V1_0_8__add_chatbot_conversations.sql`
+
+### 5. Workflow đề xuất cho team
+
+Khi cần thêm hoặc sửa schema:
+
+1. xác định module bị ảnh hưởng
+2. tạo migration mới trong `backend/src/main/resources/db/migration/`
+3. viết thay đổi theo hướng chỉ thêm mới hoặc alter rõ ràng
+4. chạy app để Flyway apply migration
+5. kiểm tra lại entity/repository/service liên quan
+6. cập nhật [backend/src/main/resources/db/schema-overview.sql](backend/src/main/resources/db/schema-overview.sql)
+
+### 6. Câu ngắn để nhớ
+
+- muốn xem toàn bộ DB: mở `schema-overview.sql`
+- muốn biết app chạy DB thế nào: xem `db/migration`
+- muốn đổi DB: tạo migration mới, không sửa lịch sử cũ
+
 ## Các file quan trọng để đọc trước
 
 Nếu là thành viên mới trong nhóm, nên đọc theo thứ tự này:
