@@ -1,6 +1,6 @@
 import { apiClient } from "./client";
 import { API_ENDPOINTS } from "./endpoints";
-import type { Product, ProductFilter } from "../types";
+import type { Product, ProductFilter, ProductDetail } from "../types";
 
 export const productAPI = {
   list: async (filters?: ProductFilter) => {
@@ -8,7 +8,7 @@ export const productAPI = {
     return response.data;
   },
   getDetail: async (id: string) => {
-    const response = await apiClient.get<Product>(API_ENDPOINTS.products.detail(id));
+    const response = await apiClient.get<ProductDetail>(API_ENDPOINTS.products.detail(id));
     return response.data;
   }
 };

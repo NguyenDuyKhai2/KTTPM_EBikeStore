@@ -9,6 +9,6 @@ export const useCart = () => {
   return {
     ...cart,
     addItem: (item: CartItem) => dispatch(addItem(item)),
-    removeItem: (productId: string) => dispatch(removeItem(productId))
+    removeItem: (productId: number) => dispatch(removeItem(productId))
   };
 };

@@ -8,6 +8,7 @@ public record ProductVariantDto(
     String variantName,
     String colorName,
     String colorHex,
+    String imageUrl,
     BigDecimal batteryCapacityAh,
     BigDecimal additionalPrice,
     Integer stockQuantity,

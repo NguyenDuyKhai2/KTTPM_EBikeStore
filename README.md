@@ -273,6 +273,15 @@ Nếu muốn chạy app:
 cd backend
 mvn spring-boot:run
 ```
+chạy seed data sản phẩm : 
+chạy theo thứ tự : 
+
+1.
+docker cp backend/dataCawl/yadea_products.seed.sql ebike-postgres:/tmp/yadea_products.seed.sql
+2.
+docker exec -i ebike-postgres psql -U ebike_user -d ebike_db -v ON_ERROR_STOP=1 -f /tmp/yadea_products.seed.sql
+
+
 
 Lưu ý:
 - cần cấu hình thêm `application.properties` và database nếu muốn chạy đầy đủ

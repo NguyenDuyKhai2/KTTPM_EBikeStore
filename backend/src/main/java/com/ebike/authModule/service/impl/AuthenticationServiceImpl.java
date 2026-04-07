@@ -21,7 +21,6 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -215,12 +214,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private AuthResponse toAuthResponse(User user) {
         Set<String> roles = extractRoleNames(user);
+        String jwtToken = jwtTokenProvider.generateToken(user);
         return new AuthResponse(
             user.getId(),
             user.getUsername(),
             user.getEmail(),
             buildFullName(user),
-            "demo-token-" + UUID.randomUUID(),
+            jwtToken,
             roles
         );
     }

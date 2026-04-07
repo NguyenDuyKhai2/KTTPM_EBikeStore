@@ -56,6 +56,12 @@ public class Order {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "customer_email", length = 255)
+    private String customerEmail;
+
+    @Column(name = "customer_identity_number", length = 30)
+    private String customerIdentityNumber;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -153,6 +159,22 @@ public class Order {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getCustomerEmail() {
+        return customerEmail;
+    }
+
+    public void setCustomerEmail(String customerEmail) {
+        this.customerEmail = customerEmail;
+    }
+
+    public String getCustomerIdentityNumber() {
+        return customerIdentityNumber;
+    }
+
+    public void setCustomerIdentityNumber(String customerIdentityNumber) {
+        this.customerIdentityNumber = customerIdentityNumber;
     }
 
     public LocalDateTime getCreatedAt() {

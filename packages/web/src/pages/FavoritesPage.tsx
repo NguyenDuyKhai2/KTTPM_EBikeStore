@@ -1,155 +1,86 @@
-import { Heart, ShoppingCart, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-
-interface FavoriteProduct {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
-  rating: number;
-  category: string;
-}
-
-const mockFavorites: FavoriteProduct[] = [
-  {
-    id: 1,
-    name: "Đô thị Commuter Pro",
-    price: 450,
-    image: "Scooter",
-    rating: 4.8,
-    category: "Đô thị di động"
-  },
-  {
-    id: 3,
-    name: "Street Beast 3000",
-    price: 750,
-    image: "Sport",
-    rating: 4.9,
-    category: "Hiệu suất đường phố"
-  }
-];
+import { ArrowRight, Minus, Plus, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const FavoritesPage = () => {
-  const navigate = useNavigate();
-  const [favorites, setFavorites] = useState<FavoriteProduct[]>(mockFavorites);
-
-  const handleRemove = (id: number) => {
-    setFavorites(favorites.filter(item => item.id !== id));
-  };
-
-  const handleBuyNow = (id: number) => {
-    navigate(`/product/${id}`);
-  };
-
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white px-4 py-12 sm:px-6 lg:px-14">
-      <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="mb-12 text-center">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
-            <Heart className="text-orange-600" size={24} />
+    <div className="mx-auto min-h-screen max-w-7xl px-6 pb-24 pt-32 md:px-12">
+      <h1 className="mb-12 text-5xl font-bold tracking-tighter">
+        Your <span className="text-primary">Selection.</span>
+      </h1>
+
+      <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
+        <div className="space-y-8 lg:col-span-8">
+          <div className="flex flex-col gap-8 rounded-2xl border border-outline-variant/10 bg-white p-8 shadow-sm sm:flex-row">
+            <div className="aspect-square w-full overflow-hidden rounded-xl bg-surface-container-low sm:w-48">
+              <img
+                src="https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&q=80&w=400"
+                alt="Product"
+                className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
+            <div className="flex flex-grow flex-col justify-between py-2">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="mb-1 text-2xl font-bold">KINETIC PULSE S1</h3>
+                  <p className="text-sm text-muted-foreground">Color: Midnight Black</p>
+                </div>
+                <button className="text-muted-foreground transition-colors hover:text-error">
+                  <Trash2 size={20} />
+                </button>
+              </div>
+
+              <div className="mt-8 flex items-end justify-between sm:mt-0">
+                <div className="flex items-center gap-4 rounded-lg bg-surface-container-low px-4 py-2">
+                  <button className="text-muted-foreground hover:text-primary"><Minus size={16} /></button>
+                  <span className="w-4 text-center font-bold">1</span>
+                  <button className="text-muted-foreground hover:text-primary"><Plus size={16} /></button>
+                </div>
+                <span className="text-2xl font-bold text-primary">74.900.000�</span>
+              </div>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
-            Sản Phẩm Yêu Thích
-          </h1>
-          <p className="mt-2 text-gray-600">
-            {favorites.length} sản phẩm đã lưu
-          </p>
+
+          <div className="flex flex-col items-center justify-center space-y-4 rounded-2xl border-2 border-dashed border-outline-variant/30 p-8 text-center">
+            <p className="text-muted-foreground">Muon them phu kien cho hanh trinh cua ban?</p>
+            <Link to="/products" className="font-bold text-primary hover:underline">
+              Tiep tuc mua sam
+            </Link>
+          </div>
         </div>
 
-        {favorites.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 py-16">
-            <Heart className="mb-4 text-gray-300" size={48} />
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
-              Chưa có sản phẩm yêu thích
-            </h2>
-            <p className="mb-6 text-gray-600">
-              Khám phá các sản phẩm xe điện của chúng tôi
-            </p>
-            <button
-              onClick={() => navigate("/products")}
-              className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700"
-            >
-              Xem Sản Phẩm
-              <ArrowRight size={18} />
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {favorites.map((product) => (
-              <div
-                key={product.id}
-                className="group animate-slideInUp overflow-hidden rounded-xl border border-gray-200 bg-white transition hover:shadow-lg"
-              >
-                {/* Product Image Placeholder */}
-                <div className="relative h-48 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <div className="text-6xl opacity-20 font-bold text-gray-400">
-                    {product.image}
-                  </div>
-                  <button
-                    onClick={() => handleRemove(product.id)}
-                    className="absolute right-3 top-3 rounded-full bg-red-500 p-2 text-white transition hover:bg-red-600"
-                    title="Xóa khỏi yêu thích"
-                  >
-                    <Heart size={18} fill="currentColor" />
-                  </button>
-                </div>
-
-                {/* Product Info */}
-                <div className="p-4">
-                  <p className="text-xs font-semibold uppercase text-orange-600 mb-1">
-                    {product.category}
-                  </p>
-                  <h3 className="mb-2 font-bold text-gray-900 line-clamp-2">
-                    {product.name}
-                  </h3>
-
-                  {/* Rating */}
-                  <div className="mb-4 flex items-center gap-1">
-                    <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i}>★</span>
-                      ))}
-                    </div>
-                    <span className="text-xs text-gray-600">
-                      ({product.rating})
-                    </span>
-                  </div>
-
-                  {/* Price */}
-                  <div className="mb-4 flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-orange-600">
-                      {product.price.toLocaleString()}đ
-                    </span>
-                  </div>
-
-                  {/* Button */}
-                  <button
-                    onClick={() => handleBuyNow(product.id)}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white transition hover:bg-orange-700 active:scale-95"
-                  >
-                    <ShoppingCart size={18} />
-                    Mua Ngay
-                  </button>
-                </div>
+        <div className="lg:col-span-4">
+          <div className="sticky top-32 rounded-2xl bg-surface-container-low p-8">
+            <h3 className="mb-8 text-xl font-bold">Order Summary</h3>
+            <div className="mb-8 space-y-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-bold">74.900.000�</span>
               </div>
-            ))}
-          </div>
-        )}
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Shipping</span>
+                <span className="font-bold text-primary">Calculated at next step</span>
+              </div>
+              <div className="my-4 h-px bg-outline-variant/20" />
+              <div className="flex items-baseline justify-between">
+                <span className="text-lg font-bold">Total</span>
+                <span className="text-3xl font-bold tracking-tighter">74.900.000�</span>
+              </div>
+            </div>
 
-        {/* Continue Shopping */}
-        <div className="mt-12 text-center">
-          <button
-            onClick={() => navigate("/products")}
-            className="inline-flex items-center gap-2 text-orange-600 font-semibold transition hover:gap-3"
-          >
-            Tiếp tục mua sắm
-            <ArrowRight size={18} />
-          </button>
+            <Link to="/checkout" className="btn-primary w-full">
+              Proceed to Checkout
+              <ArrowRight size={20} />
+            </Link>
+
+            <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">
+              Gia da bao gom VAT. Phi dang ky bien so se duoc tinh toan dua tren dia chi nhan hang cua ban.
+            </p>
+          </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 };
 

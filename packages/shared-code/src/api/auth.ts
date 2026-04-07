@@ -11,9 +11,18 @@ export const authAPI = {
     const response = await apiClient.post(API_ENDPOINTS.auth.register, payload);
     return response.data;
   },
-  getProfile: async (usernameOrEmail: string) => {
+  logout: async () => {
+    await apiClient.post(API_ENDPOINTS.auth.logout);
+  },
+  getSession: async () => {
+    const response = await apiClient.get<UserProfileResponse | null>(API_ENDPOINTS.auth.session, {
+      validateStatus: (status) => status === 200 || status === 204
+    });
+    return response.status === 204 ? null : response.data;
+  },
+  getProfile: async (usernameOrEmail?: string) => {
     const response = await apiClient.get<UserProfileResponse>(API_ENDPOINTS.auth.profile, {
-      params: { usernameOrEmail }
+      params: usernameOrEmail ? { usernameOrEmail } : undefined
     });
     return response.data;
   },

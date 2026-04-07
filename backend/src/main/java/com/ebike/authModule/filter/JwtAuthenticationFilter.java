@@ -3,11 +3,13 @@ package com.ebike.authModule.filter;
 import com.ebike.authModule.service.JwtTokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,6 +18,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final String ACCESS_TOKEN_COOKIE_NAME = "ebike_access_token";
 
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -48,13 +52,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String username = jwtTokenProvider.extractUsername(token);
             String roles = jwtTokenProvider.extractRoles(token);
 
-            List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
+            List<SimpleGrantedAuthority> authorities = Arrays.stream(roles == null ? new String[0] : roles.split(","))
+                .map(String::trim)
+                .filter(role -> !role.isEmpty())
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .toList();
 
             UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(username, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
+        } else if (token != null) {
+            SecurityContextHolder.clearContext();
+            throw new InsufficientAuthenticationException("Invalid JWT token");
         }
 
         filterChain.doFilter(request, response);
@@ -65,7 +74,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
-        return null;
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        return Arrays.stream(cookies)
+            .filter(cookie -> ACCESS_TOKEN_COOKIE_NAME.equals(cookie.getName()))
+            .map(Cookie::getValue)
+            .filter(value -> value != null && !value.isBlank())
+            .findFirst()
+            .orElse(null);
     }
 
     private boolean isPublicEndpoint(String requestPath) {

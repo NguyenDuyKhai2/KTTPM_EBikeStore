@@ -8,7 +8,14 @@ import com.ebike.authModule.dto.RoleSpecificLoginResponse;
 import com.ebike.authModule.dto.UserProfileResponse;
 import com.ebike.authModule.service.AuthenticationService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,10 +29,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AuthController {
 
+    private static final String ACCESS_TOKEN_COOKIE_NAME = "ebike_access_token";
     private static final String ROLE_CUSTOMER = "CUSTOMER";
     private static final String ROLE_STAFF = "STAFF";
     private static final String ROLE_MANAGER = "MANAGER";
     private static final String ROLE_ADMIN = "ADMIN";
+
+    @Value("${jwt.expiration:86400000}")
+    private long jwtExpirationMs;
+
+    @Value("${app.auth.cookie.secure:false}")
+    private boolean secureCookie;
+
+    @Value("${app.auth.cookie.same-site:Lax}")
+    private String sameSite;
 
     private final AuthenticationService authenticationService;
 
@@ -40,101 +57,194 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@RequestBody LoginRequest request, HttpServletRequest httpServletRequest) {
-        return authenticationService.login(
+    public ResponseEntity<AuthResponse> login(
+        @RequestBody LoginRequest request,
+        HttpServletRequest httpServletRequest,
+        HttpServletResponse httpServletResponse
+    ) {
+        AuthResponse authResponse = authenticationService.login(
             request,
             httpServletRequest.getRemoteAddr(),
             httpServletRequest.getHeader("User-Agent")
         );
+        attachAuthCookie(httpServletResponse, authResponse.token());
+        return ResponseEntity.ok(authResponse);
     }
 
     @PostMapping("/login/enhanced")
-    public EnhancedAuthResponse enhancedLogin(
+    public ResponseEntity<EnhancedAuthResponse> enhancedLogin(
         @RequestBody LoginRequest request,
-        HttpServletRequest httpServletRequest
+        HttpServletRequest httpServletRequest,
+        HttpServletResponse httpServletResponse
     ) {
-        return authenticationService.enhancedLogin(
+        EnhancedAuthResponse authResponse = authenticationService.enhancedLogin(
             request,
             httpServletRequest.getRemoteAddr(),
             httpServletRequest.getHeader("User-Agent")
         );
+        attachAuthCookie(httpServletResponse, authResponse.token());
+        return ResponseEntity.ok(authResponse);
     }
 
     @PostMapping("/login/customer")
-    public RoleSpecificLoginResponse customerLogin(
+    public ResponseEntity<RoleSpecificLoginResponse> customerLogin(
         @RequestBody LoginRequest request,
-        HttpServletRequest httpServletRequest
+        HttpServletRequest httpServletRequest,
+        HttpServletResponse httpServletResponse
     ) {
-        return authenticationService.roleSpecificLogin(
+        RoleSpecificLoginResponse response = authenticationService.roleSpecificLogin(
             request,
             ROLE_CUSTOMER,
             httpServletRequest.getRemoteAddr(),
             httpServletRequest.getHeader("User-Agent")
         );
+        attachAuthCookie(httpServletResponse, response.authResponse().token());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login/staff")
-    public RoleSpecificLoginResponse staffLogin(
+    public ResponseEntity<RoleSpecificLoginResponse> staffLogin(
         @RequestBody LoginRequest request,
-        HttpServletRequest httpServletRequest
+        HttpServletRequest httpServletRequest,
+        HttpServletResponse httpServletResponse
     ) {
-        return authenticationService.roleSpecificLogin(
+        RoleSpecificLoginResponse response = authenticationService.roleSpecificLogin(
             request,
             ROLE_STAFF,
             httpServletRequest.getRemoteAddr(),
             httpServletRequest.getHeader("User-Agent")
         );
+        attachAuthCookie(httpServletResponse, response.authResponse().token());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login/manager")
-    public RoleSpecificLoginResponse managerLogin(
+    public ResponseEntity<RoleSpecificLoginResponse> managerLogin(
         @RequestBody LoginRequest request,
-        HttpServletRequest httpServletRequest
+        HttpServletRequest httpServletRequest,
+        HttpServletResponse httpServletResponse
     ) {
-        return authenticationService.roleSpecificLogin(
+        RoleSpecificLoginResponse response = authenticationService.roleSpecificLogin(
             request,
             ROLE_MANAGER,
             httpServletRequest.getRemoteAddr(),
             httpServletRequest.getHeader("User-Agent")
         );
+        attachAuthCookie(httpServletResponse, response.authResponse().token());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login/admin")
-    public RoleSpecificLoginResponse adminLogin(
+    public ResponseEntity<RoleSpecificLoginResponse> adminLogin(
         @RequestBody LoginRequest request,
-        HttpServletRequest httpServletRequest
+        HttpServletRequest httpServletRequest,
+        HttpServletResponse httpServletResponse
     ) {
-        return authenticationService.roleSpecificLogin(
+        RoleSpecificLoginResponse response = authenticationService.roleSpecificLogin(
             request,
             ROLE_ADMIN,
             httpServletRequest.getRemoteAddr(),
             httpServletRequest.getHeader("User-Agent")
         );
+        attachAuthCookie(httpServletResponse, response.authResponse().token());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(HttpServletResponse httpServletResponse) {
+        clearAuthCookie(httpServletResponse);
+    }
+
+    @GetMapping("/session")
+    public ResponseEntity<UserProfileResponse> getSession(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(authenticationService.getProfile(authentication.getName()));
     }
 
     @GetMapping("/profile")
-    public UserProfileResponse getProfile(@RequestParam String usernameOrEmail) {
-        return authenticationService.getProfile(usernameOrEmail);
+    public UserProfileResponse getProfile(
+        Authentication authentication,
+        @RequestParam(required = false) String usernameOrEmail
+    ) {
+        String resolvedIdentity = usernameOrEmail;
+        if ((resolvedIdentity == null || resolvedIdentity.isBlank()) && authentication != null) {
+            resolvedIdentity = authentication.getName();
+        }
+        return authenticationService.getProfile(resolvedIdentity);
     }
 
     @GetMapping("/verify-token")
-    public boolean verifyToken(@RequestHeader("Authorization") String token) {
-        if (token == null || !token.startsWith("Bearer ")) {
+    public boolean verifyToken(
+        @RequestHeader(value = "Authorization", required = false) String token,
+        HttpServletRequest request
+    ) {
+        String jwtToken = extractToken(token, request);
+        if (jwtToken == null) {
             return false;
         }
-        String jwtToken = token.substring(7);
         return authenticationService.validateToken(jwtToken);
     }
 
     @GetMapping("/user-from-token")
-    public String getUserFromToken(@RequestHeader("Authorization") String token) {
-        if (token == null || !token.startsWith("Bearer ")) {
+    public String getUserFromToken(
+        @RequestHeader(value = "Authorization", required = false) String token,
+        HttpServletRequest request
+    ) {
+        String jwtToken = extractToken(token, request);
+        if (jwtToken == null) {
             return null;
         }
-        String jwtToken = token.substring(7);
         if (authenticationService.validateToken(jwtToken)) {
             return authenticationService.extractUsernameFromToken(jwtToken);
         }
         return null;
+    }
+
+    private String extractBearerToken(String authorizationHeader) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        return authorizationHeader.substring(7);
+    }
+
+    private String extractToken(String authorizationHeader, HttpServletRequest request) {
+        String bearerToken = extractBearerToken(authorizationHeader);
+        if (bearerToken != null) {
+            return bearerToken;
+        }
+        if (request.getCookies() == null) {
+            return null;
+        }
+        for (var cookie : request.getCookies()) {
+            if (ACCESS_TOKEN_COOKIE_NAME.equals(cookie.getName()) && cookie.getValue() != null && !cookie.getValue().isBlank()) {
+                return cookie.getValue();
+            }
+        }
+        return null;
+    }
+
+    private void attachAuthCookie(HttpServletResponse response, String token) {
+        ResponseCookie cookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, token)
+            .httpOnly(true)
+            .secure(secureCookie)
+            .sameSite(sameSite)
+            .path("/")
+            .maxAge(Duration.ofMillis(jwtExpirationMs))
+            .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    private void clearAuthCookie(HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, "")
+            .httpOnly(true)
+            .secure(secureCookie)
+            .sameSite(sameSite)
+            .path("/")
+            .maxAge(Duration.ZERO)
+            .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

@@ -3,6 +3,7 @@ package com.ebike.productModule.controller;
 import com.ebike.productModule.dto.ProductDetailDto;
 import com.ebike.productModule.dto.ProductSummaryDto;
 import com.ebike.productModule.service.ProductService;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,9 +24,11 @@ public class ProductController {
     @GetMapping
     public List<ProductSummaryDto> getProducts(
         @RequestParam(required = false) String query,
-        @RequestParam(required = false) Integer categoryId
+        @RequestParam(required = false) Integer categoryId,
+        @RequestParam(required = false) BigDecimal minPrice,
+        @RequestParam(required = false) BigDecimal maxPrice
     ) {
-        return productService.getProducts(query, categoryId);
+        return productService.getProducts(query, categoryId, minPrice, maxPrice);
     }
 
     @GetMapping("/{slug}")

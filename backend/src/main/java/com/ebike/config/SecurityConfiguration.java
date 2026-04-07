@@ -1,8 +1,10 @@
 package com.ebike.config;
 
 import com.ebike.authModule.filter.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -23,20 +25,37 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .cors(cors -> {})
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(
-                    "/api/v1/auth/login",
-                    "/api/v1/auth/login/**",
-                    "/api/v1/auth/register"
+                    "/auth/register",
+                    "/auth/login",
+                    "/auth/login/**",
+                    "/auth/logout",
+                    "/auth/session",
+                    "/health/**",
+                    "/products/**",
+                    "/chatbot/**",
+                    "/media/**",
+                    "/error"
                 ).permitAll()
-                .requestMatchers("/api/v1/auth/**").authenticated()
-                .requestMatchers("/api/v1/customer/**").hasAnyRole("CUSTOMER", "ADMIN", "MANAGER")
-                .requestMatchers("/api/v1/staff/**").hasAnyRole("STAFF", "MANAGER", "ADMIN")
-                .requestMatchers("/api/v1/manager/**").hasAnyRole("MANAGER", "ADMIN")
-                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/auth/**").authenticated()
+                .requestMatchers("/users/**", "/orders/**").authenticated()
+                .requestMatchers("/customer/**").hasAnyRole("CUSTOMER", "ADMIN", "MANAGER")
+                .requestMatchers("/staff/**").hasAnyRole("STAFF", "MANAGER", "ADMIN")
+                .requestMatchers("/manager/**").hasAnyRole("MANAGER", "ADMIN")
+                .requestMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().permitAll()
+            )
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, exception) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"message\":\"Unauthorized\"}");
+                })
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

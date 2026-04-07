@@ -5,7 +5,10 @@ import com.ebike.authModule.repository.UserRepository;
 import com.ebike.orderModule.entity.Order;
 import com.ebike.orderModule.entity.OrderItem;
 import com.ebike.orderModule.entity.OrderStatus;
+import com.ebike.orderModule.entity.Shipment;
+import com.ebike.orderModule.entity.Showroom;
 import com.ebike.orderModule.repository.OrderRepository;
+import com.ebike.orderModule.repository.ShowroomRepository;
 import com.ebike.productModule.entity.Product;
 import com.ebike.productModule.repository.ProductRepository;
 import java.math.BigDecimal;
@@ -37,15 +40,18 @@ public class OrderController {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final ShowroomRepository showroomRepository;
 
     public OrderController(
         OrderRepository orderRepository,
         UserRepository userRepository,
-        ProductRepository productRepository
+        ProductRepository productRepository,
+        ShowroomRepository showroomRepository
     ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.showroomRepository = showroomRepository;
     }
 
     @GetMapping
@@ -91,6 +97,28 @@ public class OrderController {
         order.setShippingFee(defaultValue(request.shippingFee()));
         order.setDiscountAmount(defaultValue(request.discountAmount()));
         order.setNotes(request.notes());
+        order.setCustomerEmail(normalize(request.customerEmail()));
+        order.setCustomerIdentityNumber(normalize(request.customerIdentityNumber()));
+
+        if (isBlank(request.customerName())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "customerName is required");
+        }
+        if (isBlank(request.phoneNumber())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "phoneNumber is required");
+        }
+        if (isBlank(request.customerEmail())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "customerEmail is required");
+        }
+        if (isBlank(request.detailedAddress())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "detailedAddress is required");
+        }
+        if (request.pickupShowroomId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "pickupShowroomId is required");
+        }
+
+        Showroom showroom = showroomRepository.findById(request.pickupShowroomId())
+            .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup showroom not found"));
 
         BigDecimal subtotal = ZERO;
 
@@ -133,6 +161,17 @@ public class OrderController {
 
         order.setTotalAmount(totalAmount);
 
+        Shipment shipment = new Shipment();
+        shipment.setOrder(order);
+        shipment.setRecipientName(request.customerName().trim());
+        shipment.setPhoneNumber(request.phoneNumber().trim());
+        shipment.setRecipientEmail(request.customerEmail().trim());
+        shipment.setPickupDistrict(showroom.getDistrict());
+        shipment.setDetailedAddress(request.detailedAddress().trim());
+        shipment.setPickupShowroom(showroom);
+        shipment.setShippingAddress(buildShippingAddress(showroom, request.detailedAddress()));
+        order.setShipment(shipment);
+
         Order savedOrder = orderRepository.save(order);
         return toResponse(savedOrder);
     }
@@ -169,7 +208,20 @@ public class OrderController {
         return value == null ? ZERO : value;
     }
 
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private String normalize(String value) {
+        return isBlank(value) ? null : value.trim();
+    }
+
+    private String buildShippingAddress(Showroom showroom, String detailedAddress) {
+        return showroom.getName() + " - " + showroom.getAddress() + " | Dia chi cu the: " + detailedAddress.trim();
+    }
+
     private OrderResponse toResponse(Order order) {
+        Shipment shipment = order.getShipment();
         return new OrderResponse(
             order.getId(),
             order.getUser().getId(),
@@ -180,6 +232,8 @@ public class OrderController {
             order.getDiscountAmount(),
             order.getTotalAmount(),
             order.getNotes(),
+            order.getCustomerEmail(),
+            order.getCustomerIdentityNumber(),
             order.getCreatedAt(),
             order.getUpdatedAt(),
             order.getItems().stream()
@@ -192,12 +246,41 @@ public class OrderController {
                     item.getQuantity(),
                     item.getLineTotal()
                 ))
-                .toList()
+                .toList(),
+            shipment == null ? null : new ShipmentResponse(
+                shipment.getId(),
+                shipment.getShipmentStatus().name(),
+                shipment.getRecipientName(),
+                shipment.getPhoneNumber(),
+                shipment.getRecipientEmail(),
+                shipment.getPickupDistrict(),
+                shipment.getDetailedAddress(),
+                shipment.getShippingAddress(),
+                shipment.getTrackingNumber(),
+                shipment.getShippedAt(),
+                shipment.getDeliveredAt(),
+                shipment.getPickupShowroom() == null ? null : new ShowroomResponse(
+                    shipment.getPickupShowroom().getId(),
+                    shipment.getPickupShowroom().getName(),
+                    shipment.getPickupShowroom().getCity(),
+                    shipment.getPickupShowroom().getDistrict(),
+                    shipment.getPickupShowroom().getAddress(),
+                    shipment.getPickupShowroom().getPhone(),
+                    shipment.getPickupShowroom().getOpeningHours(),
+                    shipment.getPickupShowroom().getActive()
+                )
+            )
         );
     }
 
     public record OrderCreateRequest(
         Long userId,
+        String customerName,
+        String phoneNumber,
+        String customerEmail,
+        String customerIdentityNumber,
+        Long pickupShowroomId,
+        String detailedAddress,
         BigDecimal shippingFee,
         BigDecimal discountAmount,
         String notes,
@@ -231,9 +314,40 @@ public class OrderController {
         BigDecimal discountAmount,
         BigDecimal totalAmount,
         String notes,
+        String customerEmail,
+        String customerIdentityNumber,
         java.time.LocalDateTime createdAt,
         java.time.LocalDateTime updatedAt,
-        List<OrderItemResponse> items
+        List<OrderItemResponse> items,
+        ShipmentResponse shipment
+    ) {
+    }
+
+    public record ShipmentResponse(
+        Long id,
+        String shipmentStatus,
+        String recipientName,
+        String phoneNumber,
+        String recipientEmail,
+        String pickupDistrict,
+        String detailedAddress,
+        String shippingAddress,
+        String trackingNumber,
+        java.time.LocalDateTime shippedAt,
+        java.time.LocalDateTime deliveredAt,
+        ShowroomResponse pickupShowroom
+    ) {
+    }
+
+    public record ShowroomResponse(
+        Long id,
+        String name,
+        String city,
+        String district,
+        String address,
+        String phone,
+        String openingHours,
+        Boolean active
     ) {
     }
 }

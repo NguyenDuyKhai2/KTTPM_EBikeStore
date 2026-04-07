@@ -3,6 +3,8 @@ export const API_ENDPOINTS = {
     login: "/auth/login",
     enhancedLogin: "/auth/login/enhanced",
     register: "/auth/register",
+    logout: "/auth/logout",
+    session: "/auth/session",
     refresh: "/auth/refresh",
     profile: "/auth/profile",
     userFromToken: "/auth/user-from-token"
@@ -16,6 +18,9 @@ export const API_ENDPOINTS = {
     list: "/orders",
     create: "/orders",
     detail: (id: string) => `/orders/${id}`
+  },
+  showrooms: {
+    list: "/showrooms"
   },
   cart: {
     current: "/cart",

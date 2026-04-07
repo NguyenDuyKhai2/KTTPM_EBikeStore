@@ -34,6 +34,16 @@ export interface EnhancedAuthResponse {
   expiresAt: string;
 }
 
+export interface SessionUser {
+  id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  roles: string[];
+  active: boolean;
+  verified: boolean;
+}
+
 export interface UserProfileResponse {
   userId: number;
   username: string;

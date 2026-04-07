@@ -13,6 +13,7 @@ public record ProductSummaryDto(
     BigDecimal rating,
     Integer reviewCount,
     Integer stockQuantity,
+    Boolean featured,
     CategorySummaryDto category,
     List<String> images
 ) {
