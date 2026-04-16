@@ -1,6 +1,7 @@
 import type { FormEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Loader, MessageSquare, Send } from "lucide-react";
+import { chatbotAPI } from "@ebike/shared-code/api";
 
 type Sender = "bot" | "user";
 type ConversationStage = "initial" | "understanding" | "recommending";
@@ -65,6 +66,7 @@ const ChatbotPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [conversationStage, setConversationStage] = useState<ConversationStage>("initial");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatIdRef = useRef<string>(crypto.randomUUID());
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -152,15 +154,45 @@ const ChatbotPage = () => {
     setInput("");
     setIsLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      const response = await chatbotAPI.askAdvisor(submittedInput, chatIdRef.current);
+      const recommendationText = response.recommendations.length
+        ? `\n\nGợi ý sản phẩm:\n${response.recommendations.map((item) => `- ${item.name}: ${item.reason}`).join("\n")}`
+        : "";
+      setConversationStage(response.recommendations.length ? "recommending" : "understanding");
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: messages.length + 2,
+          sender: "bot",
+          text: `${response.answer}${recommendationText}`,
+          timestamp: new Date()
+        }
+      ]);
+    } catch (error) {
+      const fallbackAnswer = findAnswerInFAQ(submittedInput)
+        ?? "Xin lỗi, hiện tại mình chưa kết nối được với cố vấn AI. Bạn có thể hỏi về tầm giá, pin, quãng đường, bảo hành hoặc mẫu xe bạn quan tâm.";
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: messages.length + 2,
+          sender: "bot",
+          text: fallbackAnswer,
+          timestamp: new Date()
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+    return;
 
     let botResponse = "";
     const faqAnswer = findAnswerInFAQ(submittedInput);
 
-    if (faqAnswer) {
-      botResponse = faqAnswer;
+    if (faqAnswer !== null) {
+      botResponse = faqAnswer ?? "";
     } else {
-      const recommendation = generateRecommendation(submittedInput);
+      const recommendation = generateRecommendation(submittedInput)!;
       if (recommendation) {
         botResponse = `Lựa chọn tuyệt vời! Dựa trên những gì bạn đang tìm kiếm, tôi khuyên bạn nên sử dụng bộ sưu tập **${recommendation.category}** của chúng tôi.\n\nMô hình được đề xuất:\n${recommendation.models.map((model) => `- ${model}`).join("\n")}\n\nTại sao: ${recommendation.reason}\n\nBạn có muốn biết thêm chi tiết về bất kỳ mô hình cụ thể nào không?`;
         setConversationStage("recommending");

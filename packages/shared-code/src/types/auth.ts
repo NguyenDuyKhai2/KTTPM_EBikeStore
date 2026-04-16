@@ -55,3 +55,8 @@ export interface UserProfileResponse {
   roles: string[];
   permissions: string[];
 }
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+}

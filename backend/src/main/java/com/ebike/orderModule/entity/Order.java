@@ -50,6 +50,9 @@ public class Order {
     @Column(name = "discount_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
+    @Column(name = "registration_fee", nullable = false, precision = 12, scale = 2)
+    private BigDecimal registrationFee = BigDecimal.ZERO;
+
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
@@ -143,6 +146,14 @@ public class Order {
 
     public void setDiscountAmount(BigDecimal discountAmount) {
         this.discountAmount = discountAmount;
+    }
+
+    public BigDecimal getRegistrationFee() {
+        return registrationFee;
+    }
+
+    public void setRegistrationFee(BigDecimal registrationFee) {
+        this.registrationFee = registrationFee;
     }
 
     public BigDecimal getTotalAmount() {

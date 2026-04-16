@@ -15,7 +15,7 @@ const Footer = () => {
           <div className="col-span-2 space-y-6 md:col-span-1">
             <div className="font-headline text-xl font-bold uppercase text-foreground">KINETIC</div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Leading the transition to sustainable urban mobility with precision engineering and high-tech design.
+              Đồng hành cùng xu hướng di chuyển đô thị bền vững bằng kỹ thuật chính xác và thiết kế hiện đại.
             </p>
             <div className="flex gap-4 text-muted-foreground">
               <Globe size={20} className="cursor-pointer transition-colors hover:text-primary" />
@@ -25,37 +25,37 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="mono-label mb-6 text-foreground/40">Explore</h4>
+            <h4 className="mono-label mb-6 text-foreground/40">Khám phá</h4>
             <ul className="space-y-3">
-              <li><Link to="/products" className="text-sm text-muted-foreground transition-colors hover:text-primary">Models</Link></li>
-              <li><Link to="/chatbot" className="text-sm text-muted-foreground transition-colors hover:text-primary">Advisory</Link></li>
-              <li><Link to="/favorites" className="text-sm text-muted-foreground transition-colors hover:text-primary">Saved</Link></li>
+              <li><Link to="/products" className="text-sm text-muted-foreground transition-colors hover:text-primary">Mẫu xe</Link></li>
+              <li><Link to="/chatbot" className="text-sm text-muted-foreground transition-colors hover:text-primary">Tư vấn</Link></li>
+              <li><Link to="/favorites" className="text-sm text-muted-foreground transition-colors hover:text-primary">Đã lưu</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="mono-label mb-6 text-foreground/40">Company</h4>
+            <h4 className="mono-label mb-6 text-foreground/40">Công ty</h4>
             <ul className="space-y-3">
-              <li><Link to="/" className="text-sm text-muted-foreground transition-colors hover:text-primary">About Kinetic</Link></li>
-              <li><Link to="/customer/orders" className="text-sm text-muted-foreground transition-colors hover:text-primary">Orders</Link></li>
-              <li><Link to="/auth" className="text-sm text-muted-foreground transition-colors hover:text-primary">Account</Link></li>
+              <li><Link to="/" className="text-sm text-muted-foreground transition-colors hover:text-primary">Về Kinetic</Link></li>
+              <li><Link to="/customer/orders" className="text-sm text-muted-foreground transition-colors hover:text-primary">Đơn hàng</Link></li>
+              <li><Link to="/auth" className="text-sm text-muted-foreground transition-colors hover:text-primary">Tài khoản</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="mono-label mb-6 text-foreground/40">Legal</h4>
+            <h4 className="mono-label mb-6 text-foreground/40">Pháp lý</h4>
             <ul className="space-y-3">
-              <li><Link to="/" className="text-sm text-muted-foreground transition-colors hover:text-primary">Privacy Policy</Link></li>
-              <li><Link to="/" className="text-sm text-muted-foreground transition-colors hover:text-primary">Terms of Service</Link></li>
+              <li><Link to="/" className="text-sm text-muted-foreground transition-colors hover:text-primary">Chính sách bảo mật</Link></li>
+              <li><Link to="/" className="text-sm text-muted-foreground transition-colors hover:text-primary">Điều khoản dịch vụ</Link></li>
             </ul>
           </div>
         </div>
 
         <div className="flex flex-col items-center justify-between gap-6 border-t border-outline-variant/10 pt-12 md:flex-row">
-          <p className="text-sm text-muted-foreground">© 2026 Kinetic Precision. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© 2026 Kinetic Precision. Bảo lưu mọi quyền.</p>
           <div className="flex gap-8 text-xs uppercase tracking-widest text-muted-foreground">
-            <span>Global Headquarter: Berlin, DE</span>
-            <span>Vietnam Office: HCMC, VN</span>
+            <span>Trụ sở toàn cầu: Berlin, Đức</span>
+            <span>Văn phòng Việt Nam: TP.HCM, Việt Nam</span>
           </div>
         </div>
       </div>

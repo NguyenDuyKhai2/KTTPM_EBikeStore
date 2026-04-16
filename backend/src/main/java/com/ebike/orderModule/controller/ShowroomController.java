@@ -1,5 +1,6 @@
 package com.ebike.orderModule.controller;
 
+import com.ebike.orderModule.dto.response.ShowroomResponse;
 import com.ebike.orderModule.entity.Showroom;
 import com.ebike.orderModule.repository.ShowroomRepository;
 import java.util.List;
@@ -38,17 +39,5 @@ public class ShowroomController {
                 showroom.getActive()
             ))
             .toList();
-    }
-
-    public record ShowroomResponse(
-        Long id,
-        String name,
-        String city,
-        String district,
-        String address,
-        String phone,
-        String openingHours,
-        Boolean active
-    ) {
     }
 }

@@ -4,9 +4,9 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@ebike/shared-code/hooks";
 
 const navItems = [
-  { to: "/products", label: "Models" },
-  { to: "/chatbot", label: "Advisory" },
-  { to: "/favorites", label: "Saved" }
+  { to: "/products", label: "Mẫu xe" },
+  { to: "/chatbot", label: "Tư vấn" },
+  { to: "/favorites", label: "Đã lưu" }
 ];
 
 const Header = () => {
@@ -36,7 +36,7 @@ const Header = () => {
                 }`
               }
             >
-              Home
+              Trang chủ
             </NavLink>
             {navItems.map((item) => (
               <NavLink
@@ -57,27 +57,27 @@ const Header = () => {
         <div className="flex items-center gap-4">
           <div className="hidden items-center gap-4 lg:flex">
             <button
-              onClick={() => navigate("/favorites")}
+              onClick={() => navigate("/cart")}
               className="text-foreground/70 transition-colors hover:text-primary"
-              aria-label="Cart"
+              aria-label="Giỏ hàng"
             >
               <ShoppingCart size={20} />
             </button>
             <button
               onClick={() => navigate(isAuthenticated ? "/customer/profile" : "/auth")}
               className="text-foreground/70 transition-colors hover:text-primary"
-              aria-label="User"
+              aria-label="Tài khoản"
             >
               <User size={18} />
             </button>
           </div>
           <NavLink to={isAuthenticated ? "/products" : "/auth"} className="btn-primary hidden text-sm sm:inline-flex">
-            {isAuthenticated ? "Book Test Drive" : "Sign In"}
+            {isAuthenticated ? "Đặt lịch lái thử" : "Đăng nhập"}
           </NavLink>
           <button
             onClick={() => setMobileOpen((value) => !value)}
             className="text-foreground md:hidden"
-            aria-label="Toggle navigation"
+            aria-label="Mở menu điều hướng"
           >
             <Menu size={24} />
           </button>
@@ -92,7 +92,7 @@ const Header = () => {
               end
               className="font-headline text-foreground/70 hover:text-primary"
             >
-              Home
+              Trang chủ
             </NavLink>
             {navItems.map((item) => (
               <NavLink key={item.to} to={item.to} className="font-headline text-foreground/70 hover:text-primary">
@@ -100,7 +100,7 @@ const Header = () => {
               </NavLink>
             ))}
             <NavLink to={isAuthenticated ? "/products" : "/auth"} className="btn-primary mt-2 w-full">
-              {isAuthenticated ? "Book Test Drive" : "Sign In"}
+              {isAuthenticated ? "Đặt lịch lái thử" : "Đăng nhập"}
             </NavLink>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { addItem, removeItem } from "../redux/slices/cartSlice";
+import { addItem, clearCart, removeItem, updateQuantity } from "../redux/slices/cartSlice";
 import { useAppDispatch, useAppSelector } from "../redux";
 import type { CartItem } from "../types";
 
@@ -9,6 +9,8 @@ export const useCart = () => {
   return {
     ...cart,
     addItem: (item: CartItem) => dispatch(addItem(item)),
-    removeItem: (productId: number) => dispatch(removeItem(productId))
+    updateQuantity: (productId: number, quantity: number) => dispatch(updateQuantity({ productId, quantity })),
+    removeItem: (productId: number) => dispatch(removeItem(productId)),
+    clearCart: () => dispatch(clearCart())
   };
 };

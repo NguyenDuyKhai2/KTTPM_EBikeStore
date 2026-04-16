@@ -14,9 +14,15 @@ export const API_ENDPOINTS = {
     detail: (id: string) => `/products/${id}`,
     search: "/products/search"
   },
+  favorites: {
+    list: "/favorites",
+    add: "/favorites",
+    remove: (productId: number) => `/favorites/${productId}`
+  },
   orders: {
     list: "/orders",
     create: "/orders",
+    quote: "/orders/quote",
     detail: (id: string) => `/orders/${id}`
   },
   showrooms: {
@@ -28,11 +34,13 @@ export const API_ENDPOINTS = {
     removeItem: (productId: string) => `/cart/items/${productId}`
   },
   chat: {
-    message: "/chat/message",
+    message: "/chatbot/ask",
     history: "/chat/history"
   },
   payments: {
     create: "/payments",
-    verify: (paymentId: string) => `/payments/${paymentId}/verify`
+    verify: (paymentId: string) => `/payments/${paymentId}/verify`,
+    vnpayCreate: "/payments/vnpay/create",
+    vnpayReturn: "/payments/vnpay/return"
   }
 } as const;

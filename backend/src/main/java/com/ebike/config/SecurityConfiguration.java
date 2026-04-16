@@ -30,6 +30,8 @@ public class SecurityConfiguration {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/orders/quote").permitAll()
+                .requestMatchers("/payments/vnpay/ipn", "/payments/vnpay/return").permitAll()
                 .requestMatchers(
                     "/auth/register",
                     "/auth/login",
@@ -43,7 +45,7 @@ public class SecurityConfiguration {
                     "/error"
                 ).permitAll()
                 .requestMatchers("/auth/**").authenticated()
-                .requestMatchers("/users/**", "/orders/**").authenticated()
+                .requestMatchers("/users/**", "/orders/**", "/favorites/**", "/payments/**").authenticated()
                 .requestMatchers("/customer/**").hasAnyRole("CUSTOMER", "ADMIN", "MANAGER")
                 .requestMatchers("/staff/**").hasAnyRole("STAFF", "MANAGER", "ADMIN")
                 .requestMatchers("/manager/**").hasAnyRole("MANAGER", "ADMIN")

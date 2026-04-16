@@ -1,7 +1,7 @@
 import { Calendar, CreditCard, Landmark, Lock, MapPin, Phone, Store, Zap } from "lucide-react";
-import { orderAPI, showroomAPI } from "@ebike/shared-code/api";
+import { orderAPI, paymentAPI, showroomAPI } from "@ebike/shared-code/api";
 import { useAppSelector } from "@ebike/shared-code/redux";
-import type { Showroom } from "@ebike/shared-code/types";
+import type { OrderQuote, Showroom } from "@ebike/shared-code/types";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
@@ -27,10 +27,13 @@ const CheckoutPage = () => {
   const product = state.product;
   const quantity = state.quantity ?? 1;
   const [showrooms, setShowrooms] = useState<Showroom[]>([]);
+  const [orderQuote, setOrderQuote] = useState<OrderQuote | null>(null);
+  const [loadingQuote, setLoadingQuote] = useState(true);
   const [loadingShowrooms, setLoadingShowrooms] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("BANK_TRANSFER");
   const [form, setForm] = useState({
     customerName: authUser?.fullName ?? "",
@@ -63,7 +66,7 @@ const CheckoutPage = () => {
         const data = await showroomAPI.list();
         setShowrooms(data);
       } catch (error) {
-        setSubmitError(error instanceof Error ? error.message : "Khong the tai danh sach showroom.");
+        setSubmitError(error instanceof Error ? error.message : "Không thể tải danh sách showroom.");
       } finally {
         setLoadingShowrooms(false);
       }
@@ -72,10 +75,39 @@ const CheckoutPage = () => {
     void loadShowrooms();
   }, []);
 
-  const subtotal = product ? product.price * quantity : 0;
-  const ecoIncentive = 1_200_000;
-  const registrationFee = 2_500_000;
-  const total = subtotal - ecoIncentive + registrationFee;
+  useEffect(() => {
+    const loadQuote = async () => {
+      if (!product) {
+        return;
+      }
+
+      setLoadingQuote(true);
+      try {
+        const quote = await orderAPI.quote({
+          items: [
+            {
+              productId: product.id,
+              quantity
+            }
+          ]
+        });
+        setOrderQuote(quote);
+      } catch (error) {
+        setOrderQuote(null);
+        setSubmitError(error instanceof Error ? error.message : "Không thể tính tổng thanh toán.");
+      } finally {
+        setLoadingQuote(false);
+      }
+    };
+
+    void loadQuote();
+  }, [product, quantity]);
+
+  const fallbackSubtotal = product ? product.price * quantity : 0;
+  const subtotal = orderQuote?.subtotal ?? fallbackSubtotal;
+  const showroomIncentive = orderQuote?.discountAmount ?? 0;
+  const registrationFee = orderQuote?.registrationFee ?? 0;
+  const total = orderQuote?.totalAmount ?? fallbackSubtotal;
 
   const districts = useMemo(
     () => Array.from(new Set(showrooms.map((showroom) => showroom.district))).sort((left, right) => left.localeCompare(right, "vi")),
@@ -87,11 +119,40 @@ const CheckoutPage = () => {
   );
   const selectedShowroom = filteredShowrooms.find((showroom) => String(showroom.id) === form.pickupShowroomId) ?? null;
 
+  const inputClassName = (hasError: boolean) =>
+    `w-full border-0 border-b-2 px-0 py-2 font-medium focus:ring-0 ${
+      hasError
+        ? "border-red-500 bg-red-50/40 text-red-700 focus:border-red-500"
+        : "border-outline-variant bg-transparent focus:border-primary"
+    }`;
+
+  const selectClassName = (hasError: boolean) =>
+    `w-full rounded-lg border px-4 py-3 text-sm font-medium focus:outline-none ${
+      hasError
+        ? "border-red-500 bg-red-50/40 text-red-700 focus:border-red-500"
+        : "border-outline-variant/20 bg-white focus:border-primary"
+    }`;
+
   const updateForm = (field: keyof typeof form, value: string) => {
+    setFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
     setForm((current) => ({ ...current, [field]: value }));
   };
 
   const handleDistrictChange = (district: string) => {
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next.district;
+      delete next.pickupShowroomId;
+      return next;
+    });
     setForm((current) => ({
       ...current,
       district,
@@ -102,21 +163,29 @@ const CheckoutPage = () => {
   const handleSubmit = async () => {
     setSubmitError(null);
     setSubmitSuccess(null);
+    setFieldErrors({});
 
     if (!product) {
-      setSubmitError("Khong co san pham de dat.");
+      setSubmitError("Không có sản phẩm để đặt.");
       return;
     }
     if (!authUser?.id) {
-      setSubmitError("Ban can dang nhap truoc khi dat hang.");
+      setSubmitError("Bạn cần đăng nhập trước khi đặt hàng.");
       return;
     }
-    if (!form.customerName.trim() || !form.customerIdentityNumber.trim() || !form.phoneNumber.trim() || !form.customerEmail.trim()) {
-      setSubmitError("Vui long dien day du thong tin khach hang.");
-      return;
-    }
-    if (!form.district || !form.pickupShowroomId || !form.detailedAddress.trim()) {
-      setSubmitError("Vui long chon quan, showroom nhan xe va dia chi cu the.");
+
+    const nextFieldErrors: Record<string, string> = {};
+    if (!form.customerName.trim()) nextFieldErrors.customerName = "Vui lòng nhập họ và tên.";
+    if (!form.customerIdentityNumber.trim()) nextFieldErrors.customerIdentityNumber = "Vui lòng nhập CMND / CCCD.";
+    if (!form.phoneNumber.trim()) nextFieldErrors.phoneNumber = "Vui lòng nhập số điện thoại.";
+    if (!form.customerEmail.trim()) nextFieldErrors.customerEmail = "Vui lòng nhập email.";
+    if (!form.district) nextFieldErrors.district = "Vui lòng chọn quận / huyện.";
+    if (!form.pickupShowroomId) nextFieldErrors.pickupShowroomId = "Vui lòng chọn showroom nhận xe.";
+    if (!form.detailedAddress.trim()) nextFieldErrors.detailedAddress = "Vui lòng nhập địa chỉ cụ thể.";
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      setSubmitError("Vui lòng kiểm tra các trường đang được tô đỏ.");
       return;
     }
 
@@ -131,8 +200,6 @@ const CheckoutPage = () => {
         customerEmail: form.customerEmail.trim(),
         pickupShowroomId: Number(form.pickupShowroomId),
         detailedAddress: form.detailedAddress.trim(),
-        shippingFee: 0,
-        discountAmount: ecoIncentive,
         notes,
         items: [
           {
@@ -142,10 +209,25 @@ const CheckoutPage = () => {
         ]
       });
 
-      setSubmitSuccess(`Dat hang thanh cong. Ma don: ${createdOrder.orderNumber}`);
+      setOrderQuote({
+        subtotal: createdOrder.subtotal,
+        shippingFee: createdOrder.shippingFee,
+        discountAmount: createdOrder.discountAmount,
+        registrationFee: createdOrder.registrationFee,
+        totalAmount: createdOrder.totalAmount
+      });
+      if (selectedPaymentMethod === "VNPAY") {
+        const payment = await paymentAPI.createVnPayPayment({
+          orderId: createdOrder.id,
+          language: "vn"
+        });
+        window.location.assign(payment.paymentUrl);
+        return;
+      }
+      setSubmitSuccess(`Đặt hàng thành công. Mã đơn: ${createdOrder.orderNumber}`);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Khong the tao don hang.");
+      setSubmitError(error instanceof Error ? error.message : "Không thể tạo đơn hàng.");
     } finally {
       setSubmitting(false);
     }
@@ -160,8 +242,8 @@ const CheckoutPage = () => {
       <div className="mb-16">
         <span className="mono-label mb-4 block text-primary">Secure Checkout</span>
         <h1 className="text-5xl font-bold tracking-tighter md:text-6xl">
-          Nhan xe tai showroom <br />
-          phu hop cho ban o TP.HCM.
+          Nhận xe tại showroom <br />
+          phù hợp cho bạn ở TP.HCM.
         </h1>
       </div>
 
@@ -175,7 +257,7 @@ const CheckoutPage = () => {
           ) : null}
 
           <section>
-            <h2 className="mb-8 text-2xl font-bold tracking-tight">Phuong thuc thanh toan</h2>
+            <h2 className="mb-8 text-2xl font-bold tracking-tight">Phương thức thanh toán</h2>
             <div className="space-y-4">
               <div className={`rounded-xl border-2 p-6 ${selectedPaymentMethod === "BANK_TRANSFER" ? "border-primary bg-surface-container-low" : "border-transparent bg-surface-container-low"}`}>
                 <label className="flex cursor-pointer items-start gap-4">
@@ -188,10 +270,29 @@ const CheckoutPage = () => {
                   />
                   <div className="flex-grow">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-lg font-bold">Chuyen khoan</span>
+                      <span className="text-lg font-bold">Chuyển khoản</span>
                       <Landmark className="text-primary" />
                     </div>
-                    <p className="text-sm text-muted-foreground">Thanh toan qua tai khoan ngan hang cua ban.</p>
+                    <p className="text-sm text-muted-foreground">Thanh toán qua tài khoản ngân hàng của bạn.</p>
+                  </div>
+                </label>
+              </div>
+
+              <div className={`rounded-xl p-6 transition-all hover:bg-surface-container-high ${selectedPaymentMethod === "VNPAY" ? "border-2 border-primary bg-surface-container-low" : "bg-surface-container-low"}`}>
+                <label className="flex cursor-pointer items-start gap-4">
+                  <input
+                    type="radio"
+                    name="payment"
+                    checked={selectedPaymentMethod === "VNPAY"}
+                    onChange={() => setSelectedPaymentMethod("VNPAY")}
+                    className="mt-1 text-primary focus:ring-primary"
+                  />
+                  <div className="flex-grow">
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-lg font-bold">VNPay</span>
+                      <CreditCard className="text-primary" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">Thanh toan qua cong VNPay bang ATM, QR hoac the noi dia.</p>
                   </div>
                 </label>
               </div>
@@ -207,10 +308,10 @@ const CheckoutPage = () => {
                   />
                   <div className="flex-grow">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-lg font-bold">The tin dung</span>
+                      <span className="text-lg font-bold">Thẻ tín dụng</span>
                       <CreditCard className="text-muted-foreground" />
                     </div>
-                    <p className="text-sm text-muted-foreground">Visa, Mastercard hoac cac the quoc te thong dung.</p>
+                    <p className="text-sm text-muted-foreground">Visa, Mastercard hoặc các thẻ quốc tế thông dụng.</p>
                   </div>
                 </label>
               </div>
@@ -226,10 +327,10 @@ const CheckoutPage = () => {
                   />
                   <div className="flex-grow">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-lg font-bold">Tra gop</span>
+                      <span className="text-lg font-bold">Trả góp</span>
                       <Calendar className="text-muted-foreground" />
                     </div>
-                    <p className="text-sm text-muted-foreground">Showroom se lien he tu van goi tra gop khi xac nhan don.</p>
+                    <p className="text-sm text-muted-foreground">Showroom sẽ liên hệ tư vấn gói trả góp khi xác nhận đơn.</p>
                   </div>
                 </label>
               </div>
@@ -237,16 +338,17 @@ const CheckoutPage = () => {
           </section>
 
           <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
-            <h3 className="mb-6 text-xl font-bold">Thong tin khach hang</h3>
+            <h3 className="mb-6 text-xl font-bold">Thông tin khách hàng</h3>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="mono-label text-muted-foreground">Ho va ten</label>
+                <label className="mono-label text-muted-foreground">Họ và tên</label>
                 <input
                   type="text"
                   value={form.customerName}
                   onChange={(event) => updateForm("customerName", event.target.value)}
-                  className="w-full border-0 border-b-2 border-outline-variant bg-transparent px-0 py-2 font-medium focus:border-primary focus:ring-0"
+                  className={inputClassName(Boolean(fieldErrors.customerName))}
                 />
+                {fieldErrors.customerName ? <p className="text-sm text-red-600">{fieldErrors.customerName}</p> : null}
               </div>
               <div className="space-y-2">
                 <label className="mono-label text-muted-foreground">CMND / CCCD</label>
@@ -254,17 +356,19 @@ const CheckoutPage = () => {
                   type="text"
                   value={form.customerIdentityNumber}
                   onChange={(event) => updateForm("customerIdentityNumber", event.target.value)}
-                  className="w-full border-0 border-b-2 border-outline-variant bg-transparent px-0 py-2 font-medium focus:border-primary focus:ring-0"
+                  className={inputClassName(Boolean(fieldErrors.customerIdentityNumber))}
                 />
+                {fieldErrors.customerIdentityNumber ? <p className="text-sm text-red-600">{fieldErrors.customerIdentityNumber}</p> : null}
               </div>
               <div className="space-y-2">
-                <label className="mono-label text-muted-foreground">So dien thoai</label>
+                <label className="mono-label text-muted-foreground">Số điện thoại</label>
                 <input
                   type="tel"
                   value={form.phoneNumber}
                   onChange={(event) => updateForm("phoneNumber", event.target.value)}
-                  className="w-full border-0 border-b-2 border-outline-variant bg-transparent px-0 py-2 font-medium focus:border-primary focus:ring-0"
+                  className={inputClassName(Boolean(fieldErrors.phoneNumber))}
                 />
+                {fieldErrors.phoneNumber ? <p className="text-sm text-red-600">{fieldErrors.phoneNumber}</p> : null}
               </div>
               <div className="space-y-2">
                 <label className="mono-label text-muted-foreground">Email</label>
@@ -272,8 +376,9 @@ const CheckoutPage = () => {
                   type="email"
                   value={form.customerEmail}
                   onChange={(event) => updateForm("customerEmail", event.target.value)}
-                  className="w-full border-0 border-b-2 border-outline-variant bg-transparent px-0 py-2 font-medium focus:border-primary focus:ring-0"
+                  className={inputClassName(Boolean(fieldErrors.customerEmail))}
                 />
+                {fieldErrors.customerEmail ? <p className="text-sm text-red-600">{fieldErrors.customerEmail}</p> : null}
               </div>
             </div>
           </section>
@@ -281,59 +386,62 @@ const CheckoutPage = () => {
           <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
             <div className="mb-6 flex items-center gap-3">
               <Store className="text-primary" />
-              <h3 className="text-xl font-bold">Showroom nhan xe</h3>
+              <h3 className="text-xl font-bold">Showroom nhận xe</h3>
             </div>
 
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="mono-label text-muted-foreground">Thanh pho</label>
+                <label className="mono-label text-muted-foreground">Thành phố</label>
                 <input
                   type="text"
-                  value="TP. Ho Chi Minh"
+                  value="TP. Hồ Chí Minh"
                   disabled
                   className="w-full rounded-lg border border-outline-variant/20 bg-surface-container-low px-4 py-3 text-sm font-medium text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <label className="mono-label text-muted-foreground">Chon quan / huyen</label>
+                <label className="mono-label text-muted-foreground">Chọn quận / huyện</label>
                 <select
                   value={form.district}
                   onChange={(event) => handleDistrictChange(event.target.value)}
-                  className="w-full rounded-lg border border-outline-variant/20 bg-white px-4 py-3 text-sm font-medium focus:border-primary focus:outline-none"
+                  className={selectClassName(Boolean(fieldErrors.district))}
                 >
-                  <option value="">{loadingShowrooms ? "Dang tai quan..." : "Chon quan / huyen"}</option>
+                  <option value="">{loadingShowrooms ? "Đang tải quận..." : "Chọn quận / huyện"}</option>
                   {districts.map((district) => (
                     <option key={district} value={district}>
                       {district}
                     </option>
                   ))}
                 </select>
+                {fieldErrors.district ? <p className="text-sm text-red-600">{fieldErrors.district}</p> : null}
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label className="mono-label text-muted-foreground">Chon showroom</label>
+                <label className="mono-label text-muted-foreground">Chọn showroom</label>
                 <select
                   value={form.pickupShowroomId}
                   onChange={(event) => updateForm("pickupShowroomId", event.target.value)}
                   disabled={!form.district}
-                  className="w-full rounded-lg border border-outline-variant/20 bg-white px-4 py-3 text-sm font-medium focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-surface-container-low"
+                  className={`${selectClassName(Boolean(fieldErrors.pickupShowroomId))} disabled:cursor-not-allowed disabled:bg-surface-container-low`}
                 >
-                  <option value="">{form.district ? "Chon showroom nhan xe" : "Vui long chon quan truoc"}</option>
+                  <option value="">{form.district ? "Chọn showroom nhận xe" : "Vui lòng chọn quận trước"}</option>
                   {filteredShowrooms.map((showroom) => (
                     <option key={showroom.id} value={showroom.id}>
                       {showroom.name}
                     </option>
                   ))}
                 </select>
+                {fieldErrors.pickupShowroomId ? <p className="text-sm text-red-600">{fieldErrors.pickupShowroomId}</p> : null}
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label className="mono-label text-muted-foreground">Dia chi cu the</label>
+                <label className="mono-label text-muted-foreground">Địa chỉ cụ thể</label>
                 <textarea
                   rows={4}
                   value={form.detailedAddress}
                   onChange={(event) => updateForm("detailedAddress", event.target.value)}
-                  placeholder="Nhap so nha, ten duong, phuong/xa tai TP.HCM de showroom lien he nhan xe."
-                  className="w-full rounded-lg border border-outline-variant/20 bg-white px-4 py-3 text-sm font-medium focus:border-primary focus:outline-none"
+                  placeholder="Nhập số nhà, tên đường, phường/xã tại TP.HCM để showroom liên hệ nhận xe."
+                  className={selectClassName(Boolean(fieldErrors.detailedAddress))}
                 />
+                {fieldErrors.detailedAddress ? <p className="text-sm text-red-600">{fieldErrors.detailedAddress}</p> : null}
               </div>
             </div>
 
@@ -346,19 +454,19 @@ const CheckoutPage = () => {
                 <p>{selectedShowroom.address}</p>
                 <p className="mt-2 flex items-center gap-2">
                   <Phone size={14} />
-                  {selectedShowroom.phone || "Dang cap nhat"}
+                  {selectedShowroom.phone || "Đang cập nhật"}
                 </p>
               </div>
             ) : null}
           </section>
 
           <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
-            <h3 className="mb-4 text-xl font-bold">Thong tin bo sung</h3>
+            <h3 className="mb-4 text-xl font-bold">Thông tin bổ sung</h3>
             <textarea
               rows={5}
               value={form.notes}
               onChange={(event) => updateForm("notes", event.target.value)}
-              placeholder="Ghi chu them cho showroom neu can."
+              placeholder="Ghi chú thêm cho showroom nếu cần."
               className="w-full rounded-lg border border-outline-variant/20 bg-white px-4 py-3 text-sm font-medium focus:border-primary focus:outline-none"
             />
           </section>
@@ -380,53 +488,59 @@ const CheckoutPage = () => {
               <div className="mb-8 flex items-end justify-between">
                 <div>
                   <h3 className="text-2xl font-bold tracking-tight">{product.name}</h3>
-                  <p className="text-sm text-muted-foreground">Phien ban: {state.selectedColor || "Default"}</p>
+                  <p className="text-sm text-muted-foreground">Phiên bản: {state.selectedColor || "Mặc định"}</p>
                   <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">{product.categoryName || "E-Bike"}</p>
                 </div>
-                <span className="font-mono text-xl font-bold text-primary">{product.price.toLocaleString("vi-VN")}�</span>
+                <span className="font-mono text-xl font-bold text-primary">{product.price.toLocaleString("vi-VN")}đ</span>
               </div>
 
               <div className="space-y-4 border-t border-outline-variant/15 pt-8">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">So luong</span>
+                  <span className="text-muted-foreground">Số lượng</span>
                   <span className="font-mono font-medium">{quantity}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tam tinh</span>
-                  <span className="font-mono font-medium">{subtotal.toLocaleString("vi-VN")}�</span>
+                  <span className="text-muted-foreground">Tạm tính</span>
+                  <span className="font-mono font-medium">{subtotal.toLocaleString("vi-VN")}đ</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Uu dai showroom</span>
-                  <span className="font-mono font-medium text-error">- {ecoIncentive.toLocaleString("vi-VN")}�</span>
+                  <span className="text-muted-foreground">Ưu đãi showroom</span>
+                  <span className="font-mono font-medium text-error">- {showroomIncentive.toLocaleString("vi-VN")}đ</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Phi dang ky</span>
-                  <span className="font-mono font-medium">{registrationFee.toLocaleString("vi-VN")}�</span>
+                  <span className="text-muted-foreground">Phí đăng ký</span>
+                  <span className="font-mono font-medium">{registrationFee.toLocaleString("vi-VN")}đ</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Nhan tai showroom</span>
-                  <span className="font-mono font-medium text-primary">Mien phi</span>
+                  <span className="text-muted-foreground">Nhận tại showroom</span>
+                  <span className="font-mono font-medium text-primary">Miễn phí</span>
                 </div>
               </div>
 
               <div className="mt-8 border-t-2 border-foreground pt-8">
                 <div className="mb-8 flex items-baseline justify-between">
-                  <span className="text-lg font-bold">Tong thanh toan</span>
+                  <span className="text-lg font-bold">Tổng thanh toán</span>
                   <div className="text-right">
-                    <span className="text-3xl font-bold tracking-tighter">{total.toLocaleString("vi-VN")}�</span>
-                    <p className="mt-1 text-[10px] font-mono text-muted-foreground">VAT INCLUDED</p>
+                    <span className="text-3xl font-bold tracking-tighter">{total.toLocaleString("vi-VN")}đ</span>
+                    <p className="mt-1 text-[10px] font-mono text-muted-foreground">{loadingQuote ? "ĐANG TÍNH LẠI" : "ĐÃ BAO GỒM VAT"}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => void handleSubmit()}
-                  disabled={submitting}
+                  disabled={submitting || loadingQuote || !orderQuote}
                   className="w-full rounded-lg bg-primary py-5 text-lg font-bold tracking-tight text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {submitting ? "Dang tao don hang..." : "Xac nhan dat hang"}
+                  {submitting
+                    ? selectedPaymentMethod === "VNPAY"
+                      ? "Dang chuyen sang VNPay..."
+                      : "Đang tạo đơn hàng..."
+                    : selectedPaymentMethod === "VNPAY"
+                      ? "Thanh toan voi VNPay"
+                      : "Xác nhận đặt hàng"}
                 </button>
                 <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">
                   <Lock size={14} />
-                  Encrypted Secure Payment
+                  Thanh toán bảo mật được mã hóa
                 </p>
               </div>
             </div>
@@ -435,10 +549,10 @@ const CheckoutPage = () => {
               <div className="flex-grow">
                 <div className="mb-2 flex items-center gap-2">
                   <Zap size={14} className="text-primary" fill="currentColor" />
-                  <span className="mono-label text-primary">TP.HCM PICKUP ONLY</span>
+                  <span className="mono-label text-primary">CHỈ NHẬN XE TẠI TP.HCM</span>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  He thong hien chi ho tro nhan xe tai showroom trong TP.HCM. Khach hang chon quan va dia chi cu the de showroom lien he.
+                  Hệ thống hiện chỉ hỗ trợ nhận xe tại showroom trong TP.HCM. Khách hàng chọn quận và địa chỉ cụ thể để showroom liên hệ.
                 </p>
               </div>
             </div>

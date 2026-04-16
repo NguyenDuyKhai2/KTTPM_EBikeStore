@@ -1,6 +1,6 @@
 package com.ebike.productModule.service;
 
-import com.ebike.productModule.dto.AdminProductImageDto;
+import com.ebike.productModule.dto.response.AdminProductImageDto;
 import com.ebike.productModule.entity.Product;
 import com.ebike.productModule.entity.ProductImage;
 import com.ebike.productModule.entity.ProductImageStatus;

@@ -1,11 +1,12 @@
 package com.ebike.authModule.controller;
 
-import com.ebike.authModule.dto.AuthResponse;
-import com.ebike.authModule.dto.EnhancedAuthResponse;
-import com.ebike.authModule.dto.LoginRequest;
-import com.ebike.authModule.dto.RegisterRequest;
-import com.ebike.authModule.dto.RoleSpecificLoginResponse;
-import com.ebike.authModule.dto.UserProfileResponse;
+import com.ebike.authModule.dto.response.AuthResponse;
+import com.ebike.authModule.dto.response.EnhancedAuthResponse;
+import com.ebike.authModule.dto.request.LoginRequest;
+import com.ebike.authModule.dto.request.RegisterRequest;
+import com.ebike.authModule.dto.request.UpdateProfileRequest;
+import com.ebike.authModule.dto.response.RoleSpecificLoginResponse;
+import com.ebike.authModule.dto.response.UserProfileResponse;
 import com.ebike.authModule.service.AuthenticationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -174,6 +176,17 @@ public class AuthController {
             resolvedIdentity = authentication.getName();
         }
         return authenticationService.getProfile(resolvedIdentity);
+    }
+
+    @PutMapping("/profile")
+    public UserProfileResponse updateProfile(
+        Authentication authentication,
+        @RequestBody UpdateProfileRequest request
+    ) {
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
+        }
+        return authenticationService.updateProfile(authentication.getName(), request);
     }
 
     @GetMapping("/verify-token")

@@ -77,6 +77,8 @@ const authSlice = createSlice({
       })
       .addCase(loginThunk.pending, (state) => {
         state.isLoading = true;
+        state.user = null;
+        state.isAuthenticated = false;
         state.error = null;
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
@@ -89,6 +91,11 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = false;
         state.error = action.error.message ?? "Login failed";
+      })
+      .addCase(logoutThunk.pending, (state) => {
+        state.user = null;
+        state.isAuthenticated = false;
+        state.error = null;
       })
       .addCase(logoutThunk.fulfilled, (state) => {
         state.user = null;

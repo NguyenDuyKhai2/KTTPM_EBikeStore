@@ -1,7 +1,0 @@
-{
-  "name": "Kinetic E-Bike Web",
-  "description": "A premium electric vehicle web application featuring high-performance design, store locator, and seamless checkout experience.",
-  "requestFramePermissions": [
-    "geolocation"
-  ]
-}

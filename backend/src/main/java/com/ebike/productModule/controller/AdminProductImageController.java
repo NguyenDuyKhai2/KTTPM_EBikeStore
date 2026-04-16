@@ -1,6 +1,6 @@
 package com.ebike.productModule.controller;
 
-import com.ebike.productModule.dto.AdminProductImageDto;
+import com.ebike.productModule.dto.response.AdminProductImageDto;
 import com.ebike.productModule.service.AdminProductImageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

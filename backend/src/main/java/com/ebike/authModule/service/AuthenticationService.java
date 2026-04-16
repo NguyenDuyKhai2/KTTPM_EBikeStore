@@ -1,11 +1,12 @@
 package com.ebike.authModule.service;
 
-import com.ebike.authModule.dto.AuthResponse;
-import com.ebike.authModule.dto.EnhancedAuthResponse;
-import com.ebike.authModule.dto.LoginRequest;
-import com.ebike.authModule.dto.RegisterRequest;
-import com.ebike.authModule.dto.RoleSpecificLoginResponse;
-import com.ebike.authModule.dto.UserProfileResponse;
+import com.ebike.authModule.dto.response.AuthResponse;
+import com.ebike.authModule.dto.response.EnhancedAuthResponse;
+import com.ebike.authModule.dto.request.LoginRequest;
+import com.ebike.authModule.dto.request.RegisterRequest;
+import com.ebike.authModule.dto.request.UpdateProfileRequest;
+import com.ebike.authModule.dto.response.RoleSpecificLoginResponse;
+import com.ebike.authModule.dto.response.UserProfileResponse;
 
 public interface AuthenticationService {
 
@@ -23,6 +24,8 @@ public interface AuthenticationService {
     );
 
     UserProfileResponse getProfile(String usernameOrEmail);
+
+    UserProfileResponse updateProfile(String usernameOrEmail, UpdateProfileRequest request);
 
     boolean validateToken(String token);
 

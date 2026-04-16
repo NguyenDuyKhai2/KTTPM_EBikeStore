@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,14 +43,16 @@ public class UserController {
 
     @GetMapping("/{userId}")
     @Transactional(readOnly = true)
-    public UserBasicResponse getUser(@PathVariable Long userId) {
+    public UserBasicResponse getUser(@PathVariable Long userId, Authentication authentication) {
+        assertCanAccessUser(userId, authentication);
         User user = getUserOrThrow(userId);
         return toUserBasicResponse(user);
     }
 
     @GetMapping("/{userId}/addresses")
     @Transactional(readOnly = true)
-    public List<UserAddressResponse> getAddresses(@PathVariable Long userId) {
+    public List<UserAddressResponse> getAddresses(@PathVariable Long userId, Authentication authentication) {
+        assertCanAccessUser(userId, authentication);
         validateUser(userId);
         return userAddressRepository.findByUserId(userId).stream()
             .sorted(Comparator.comparing(UserAddress::getId))
@@ -60,7 +63,12 @@ public class UserController {
     @PostMapping("/{userId}/addresses")
     @Transactional
     @ResponseStatus(HttpStatus.CREATED)
-    public UserAddressResponse createAddress(@PathVariable Long userId, @RequestBody UserAddressRequest request) {
+    public UserAddressResponse createAddress(
+        @PathVariable Long userId,
+        @RequestBody UserAddressRequest request,
+        Authentication authentication
+    ) {
+        assertCanAccessUser(userId, authentication);
         User user = getUserOrThrow(userId);
 
         UserAddress address = new UserAddress();
@@ -78,7 +86,8 @@ public class UserController {
 
     @GetMapping("/{userId}/preferences")
     @Transactional(readOnly = true)
-    public UserPreferenceResponse getPreferences(@PathVariable Long userId) {
+    public UserPreferenceResponse getPreferences(@PathVariable Long userId, Authentication authentication) {
+        assertCanAccessUser(userId, authentication);
         validateUser(userId);
         UserPreference preference = userPreferenceRepository.findByUserId(userId)
             .orElse(null);
@@ -92,7 +101,12 @@ public class UserController {
 
     @PutMapping("/{userId}/preferences")
     @Transactional
-    public UserPreferenceResponse upsertPreferences(@PathVariable Long userId, @RequestBody UserPreferenceRequest request) {
+    public UserPreferenceResponse upsertPreferences(
+        @PathVariable Long userId,
+        @RequestBody UserPreferenceRequest request,
+        Authentication authentication
+    ) {
+        assertCanAccessUser(userId, authentication);
         User user = getUserOrThrow(userId);
 
         UserPreference preference = userPreferenceRepository.findByUserId(userId)
@@ -126,6 +140,33 @@ public class UserController {
 
     private void validateUser(Long userId) {
         getUserOrThrow(userId);
+    }
+
+    private void assertCanAccessUser(Long userId, Authentication authentication) {
+        if (isBackOffice(authentication)) {
+            return;
+        }
+        User currentUser = getAuthenticatedUser(authentication);
+        if (!currentUser.getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only access your own profile data");
+        }
+    }
+
+    private User getAuthenticatedUser(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
+        }
+        return userRepository.findByUsername(authentication.getName())
+            .or(() -> userRepository.findByEmail(authentication.getName()))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
+    }
+
+    private boolean isBackOffice(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+            .anyMatch(authority -> {
+                String role = authority.getAuthority();
+                return "ROLE_STAFF".equals(role) || "ROLE_MANAGER".equals(role) || "ROLE_ADMIN".equals(role);
+            });
     }
 
     private AddressType parseAddressType(String value) {

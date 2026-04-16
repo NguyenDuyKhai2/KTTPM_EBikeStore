@@ -1,11 +1,12 @@
 package com.ebike.authModule.service.impl;
 
-import com.ebike.authModule.dto.AuthResponse;
-import com.ebike.authModule.dto.EnhancedAuthResponse;
-import com.ebike.authModule.dto.LoginRequest;
-import com.ebike.authModule.dto.RegisterRequest;
-import com.ebike.authModule.dto.RoleSpecificLoginResponse;
-import com.ebike.authModule.dto.UserProfileResponse;
+import com.ebike.authModule.dto.response.AuthResponse;
+import com.ebike.authModule.dto.response.EnhancedAuthResponse;
+import com.ebike.authModule.dto.request.LoginRequest;
+import com.ebike.authModule.dto.request.RegisterRequest;
+import com.ebike.authModule.dto.request.UpdateProfileRequest;
+import com.ebike.authModule.dto.response.RoleSpecificLoginResponse;
+import com.ebike.authModule.dto.response.UserProfileResponse;
 import com.ebike.authModule.entity.AuthenticationLog;
 import com.ebike.authModule.entity.Role;
 import com.ebike.authModule.entity.User;
@@ -170,17 +171,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         User user = findUser(usernameOrEmail);
-        return new UserProfileResponse(
-            user.getId(),
-            user.getUsername(),
-            user.getEmail(),
-            user.getFirstName(),
-            user.getLastName(),
-            user.getActive(),
-            user.getVerified(),
-            extractRoleNames(user),
-            permissionService.resolvePermissionCodes(user)
-        );
+        return toUserProfileResponse(user);
+    }
+
+    @Override
+    public UserProfileResponse updateProfile(String usernameOrEmail, UpdateProfileRequest request) {
+        if (isBlank(usernameOrEmail)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "usernameOrEmail is required");
+        }
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
+        }
+
+        User user = findUser(usernameOrEmail);
+        user.setFirstName(trimToNull(request.firstName()));
+        user.setLastName(trimToNull(request.lastName()));
+        User savedUser = userRepository.save(user);
+        return toUserProfileResponse(savedUser);
     }
 
     @Override
@@ -246,6 +253,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             user.getVerified(),
             issuedAt,
             expiresAt
+        );
+    }
+
+    private UserProfileResponse toUserProfileResponse(User user) {
+        return new UserProfileResponse(
+            user.getId(),
+            user.getUsername(),
+            user.getEmail(),
+            user.getFirstName(),
+            user.getLastName(),
+            user.getActive(),
+            user.getVerified(),
+            extractRoleNames(user),
+            permissionService.resolvePermissionCodes(user)
         );
     }
 

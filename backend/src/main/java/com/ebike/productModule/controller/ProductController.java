@@ -1,7 +1,7 @@
 package com.ebike.productModule.controller;
 
-import com.ebike.productModule.dto.ProductDetailDto;
-import com.ebike.productModule.dto.ProductSummaryDto;
+import com.ebike.productModule.dto.response.ProductDetailDto;
+import com.ebike.productModule.dto.response.ProductSummaryDto;
 import com.ebike.productModule.service.ProductService;
 import java.math.BigDecimal;
 import java.util.List;

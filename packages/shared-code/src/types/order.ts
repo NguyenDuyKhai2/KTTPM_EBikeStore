@@ -22,6 +22,36 @@ export interface Payment {
   amount: number;
 }
 
+export interface VnPayCreatePaymentRequest {
+  orderId: number;
+  bankCode?: string;
+  language?: "vn" | "en";
+}
+
+export interface VnPayCreatePaymentResponse {
+  paymentUrl: string;
+  paymentId: number;
+  txnRef: string;
+  amount: number;
+  expireTime: string;
+  orderNumber: string;
+}
+
+export interface VnPayReturnResponse {
+  valid: boolean;
+  success: boolean;
+  responseCode?: string | null;
+  txnRef?: string | null;
+  amount?: number | null;
+  transactionNo?: string | null;
+  bankCode?: string | null;
+  cardType?: string | null;
+  paymentId?: number | null;
+  orderId?: number | null;
+  orderNumber?: string | null;
+  paymentStatus?: string | null;
+}
+
 export interface Showroom {
   id: number;
   name: string;
@@ -56,6 +86,7 @@ export interface Order {
   subtotal: number;
   shippingFee: number;
   discountAmount: number;
+  registrationFee: number;
   totalAmount: number;
   notes?: string | null;
   customerEmail?: string | null;
@@ -74,11 +105,24 @@ export interface CreateOrderRequest {
   customerIdentityNumber: string;
   pickupShowroomId: number;
   detailedAddress: string;
-  shippingFee?: number;
-  discountAmount?: number;
   notes?: string;
   items: Array<{
     productId: number;
     quantity: number;
   }>;
+}
+
+export interface OrderQuoteRequest {
+  items: Array<{
+    productId: number;
+    quantity: number;
+  }>;
+}
+
+export interface OrderQuote {
+  subtotal: number;
+  shippingFee: number;
+  discountAmount: number;
+  registrationFee: number;
+  totalAmount: number;
 }

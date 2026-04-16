@@ -1,10 +1,10 @@
 package com.ebike.productModule.service;
 
-import com.ebike.productModule.dto.CategorySummaryDto;
-import com.ebike.productModule.dto.ProductDetailDto;
-import com.ebike.productModule.dto.ProductSpecificationDto;
-import com.ebike.productModule.dto.ProductSummaryDto;
-import com.ebike.productModule.dto.ProductVariantDto;
+import com.ebike.productModule.dto.response.CategorySummaryDto;
+import com.ebike.productModule.dto.response.ProductDetailDto;
+import com.ebike.productModule.dto.response.ProductSpecificationDto;
+import com.ebike.productModule.dto.response.ProductSummaryDto;
+import com.ebike.productModule.dto.response.ProductVariantDto;
 import com.ebike.productModule.entity.Product;
 import com.ebike.productModule.entity.ProductImage;
 import com.ebike.productModule.entity.ProductImageStatus;
@@ -85,7 +85,7 @@ public class ProductService {
         };
     }
 
-    private ProductSummaryDto toSummaryDto(Product product) {
+    public ProductSummaryDto toSummaryDto(Product product) {
         return new ProductSummaryDto(
             product.getId(),
             product.getName(),

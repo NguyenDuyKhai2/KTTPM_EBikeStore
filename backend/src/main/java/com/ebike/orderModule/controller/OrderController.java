@@ -7,6 +7,15 @@ import com.ebike.orderModule.entity.OrderItem;
 import com.ebike.orderModule.entity.OrderStatus;
 import com.ebike.orderModule.entity.Shipment;
 import com.ebike.orderModule.entity.Showroom;
+import com.ebike.orderModule.dto.request.OrderCreateItemRequest;
+import com.ebike.orderModule.dto.request.OrderCreateRequest;
+import com.ebike.orderModule.dto.request.OrderQuoteRequest;
+import com.ebike.orderModule.dto.request.OrderStatusUpdateRequest;
+import com.ebike.orderModule.dto.response.OrderItemResponse;
+import com.ebike.orderModule.dto.response.OrderQuoteResponse;
+import com.ebike.orderModule.dto.response.OrderResponse;
+import com.ebike.orderModule.dto.response.ShipmentResponse;
+import com.ebike.orderModule.dto.response.ShowroomResponse;
 import com.ebike.orderModule.repository.OrderRepository;
 import com.ebike.orderModule.repository.ShowroomRepository;
 import com.ebike.productModule.entity.Product;
@@ -19,6 +28,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,6 +47,8 @@ import org.springframework.web.server.ResponseStatusException;
 public class OrderController {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
+    private static final BigDecimal SHOWROOM_INCENTIVE_AMOUNT = new BigDecimal("1200000");
+    private static final BigDecimal REGISTRATION_FEE_AMOUNT = new BigDecimal("2500000");
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
@@ -56,10 +69,13 @@ public class OrderController {
 
     @GetMapping
     @Transactional(readOnly = true)
-    public List<OrderResponse> getOrders(@RequestParam(required = false) Long userId) {
-        List<Order> orders = userId == null
+    public List<OrderResponse> getOrders(Authentication authentication, @RequestParam(required = false) Long userId) {
+        User currentUser = getAuthenticatedUser(authentication);
+        Long effectiveUserId = isBackOffice(authentication) ? userId : currentUser.getId();
+
+        List<Order> orders = effectiveUserId == null
             ? orderRepository.findAll()
-            : orderRepository.findByUserId(userId);
+            : orderRepository.findByUserId(effectiveUserId);
 
         return orders.stream()
             .sorted(Comparator.comparing(Order::getCreatedAt).reversed())
@@ -69,33 +85,40 @@ public class OrderController {
 
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
-    public OrderResponse getOrderById(@PathVariable Long id) {
+    public OrderResponse getOrderById(@PathVariable Long id, Authentication authentication) {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        assertCanAccessOrder(order, authentication);
 
         return toResponse(order);
+    }
+
+    @PostMapping("/quote")
+    @Transactional(readOnly = true)
+    public OrderQuoteResponse quoteOrder(@RequestBody OrderQuoteRequest request) {
+        return buildQuote(validateQuoteItems(request == null ? null : request.items()));
     }
 
     @PostMapping
     @Transactional
     @ResponseStatus(HttpStatus.CREATED)
-    public OrderResponse createOrder(@RequestBody OrderCreateRequest request) {
-        if (request == null || request.userId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId is required");
+    public OrderResponse createOrder(@RequestBody OrderCreateRequest request, Authentication authentication) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
         }
         if (request.items() == null || request.items().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one order item is required");
         }
 
-        User user = userRepository.findById(request.userId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        User user = getAuthenticatedUser(authentication);
 
         Order order = new Order();
         order.setUser(user);
         order.setOrderNumber(generateOrderNumber());
         order.setStatus(OrderStatus.PENDING);
-        order.setShippingFee(defaultValue(request.shippingFee()));
-        order.setDiscountAmount(defaultValue(request.discountAmount()));
+        order.setShippingFee(ZERO);
+        order.setDiscountAmount(SHOWROOM_INCENTIVE_AMOUNT);
+        order.setRegistrationFee(REGISTRATION_FEE_AMOUNT);
         order.setNotes(request.notes());
         order.setCustomerEmail(normalize(request.customerEmail()));
         order.setCustomerIdentityNumber(normalize(request.customerIdentityNumber()));
@@ -120,16 +143,10 @@ public class OrderController {
             .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup showroom not found"));
 
+        List<OrderCreateItemRequest> quoteItems = validateQuoteItems(request.items());
         BigDecimal subtotal = ZERO;
 
-        for (OrderCreateItemRequest itemRequest : request.items()) {
-            if (itemRequest.productId() == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "productId is required");
-            }
-            if (itemRequest.quantity() == null || itemRequest.quantity() <= 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "quantity must be greater than 0");
-            }
-
+        for (OrderCreateItemRequest itemRequest : quoteItems) {
             Product product = productRepository.findById(itemRequest.productId())
                 .filter(p -> Boolean.TRUE.equals(p.getActive()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found: " + itemRequest.productId()));
@@ -150,16 +167,7 @@ public class OrderController {
         }
 
         order.setSubtotal(subtotal);
-
-        BigDecimal totalAmount = subtotal
-            .add(order.getShippingFee())
-            .subtract(order.getDiscountAmount());
-
-        if (totalAmount.signum() < 0) {
-            totalAmount = ZERO;
-        }
-
-        order.setTotalAmount(totalAmount);
+        order.setTotalAmount(calculateTotalAmount(subtotal, order.getShippingFee(), order.getDiscountAmount(), order.getRegistrationFee()));
 
         Shipment shipment = new Shipment();
         shipment.setOrder(order);
@@ -178,6 +186,7 @@ public class OrderController {
 
     @PatchMapping("/{id}/status")
     @Transactional
+    @PreAuthorize("hasAnyRole('STAFF', 'MANAGER', 'ADMIN')")
     public OrderResponse updateOrderStatus(@PathVariable Long id, @RequestBody OrderStatusUpdateRequest request) {
         if (request == null || request.status() == null || request.status().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status is required");
@@ -208,12 +217,91 @@ public class OrderController {
         return value == null ? ZERO : value;
     }
 
+    private List<OrderCreateItemRequest> validateQuoteItems(List<OrderCreateItemRequest> items) {
+        if (items == null || items.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one order item is required");
+        }
+
+        for (OrderCreateItemRequest itemRequest : items) {
+            if (itemRequest.productId() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "productId is required");
+            }
+            if (itemRequest.quantity() == null || itemRequest.quantity() <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "quantity must be greater than 0");
+            }
+        }
+
+        return items;
+    }
+
+    private OrderQuoteResponse buildQuote(List<OrderCreateItemRequest> items) {
+        BigDecimal subtotal = ZERO;
+
+        for (OrderCreateItemRequest itemRequest : items) {
+            Product product = productRepository.findById(itemRequest.productId())
+                .filter(p -> Boolean.TRUE.equals(p.getActive()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found: " + itemRequest.productId()));
+
+            BigDecimal unitPrice = product.getDiscountPrice() != null ? product.getDiscountPrice() : product.getPrice();
+            subtotal = subtotal.add(unitPrice.multiply(BigDecimal.valueOf(itemRequest.quantity())));
+        }
+
+        return new OrderQuoteResponse(
+            subtotal,
+            ZERO,
+            SHOWROOM_INCENTIVE_AMOUNT,
+            REGISTRATION_FEE_AMOUNT,
+            calculateTotalAmount(subtotal, ZERO, SHOWROOM_INCENTIVE_AMOUNT, REGISTRATION_FEE_AMOUNT)
+        );
+    }
+
+    private BigDecimal calculateTotalAmount(
+        BigDecimal subtotal,
+        BigDecimal shippingFee,
+        BigDecimal discountAmount,
+        BigDecimal registrationFee
+    ) {
+        BigDecimal totalAmount = defaultValue(subtotal)
+            .add(defaultValue(shippingFee))
+            .add(defaultValue(registrationFee))
+            .subtract(defaultValue(discountAmount));
+
+        return totalAmount.signum() < 0 ? ZERO : totalAmount;
+    }
+
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
     private String normalize(String value) {
         return isBlank(value) ? null : value.trim();
+    }
+
+    private User getAuthenticatedUser(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
+        }
+        return userRepository.findByUsername(authentication.getName())
+            .or(() -> userRepository.findByEmail(authentication.getName()))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
+    }
+
+    private void assertCanAccessOrder(Order order, Authentication authentication) {
+        if (isBackOffice(authentication)) {
+            return;
+        }
+        User currentUser = getAuthenticatedUser(authentication);
+        if (!order.getUser().getId().equals(currentUser.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only access your own orders");
+        }
+    }
+
+    private boolean isBackOffice(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+            .anyMatch(authority -> {
+                String role = authority.getAuthority();
+                return "ROLE_STAFF".equals(role) || "ROLE_MANAGER".equals(role) || "ROLE_ADMIN".equals(role);
+            });
     }
 
     private String buildShippingAddress(Showroom showroom, String detailedAddress) {
@@ -230,6 +318,7 @@ public class OrderController {
             order.getSubtotal(),
             order.getShippingFee(),
             order.getDiscountAmount(),
+            order.getRegistrationFee(),
             order.getTotalAmount(),
             order.getNotes(),
             order.getCustomerEmail(),
@@ -273,81 +362,4 @@ public class OrderController {
         );
     }
 
-    public record OrderCreateRequest(
-        Long userId,
-        String customerName,
-        String phoneNumber,
-        String customerEmail,
-        String customerIdentityNumber,
-        Long pickupShowroomId,
-        String detailedAddress,
-        BigDecimal shippingFee,
-        BigDecimal discountAmount,
-        String notes,
-        List<OrderCreateItemRequest> items
-    ) {
-    }
-
-    public record OrderCreateItemRequest(Long productId, Integer quantity) {
-    }
-
-    public record OrderStatusUpdateRequest(String status) {
-    }
-
-    public record OrderItemResponse(
-        Long id,
-        Long productId,
-        String productName,
-        BigDecimal unitPrice,
-        Integer quantity,
-        BigDecimal lineTotal
-    ) {
-    }
-
-    public record OrderResponse(
-        Long id,
-        Long userId,
-        String orderNumber,
-        String status,
-        BigDecimal subtotal,
-        BigDecimal shippingFee,
-        BigDecimal discountAmount,
-        BigDecimal totalAmount,
-        String notes,
-        String customerEmail,
-        String customerIdentityNumber,
-        java.time.LocalDateTime createdAt,
-        java.time.LocalDateTime updatedAt,
-        List<OrderItemResponse> items,
-        ShipmentResponse shipment
-    ) {
-    }
-
-    public record ShipmentResponse(
-        Long id,
-        String shipmentStatus,
-        String recipientName,
-        String phoneNumber,
-        String recipientEmail,
-        String pickupDistrict,
-        String detailedAddress,
-        String shippingAddress,
-        String trackingNumber,
-        java.time.LocalDateTime shippedAt,
-        java.time.LocalDateTime deliveredAt,
-        ShowroomResponse pickupShowroom
-    ) {
-    }
-
-    public record ShowroomResponse(
-        Long id,
-        String name,
-        String city,
-        String district,
-        String address,
-        String phone,
-        String openingHours,
-        Boolean active
-    ) {
-    }
 }
