@@ -4,9 +4,9 @@ import com.ebike.orderModule.dto.request.VnPayCreatePaymentRequest;
 import com.ebike.orderModule.dto.response.VnPayCreatePaymentResponse;
 import com.ebike.orderModule.dto.response.VnPayReturnResponse;
 import com.ebike.orderModule.service.VnPayService;
+import com.ebike.shared.constants.PermissionConstants;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,13 +32,10 @@ public class VnPayController {
         HttpServletRequest servletRequest,
         Authentication authentication
     ) {
-        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
-            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
-        }
         return vnPayService.createPaymentUrl(
             request,
             resolveClientIp(servletRequest),
-            authentication.getName(),
+            authentication == null ? null : authentication.getName(),
             isBackOffice(authentication)
         );
     }
@@ -67,9 +64,6 @@ public class VnPayController {
 
     private boolean isBackOffice(Authentication authentication) {
         return authentication != null && authentication.getAuthorities().stream()
-            .anyMatch(authority -> {
-                String role = authority.getAuthority();
-                return "ROLE_STAFF".equals(role) || "ROLE_MANAGER".equals(role) || "ROLE_ADMIN".equals(role);
-            });
+            .anyMatch(authority -> PermissionConstants.OrderManagement.PAYMENT_VERIFY.equals(authority.getAuthority()));
     }
 }

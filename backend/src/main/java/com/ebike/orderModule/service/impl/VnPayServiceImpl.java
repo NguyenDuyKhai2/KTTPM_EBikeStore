@@ -64,7 +64,11 @@ public class VnPayServiceImpl implements VnPayService {
 
         Order order = orderRepository.findById(request.orderId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
-        if (!backOfficeUser && (username == null || !username.equals(order.getUser().getUsername()))) {
+        if (
+            !backOfficeUser
+                && order.getUser() != null
+                && (username == null || !username.equals(order.getUser().getUsername()))
+        ) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only pay your own orders");
         }
         if (order.getStatus() == OrderStatus.CANCELLED) {

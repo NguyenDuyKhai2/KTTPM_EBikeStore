@@ -15,13 +15,6 @@ export interface OrderItem {
   lineTotal?: number;
 }
 
-export interface Payment {
-  id: number | string;
-  method: string;
-  status: string;
-  amount: number;
-}
-
 export interface VnPayCreatePaymentRequest {
   orderId: number;
   bankCode?: string;
@@ -80,7 +73,7 @@ export interface Shipment {
 
 export interface Order {
   id: number;
-  userId: number;
+  userId?: number | null;
   orderNumber: string;
   status: OrderStatus;
   subtotal: number;
@@ -88,6 +81,8 @@ export interface Order {
   discountAmount: number;
   registrationFee: number;
   totalAmount: number;
+  paymentMethod?: "PAY_LATER" | "VNPAY" | string | null;
+  paymentStatus?: string | null;
   notes?: string | null;
   customerEmail?: string | null;
   customerIdentityNumber?: string | null;
@@ -98,13 +93,14 @@ export interface Order {
 }
 
 export interface CreateOrderRequest {
-  userId: number;
+  userId?: number | null;
   customerName: string;
   phoneNumber: string;
   customerEmail: string;
   customerIdentityNumber: string;
   pickupShowroomId: number;
   detailedAddress: string;
+  paymentMethod: "PAY_LATER" | "VNPAY";
   notes?: string;
   items: Array<{
     productId: number;

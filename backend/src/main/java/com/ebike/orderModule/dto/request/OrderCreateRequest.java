@@ -11,6 +11,7 @@ public record OrderCreateRequest(
     String customerIdentityNumber,
     Long pickupShowroomId,
     String detailedAddress,
+    String paymentMethod,
     BigDecimal shippingFee,
     BigDecimal discountAmount,
     String notes,

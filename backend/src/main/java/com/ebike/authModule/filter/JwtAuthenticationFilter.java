@@ -1,14 +1,20 @@
 package com.ebike.authModule.filter;
 
+import com.ebike.authModule.entity.User;
+import com.ebike.authModule.repository.UserRepository;
 import com.ebike.authModule.service.JwtTokenProvider;
+import com.ebike.authModule.service.PermissionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +27,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String ACCESS_TOKEN_COOKIE_NAME = "ebike_access_token";
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
+    private final PermissionService permissionService;
 
     private static final List<String> PUBLIC_ENDPOINTS = Arrays.asList(
         "/api/v1/auth/login",
@@ -28,8 +36,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/api/v1/auth/public"
     );
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(
+        JwtTokenProvider jwtTokenProvider,
+        UserRepository userRepository,
+        PermissionService permissionService
+    ) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userRepository = userRepository;
+        this.permissionService = permissionService;
     }
 
     @Override
@@ -49,16 +63,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null && jwtTokenProvider.validateToken(token)) {
             String username = jwtTokenProvider.extractUsername(token);
-            String roles = jwtTokenProvider.extractRoles(token);
+            User user = findUserWithPermissions(username)
+                .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()))
+                .orElse(null);
 
-            List<SimpleGrantedAuthority> authorities = Arrays.stream(roles == null ? new String[0] : roles.split(","))
-                .map(String::trim)
-                .filter(role -> !role.isEmpty())
+            if (user == null) {
+                SecurityContextHolder.clearContext();
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"message\":\"Authenticated user is inactive or missing\"}");
+                return;
+            }
+
+            List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+            user.getRoles().stream()
+                .map(role -> role.getName())
+                .filter(role -> role != null && !role.isBlank())
+                .map(role -> role.trim().toUpperCase(Locale.ROOT))
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                .toList();
+                .forEach(authorities::add);
+            permissionService.resolvePermissionCodes(user).stream()
+                .filter(permission -> permission != null && !permission.isBlank())
+                .map(SimpleGrantedAuthority::new)
+                .forEach(authorities::add);
 
             UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(username, null, authorities);
+                new UsernamePasswordAuthenticationToken(user.getUsername(), null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } else if (token != null) {
             SecurityContextHolder.clearContext();
@@ -69,6 +99,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private Optional<User> findUserWithPermissions(String usernameOrEmail) {
+        if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
+            return Optional.empty();
+        }
+
+        String trimmed = usernameOrEmail.trim();
+        return userRepository.findWithPermissionsByUsername(trimmed)
+            .or(() -> userRepository.findWithPermissionsByEmail(trimmed.toLowerCase(Locale.ROOT)));
     }
 
     private String extractTokenFromRequest(HttpServletRequest request) {

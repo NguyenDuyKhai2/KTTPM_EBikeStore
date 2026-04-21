@@ -1,4 +1,4 @@
-import { Menu, ShoppingCart, User } from "lucide-react";
+import { Menu, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@ebike/shared-code/hooks";
@@ -56,13 +56,6 @@ const Header = () => {
 
         <div className="flex items-center gap-4">
           <div className="hidden items-center gap-4 lg:flex">
-            <button
-              onClick={() => navigate("/cart")}
-              className="text-foreground/70 transition-colors hover:text-primary"
-              aria-label="Giỏ hàng"
-            >
-              <ShoppingCart size={20} />
-            </button>
             <button
               onClick={() => navigate(isAuthenticated ? "/customer/profile" : "/auth")}
               className="text-foreground/70 transition-colors hover:text-primary"

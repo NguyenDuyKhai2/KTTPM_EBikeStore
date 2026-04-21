@@ -1,4 +1,4 @@
-﻿import { ShoppingCart, AlertCircle } from "lucide-react";
+﻿import { AlertCircle, ArrowRight } from "lucide-react";
 import { attachImageFallback, resolveProductImage } from "../../utils/media";
 
 export type ProductCardProduct = {
@@ -135,7 +135,7 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
           >
             {inStock ? (
               <>
-                <ShoppingCart className="h-3.5 w-3.5" />
+                <ArrowRight className="h-3.5 w-3.5" />
                 Mua ngay
               </>
             ) : (

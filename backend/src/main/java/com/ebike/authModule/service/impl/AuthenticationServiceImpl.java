@@ -16,9 +16,13 @@ import com.ebike.authModule.repository.UserRepository;
 import com.ebike.authModule.service.AuthenticationService;
 import com.ebike.authModule.service.JwtTokenProvider;
 import com.ebike.authModule.service.PermissionService;
+import com.ebike.orderModule.entity.Order;
+import com.ebike.orderModule.repository.OrderRepository;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +49,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PermissionService permissionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final OrderRepository orderRepository;
 
     public AuthenticationServiceImpl(
         UserRepository userRepository,
@@ -52,7 +57,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         AuthenticationLogRepository authenticationLogRepository,
         PermissionService permissionService,
         PasswordEncoder passwordEncoder,
-        JwtTokenProvider jwtTokenProvider
+        JwtTokenProvider jwtTokenProvider,
+        OrderRepository orderRepository
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -60,6 +66,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         this.permissionService = permissionService;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.orderRepository = orderRepository;
     }
 
     @Override
@@ -88,6 +95,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         user.getRoles().add(defaultRole);
 
         User savedUser = userRepository.save(user);
+        linkGuestOrdersToUser(savedUser);
         return toAuthResponse(savedUser);
     }
 
@@ -205,6 +213,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return userRepository.findByEmail(trimmed.toLowerCase(Locale.ROOT))
             .or(() -> userRepository.findByUsername(trimmed))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    private void linkGuestOrdersToUser(User user) {
+        if (user == null || isBlank(user.getEmail())) {
+            return;
+        }
+
+        List<Order> guestOrders = new ArrayList<>(orderRepository.findByUserIsNullAndCustomerEmail(user.getEmail()));
+        if (guestOrders.isEmpty()) {
+            return;
+        }
+
+        for (Order order : guestOrders) {
+            order.setUser(user);
+        }
+        orderRepository.saveAll(guestOrders);
     }
 
     private void validateRegisterRequest(RegisterRequest request) {

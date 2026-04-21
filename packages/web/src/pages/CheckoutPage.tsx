@@ -1,4 +1,4 @@
-import { Calendar, CreditCard, Landmark, Lock, MapPin, Phone, Store, Zap } from "lucide-react";
+import { Clock, CreditCard, Lock, MapPin, Phone, Store, Zap } from "lucide-react";
 import { orderAPI, paymentAPI, showroomAPI } from "@ebike/shared-code/api";
 import { useAppSelector } from "@ebike/shared-code/redux";
 import type { OrderQuote, Showroom } from "@ebike/shared-code/types";
@@ -19,6 +19,35 @@ interface CheckoutState {
   quantity?: number;
 }
 
+const mapCheckoutErrorToFields = (message: string) => {
+  const lowerMessage = message.toLowerCase();
+  const errors: Record<string, string> = {};
+
+  if (lowerMessage.includes("họ và tên")) {
+    errors.customerName = message;
+  }
+  if (lowerMessage.includes("số điện thoại")) {
+    errors.phoneNumber = message;
+  }
+  if (lowerMessage.includes("email")) {
+    errors.customerEmail = message;
+  }
+  if (lowerMessage.includes("cmnd") || lowerMessage.includes("cccd")) {
+    errors.customerIdentityNumber = message;
+  }
+  if (lowerMessage.includes("địa chỉ")) {
+    errors.detailedAddress = message;
+  }
+  if (lowerMessage.includes("showroom")) {
+    errors.pickupShowroomId = message;
+  }
+  if (lowerMessage.includes("ghi chú")) {
+    errors.notes = message;
+  }
+
+  return errors;
+};
+
 const CheckoutPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,9 +61,8 @@ const CheckoutPage = () => {
   const [loadingShowrooms, setLoadingShowrooms] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("BANK_TRANSFER");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"PAY_LATER" | "VNPAY">("PAY_LATER");
   const [form, setForm] = useState({
     customerName: authUser?.fullName ?? "",
     customerIdentityNumber: "",
@@ -113,10 +141,12 @@ const CheckoutPage = () => {
     () => Array.from(new Set(showrooms.map((showroom) => showroom.district))).sort((left, right) => left.localeCompare(right, "vi")),
     [showrooms]
   );
+
   const filteredShowrooms = useMemo(
     () => showrooms.filter((showroom) => showroom.district === form.district),
     [form.district, showrooms]
   );
+
   const selectedShowroom = filteredShowrooms.find((showroom) => String(showroom.id) === form.pickupShowroomId) ?? null;
 
   const inputClassName = (hasError: boolean) =>
@@ -162,15 +192,10 @@ const CheckoutPage = () => {
 
   const handleSubmit = async () => {
     setSubmitError(null);
-    setSubmitSuccess(null);
     setFieldErrors({});
 
     if (!product) {
       setSubmitError("Không có sản phẩm để đặt.");
-      return;
-    }
-    if (!authUser?.id) {
-      setSubmitError("Bạn cần đăng nhập trước khi đặt hàng.");
       return;
     }
 
@@ -191,15 +216,16 @@ const CheckoutPage = () => {
 
     setSubmitting(true);
     try {
-      const notes = [form.notes.trim(), `Payment: ${selectedPaymentMethod}`].filter(Boolean).join(" | ");
+      const notes = form.notes.trim();
       const createdOrder = await orderAPI.create({
-        userId: Number(authUser.id),
+        userId: authUser?.id ? Number(authUser.id) : undefined,
         customerName: form.customerName.trim(),
         customerIdentityNumber: form.customerIdentityNumber.trim(),
         phoneNumber: form.phoneNumber.trim(),
         customerEmail: form.customerEmail.trim(),
         pickupShowroomId: Number(form.pickupShowroomId),
         detailedAddress: form.detailedAddress.trim(),
+        paymentMethod: selectedPaymentMethod,
         notes,
         items: [
           {
@@ -216,6 +242,7 @@ const CheckoutPage = () => {
         registrationFee: createdOrder.registrationFee,
         totalAmount: createdOrder.totalAmount
       });
+
       if (selectedPaymentMethod === "VNPAY") {
         const payment = await paymentAPI.createVnPayPayment({
           orderId: createdOrder.id,
@@ -224,10 +251,20 @@ const CheckoutPage = () => {
         window.location.assign(payment.paymentUrl);
         return;
       }
-      setSubmitSuccess(`Đặt hàng thành công. Mã đơn: ${createdOrder.orderNumber}`);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      navigate("/checkout/success", {
+        replace: true,
+        state: {
+          order: createdOrder
+        }
+      });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Không thể tạo đơn hàng.");
+      const message = error instanceof Error ? error.message : "Không thể tạo đơn hàng.";
+      const backendFieldErrors = mapCheckoutErrorToFields(message);
+      if (Object.keys(backendFieldErrors).length > 0) {
+        setFieldErrors((current) => ({ ...current, ...backendFieldErrors }));
+      }
+      setSubmitError(`Thông tin chưa hợp lệ: ${message}`);
     } finally {
       setSubmitting(false);
     }
@@ -252,28 +289,27 @@ const CheckoutPage = () => {
           {submitError ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{submitError}</div>
           ) : null}
-          {submitSuccess ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">{submitSuccess}</div>
-          ) : null}
 
           <section>
             <h2 className="mb-8 text-2xl font-bold tracking-tight">Phương thức thanh toán</h2>
             <div className="space-y-4">
-              <div className={`rounded-xl border-2 p-6 ${selectedPaymentMethod === "BANK_TRANSFER" ? "border-primary bg-surface-container-low" : "border-transparent bg-surface-container-low"}`}>
+              <div className={`rounded-xl border-2 p-6 ${selectedPaymentMethod === "PAY_LATER" ? "border-primary bg-surface-container-low" : "border-transparent bg-surface-container-low"}`}>
                 <label className="flex cursor-pointer items-start gap-4">
                   <input
                     type="radio"
                     name="payment"
-                    checked={selectedPaymentMethod === "BANK_TRANSFER"}
-                    onChange={() => setSelectedPaymentMethod("BANK_TRANSFER")}
+                    checked={selectedPaymentMethod === "PAY_LATER"}
+                    onChange={() => setSelectedPaymentMethod("PAY_LATER")}
                     className="mt-1 text-primary focus:ring-primary"
                   />
                   <div className="flex-grow">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-lg font-bold">Chuyển khoản</span>
-                      <Landmark className="text-primary" />
+                      <span className="text-lg font-bold">Thanh toán sau</span>
+                      <Clock className="text-primary" />
                     </div>
-                    <p className="text-sm text-muted-foreground">Thanh toán qua tài khoản ngân hàng của bạn.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Showroom sẽ xác nhận đơn và hướng dẫn thanh toán sau. Đơn hàng được ghi nhận là chưa thanh toán.
+                    </p>
                   </div>
                 </label>
               </div>
@@ -292,45 +328,7 @@ const CheckoutPage = () => {
                       <span className="text-lg font-bold">VNPay</span>
                       <CreditCard className="text-primary" />
                     </div>
-                    <p className="text-sm text-muted-foreground">Thanh toan qua cong VNPay bang ATM, QR hoac the noi dia.</p>
-                  </div>
-                </label>
-              </div>
-
-              <div className={`rounded-xl p-6 transition-all hover:bg-surface-container-high ${selectedPaymentMethod === "CREDIT_CARD" ? "border-2 border-primary bg-surface-container-low" : "bg-surface-container-low"}`}>
-                <label className="flex cursor-pointer items-start gap-4">
-                  <input
-                    type="radio"
-                    name="payment"
-                    checked={selectedPaymentMethod === "CREDIT_CARD"}
-                    onChange={() => setSelectedPaymentMethod("CREDIT_CARD")}
-                    className="mt-1 text-primary focus:ring-primary"
-                  />
-                  <div className="flex-grow">
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className="text-lg font-bold">Thẻ tín dụng</span>
-                      <CreditCard className="text-muted-foreground" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">Visa, Mastercard hoặc các thẻ quốc tế thông dụng.</p>
-                  </div>
-                </label>
-              </div>
-
-              <div className={`rounded-xl p-6 transition-all hover:bg-surface-container-high ${selectedPaymentMethod === "INSTALLMENT" ? "border-2 border-primary bg-surface-container-low" : "bg-surface-container-low"}`}>
-                <label className="flex cursor-pointer items-start gap-4">
-                  <input
-                    type="radio"
-                    name="payment"
-                    checked={selectedPaymentMethod === "INSTALLMENT"}
-                    onChange={() => setSelectedPaymentMethod("INSTALLMENT")}
-                    className="mt-1 text-primary focus:ring-primary"
-                  />
-                  <div className="flex-grow">
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className="text-lg font-bold">Trả góp</span>
-                      <Calendar className="text-muted-foreground" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">Showroom sẽ liên hệ tư vấn gói trả góp khi xác nhận đơn.</p>
+                    <p className="text-sm text-muted-foreground">Thanh toán qua cổng VNPay bằng ATM, QR hoặc thẻ nội địa.</p>
                   </div>
                 </label>
               </div>
@@ -467,8 +465,13 @@ const CheckoutPage = () => {
               value={form.notes}
               onChange={(event) => updateForm("notes", event.target.value)}
               placeholder="Ghi chú thêm cho showroom nếu cần."
-              className="w-full rounded-lg border border-outline-variant/20 bg-white px-4 py-3 text-sm font-medium focus:border-primary focus:outline-none"
+              className={`w-full rounded-lg border px-4 py-3 text-sm font-medium focus:outline-none ${
+                fieldErrors.notes
+                  ? "border-red-500 bg-red-50/40 text-red-700 focus:border-red-500"
+                  : "border-outline-variant/20 bg-white focus:border-primary"
+              }`}
             />
+            {fieldErrors.notes ? <p className="mt-2 text-sm text-red-600">{fieldErrors.notes}</p> : null}
           </section>
         </div>
 
@@ -532,10 +535,10 @@ const CheckoutPage = () => {
                 >
                   {submitting
                     ? selectedPaymentMethod === "VNPAY"
-                      ? "Dang chuyen sang VNPay..."
+                      ? "Đang chuyển sang VNPay..."
                       : "Đang tạo đơn hàng..."
                     : selectedPaymentMethod === "VNPAY"
-                      ? "Thanh toan voi VNPay"
+                      ? "Thanh toán với VNPay"
                       : "Xác nhận đặt hàng"}
                 </button>
                 <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">

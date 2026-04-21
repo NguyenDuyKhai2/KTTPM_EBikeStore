@@ -10,12 +10,12 @@ import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
 import AdminProductsPage from "../pages/admin/AdminProductsPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
 import ChatbotPage from "../pages/ChatbotPage";
-import CartPage from "../pages/CartPage";
 import CheckoutPage from "../pages/CheckoutPage";
 import FavoritesPage from "../pages/FavoritesPage";
 import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPageApi";
 import NotFoundPage from "../pages/NotFoundPage";
+import OrderSuccessPage from "../pages/OrderSuccessPage";
 import PaymentReturnPage from "../pages/PaymentReturnPage";
 import ProductDetailPage from "../pages/ProductDetailPage";
 import ProductsPage from "../pages/ProductsPage";
@@ -39,8 +39,8 @@ const router = createBrowserRouter([
       { path: "product/:id", element: <ProductDetailPage /> },
       { path: "models/:id", element: <ProductDetailPage /> },
       { path: "favorites", element: <FavoritesPage /> },
-      { path: "cart", element: <CartPage /> },
       { path: "checkout", element: <CheckoutPage /> },
+      { path: "checkout/success", element: <OrderSuccessPage /> },
       { path: "payment/return", element: <PaymentReturnPage /> },
       { path: "chatbot", element: <ChatbotPage /> }
     ]

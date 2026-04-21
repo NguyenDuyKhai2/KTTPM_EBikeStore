@@ -2,14 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Battery, Heart, RotateCcw, Star, Zap } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { favoritesAPI, productAPI } from "@ebike/shared-code/api";
-import { useCart } from "@ebike/shared-code/hooks";
 import type { ProductDetail } from "@ebike/shared-code/types";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
 
 const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addItem } = useCart();
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,29 +131,21 @@ const ProductDetailPage = () => {
     }
   };
 
-  const handleAddToCart = () => {
-    addItem({
-      product: {
-        id: Number(product.id),
-        name: product.name,
-        slug: product.slug,
-        description: product.description,
-        price: product.price,
-        discountPrice: product.discountPrice,
-        rating: product.rating,
-        reviewCount: product.reviewCount,
-        stockQuantity: product.stockQuantity,
-        featured: product.featured,
-        category: {
-          id: product.category?.id ?? 0,
-          name: product.category?.name || "Xe điện",
-          slug: product.category?.slug
+  const handleBuyNow = () => {
+    navigate("/checkout", {
+      state: {
+        product: {
+          id: Number(product.id),
+          name: product.name,
+          slug: product.slug,
+          price: priceValue,
+          image: mainImage,
+          categoryName: product.category?.name || "E-Bike"
         },
-        images: galleryImages.length ? galleryImages : images
-      },
-      quantity: 1
+        selectedColor,
+        quantity: 1
+      }
     });
-    navigate("/cart");
   };
 
   return (
@@ -242,30 +232,9 @@ const ProductDetailPage = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <button
-              className="btn-primary"
-              onClick={() =>
-                navigate("/checkout", {
-                  state: {
-                    product: {
-                      id: Number(product.id),
-                      name: product.name,
-                      slug: product.slug,
-                      price: priceValue,
-                      image: mainImage,
-                      categoryName: product.category?.name || "E-Bike"
-                    },
-                    selectedColor,
-                    quantity: 1
-                  }
-                })
-              }
-            >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <button className="btn-primary" onClick={handleBuyNow}>
               Mua ngay
-            </button>
-            <button type="button" onClick={handleAddToCart} className="btn-secondary">
-              Thêm vào giỏ
             </button>
             <button
               type="button"

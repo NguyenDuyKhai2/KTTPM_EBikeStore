@@ -20,6 +20,13 @@ const STATUS_CLASSES: Record<string, string> = {
   CANCELLED: "bg-rose-50 text-rose-700 border-rose-200"
 };
 
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Chưa thanh toán",
+  PAID: "Đã thanh toán",
+  FAILED: "Thanh toán thất bại",
+  REFUNDED: "Đã hoàn tiền"
+};
+
 const CustomerOrdersSafePage = () => {
   const authUser = useAppSelector((state) => state.auth.user);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -62,10 +69,7 @@ const CustomerOrdersSafePage = () => {
     void loadOrders();
   }, [authUser?.id]);
 
-  const totalSpent = useMemo(
-    () => orders.reduce((sum, order) => sum + order.totalAmount, 0),
-    [orders]
-  );
+  const totalSpent = useMemo(() => orders.reduce((sum, order) => sum + order.totalAmount, 0), [orders]);
 
   return (
     <SectionShell
@@ -127,6 +131,9 @@ const CustomerOrdersSafePage = () => {
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground">
                         Nhận xe tại {order.shipment?.pickupShowroom?.name || "Showroom đang cập nhật"}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-muted-foreground">
+                        Thanh toán: {PAYMENT_STATUS_LABELS[order.paymentStatus || ""] || "Chưa khởi tạo"}
                       </p>
                     </div>
                     <div className="text-left md:text-right">

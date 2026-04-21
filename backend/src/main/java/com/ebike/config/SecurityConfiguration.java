@@ -1,6 +1,7 @@
 package com.ebike.config;
 
 import com.ebike.authModule.filter.JwtAuthenticationFilter;
+import com.ebike.shared.constants.PermissionConstants;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,6 +29,15 @@ public class SecurityConfiguration {
             .cors(cors -> {})
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .anonymous(anonymous -> anonymous.authorities(
+                PermissionConstants.Guest.PRODUCT_VIEW,
+                PermissionConstants.Guest.PRODUCT_SEARCH,
+                PermissionConstants.Guest.CATEGORY_VIEW,
+                PermissionConstants.Guest.REVIEW_VIEW,
+                PermissionConstants.Guest.ORDER_CREATE,
+                PermissionConstants.Guest.PAYMENT_CREATE,
+                PermissionConstants.ChatbotManagement.CHATBOT_USE
+            ))
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/orders/quote").permitAll()
@@ -39,18 +49,44 @@ public class SecurityConfiguration {
                     "/auth/logout",
                     "/auth/session",
                     "/health/**",
-                    "/products/**",
-                    "/chatbot/**",
                     "/media/**",
                     "/error"
                 ).permitAll()
+                .requestMatchers(HttpMethod.GET, "/products/**").hasAuthority(PermissionConstants.Guest.PRODUCT_VIEW)
+                .requestMatchers(HttpMethod.GET, "/showrooms").hasAuthority(PermissionConstants.Guest.PRODUCT_VIEW)
+                .requestMatchers(HttpMethod.POST, "/chatbot/ask").hasAuthority(PermissionConstants.ChatbotManagement.CHATBOT_USE)
+                .requestMatchers(HttpMethod.POST, "/chatbot/debug").hasAuthority(PermissionConstants.ChatbotManagement.CHATBOT_CONFIGURE)
+                .requestMatchers(HttpMethod.GET, "/auth/profile").hasAuthority(PermissionConstants.Customer.PROFILE_VIEW)
+                .requestMatchers(HttpMethod.PUT, "/auth/profile").hasAuthority(PermissionConstants.Customer.PROFILE_UPDATE)
                 .requestMatchers("/auth/**").authenticated()
-                .requestMatchers("/users/**", "/orders/**", "/favorites/**", "/payments/**").authenticated()
-                .requestMatchers("/customer/**").hasAnyRole("CUSTOMER", "ADMIN", "MANAGER")
-                .requestMatchers("/staff/**").hasAnyRole("STAFF", "MANAGER", "ADMIN")
-                .requestMatchers("/manager/**").hasAnyRole("MANAGER", "ADMIN")
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                .anyRequest().permitAll()
+                .requestMatchers(HttpMethod.GET, "/orders", "/orders/*").hasAnyAuthority(
+                    PermissionConstants.Customer.ORDER_VIEW_OWN,
+                    PermissionConstants.OrderManagement.ORDER_VIEW_ALL
+                )
+                .requestMatchers(HttpMethod.POST, "/orders").hasAuthority(PermissionConstants.Guest.ORDER_CREATE)
+                .requestMatchers(HttpMethod.PATCH, "/orders/*/status").hasAuthority(PermissionConstants.OrderManagement.ORDER_UPDATE_STATUS)
+                .requestMatchers(HttpMethod.GET, "/favorites").hasAuthority(PermissionConstants.Customer.FAVORITE_VIEW)
+                .requestMatchers(HttpMethod.POST, "/favorites").hasAuthority(PermissionConstants.Customer.FAVORITE_UPDATE)
+                .requestMatchers(HttpMethod.DELETE, "/favorites/*").hasAuthority(PermissionConstants.Customer.FAVORITE_UPDATE)
+                .requestMatchers(HttpMethod.POST, "/payments/vnpay/create").hasAuthority(PermissionConstants.Guest.PAYMENT_CREATE)
+                .requestMatchers(HttpMethod.GET, "/users/**").hasAnyAuthority(
+                    PermissionConstants.Customer.PROFILE_VIEW,
+                    PermissionConstants.UserManagement.USER_VIEW
+                )
+                .requestMatchers(HttpMethod.POST, "/users/**").hasAuthority(PermissionConstants.Customer.PROFILE_UPDATE)
+                .requestMatchers(HttpMethod.PUT, "/users/**").hasAuthority(PermissionConstants.Customer.PROFILE_UPDATE)
+                .requestMatchers(HttpMethod.POST, "/admin/product-images").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_CREATE)
+                .requestMatchers(HttpMethod.GET, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
+                .requestMatchers(HttpMethod.PUT, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
+                .requestMatchers(HttpMethod.DELETE, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_DELETE)
+                .requestMatchers("/customer/**").hasAuthority(PermissionConstants.Customer.PROFILE_VIEW)
+                .requestMatchers("/staff/**").hasAnyAuthority(
+                    PermissionConstants.OrderManagement.ORDER_VIEW_ALL,
+                    PermissionConstants.ProductManagement.PRODUCT_UPDATE
+                )
+                .requestMatchers("/manager/**").hasAuthority(PermissionConstants.OrderManagement.ORDER_VIEW_ALL)
+                .requestMatchers("/admin/**").hasAuthority(PermissionConstants.UserManagement.PERMISSION_MANAGE)
+                .anyRequest().denyAll()
             )
             .exceptionHandling(exceptions -> exceptions
                 .authenticationEntryPoint((request, response, exception) -> {

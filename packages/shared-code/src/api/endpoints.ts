@@ -28,18 +28,11 @@ export const API_ENDPOINTS = {
   showrooms: {
     list: "/showrooms"
   },
-  cart: {
-    current: "/cart",
-    addItem: "/cart/items",
-    removeItem: (productId: string) => `/cart/items/${productId}`
-  },
   chat: {
     message: "/chatbot/ask",
     history: "/chat/history"
   },
   payments: {
-    create: "/payments",
-    verify: (paymentId: string) => `/payments/${paymentId}/verify`,
     vnpayCreate: "/payments/vnpay/create",
     vnpayReturn: "/payments/vnpay/return"
   }

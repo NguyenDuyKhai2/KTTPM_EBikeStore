@@ -10,19 +10,21 @@ public final class PermissionConstants {
         public static final String PRODUCT_SEARCH = "product:search";
         public static final String CATEGORY_VIEW = "category:view";
         public static final String REVIEW_VIEW = "review:view";
+        public static final String ORDER_CREATE = "order:create";
+        public static final String PAYMENT_CREATE = "payment:create";
 
         private Guest() {
         }
     }
 
     public static final class Customer {
-        public static final String CART_VIEW = "cart:view";
-        public static final String CART_UPDATE = "cart:update";
         public static final String ORDER_CREATE = "order:create";
         public static final String ORDER_VIEW_OWN = "order:view-own";
         public static final String ORDER_CANCEL_OWN = "order:cancel-own";
         public static final String PAYMENT_CREATE = "payment:create";
         public static final String PAYMENT_VIEW_OWN = "payment:view-own";
+        public static final String FAVORITE_VIEW = "favorite:view";
+        public static final String FAVORITE_UPDATE = "favorite:update";
         public static final String PROFILE_VIEW = "profile:view";
         public static final String PROFILE_UPDATE = "profile:update";
         public static final String REVIEW_CREATE = "review:create";

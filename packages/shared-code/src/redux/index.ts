@@ -4,7 +4,6 @@ export * from "./hooks/useAppSelector";
 export * from "./hooks/useAppStore";
 export * from "./slices/authSlice";
 export * from "./slices/productSlice";
-export * from "./slices/cartSlice";
 export * from "./slices/chatbotSlice";
 export * from "./slices/orderSlice";
 export * from "./slices/uiSlice";

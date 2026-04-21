@@ -14,6 +14,8 @@ public record OrderResponse(
     BigDecimal discountAmount,
     BigDecimal registrationFee,
     BigDecimal totalAmount,
+    String paymentMethod,
+    String paymentStatus,
     String notes,
     String customerEmail,
     String customerIdentityNumber,
