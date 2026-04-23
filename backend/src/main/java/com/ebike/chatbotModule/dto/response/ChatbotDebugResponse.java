@@ -11,6 +11,8 @@ public record ChatbotDebugResponse(
     boolean geminiConfigured,
     String showroomContext,
     String orderPaymentContext,
+    String pdfKnowledgeContext,
+    List<String> pdfKnowledgeSources,
     String fallbackAnswer,
     List<ChatbotRecommendationDto> recommendations
 ) {

@@ -12,8 +12,12 @@ const navItems = [
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isManager = user?.roles.includes("MANAGER");
+  const visibleNavItems = isManager
+    ? [...navItems, { to: "/manager", label: "Manager", end: false }]
+    : navItems;
 
   useEffect(() => {
     setMobileOpen(false);
@@ -38,10 +42,11 @@ const Header = () => {
             >
               Trang chủ
             </NavLink>
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={"end" in item ? item.end : undefined}
                 className={({ isActive }) =>
                   `font-headline tracking-tight transition-all duration-300 hover:text-primary ${
                     isActive ? "border-b-2 border-primary pb-1 text-primary" : "text-foreground/70"
@@ -87,8 +92,13 @@ const Header = () => {
             >
               Trang chủ
             </NavLink>
-            {navItems.map((item) => (
-              <NavLink key={item.to} to={item.to} className="font-headline text-foreground/70 hover:text-primary">
+            {visibleNavItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={"end" in item ? item.end : undefined}
+                className="font-headline text-foreground/70 hover:text-primary"
+              >
                 {item.label}
               </NavLink>
             ))}

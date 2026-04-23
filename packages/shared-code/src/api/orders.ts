@@ -2,10 +2,19 @@ import { apiClient } from "./client";
 import { API_ENDPOINTS } from "./endpoints";
 import type { CreateOrderRequest, Order, OrderQuote, OrderQuoteRequest } from "../types";
 
+export type OrderListParams = {
+  userId?: number;
+  status?: string;
+  paymentStatus?: string;
+  search?: string;
+  showroomId?: number;
+};
+
 export const orderAPI = {
-  list: async (userId?: number) => {
+  list: async (params?: number | OrderListParams) => {
+    const resolvedParams = typeof params === "number" ? { userId: params } : params;
     const response = await apiClient.get<Order[]>(API_ENDPOINTS.orders.list, {
-      params: userId ? { userId } : undefined
+      params: resolvedParams
     });
     return response.data;
   },

@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 // Layouts
 import AdminLayout from "../layouts/AdminLayout";
 import CustomerLayout from "../layouts/CustomerLayout";
+import ManagerLayout from "../layouts/ManagerLayout";
 import Layout from "../components/common/Layout";
 
 // Pages
@@ -23,6 +24,12 @@ import SignupPage from "../pages/SignupPage";
 import CustomerDashboardPage from "../pages/customer/CustomerDashboardRealPage";
 import CustomerOrdersPage from "../pages/customer/CustomerOrdersSafePage";
 import CustomerProfilePage from "../pages/customer/CustomerProfilePage";
+import ManagerCustomersPage from "../pages/manager/ManagerCustomersPage";
+import ManagerDashboardPage from "../pages/manager/ManagerDashboardPage";
+import ManagerOrderDetailPage from "../pages/manager/ManagerOrderDetailPage";
+import ManagerOrdersPage from "../pages/manager/ManagerOrdersPage";
+import ManagerPaymentsPage from "../pages/manager/ManagerPaymentsPage";
+import ManagerProductsPage from "../pages/manager/ManagerProductsPage";
 
 const router = createBrowserRouter([
   {
@@ -75,6 +82,19 @@ const router = createBrowserRouter([
           { path: "users", element: <AdminUsersPage /> }
         ]
       }
+    ]
+  },
+  {
+    path: "/manager",
+    element: <ManagerLayout />,
+    errorElement: <NotFoundPage />,
+    children: [
+      { index: true, element: <ManagerDashboardPage /> },
+      { path: "orders", element: <ManagerOrdersPage /> },
+      { path: "orders/:id", element: <ManagerOrderDetailPage /> },
+      { path: "payments", element: <ManagerPaymentsPage /> },
+      { path: "customers", element: <ManagerCustomersPage /> },
+      { path: "products", element: <ManagerProductsPage /> }
     ]
   },
   {

@@ -6,6 +6,7 @@ import com.ebike.orderModule.dto.request.OrderStatusUpdateRequest;
 import com.ebike.orderModule.dto.response.OrderQuoteResponse;
 import com.ebike.orderModule.dto.response.OrderResponse;
 import com.ebike.orderModule.service.OrderService;
+import com.ebike.shared.constants.PermissionConstants;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,8 +32,15 @@ public class OrderController {
     }
 
     @GetMapping
-    public List<OrderResponse> getOrders(Authentication authentication, @RequestParam(required = false) Long userId) {
-        return orderService.getOrders(authentication, userId);
+    public List<OrderResponse> getOrders(
+        Authentication authentication,
+        @RequestParam(required = false) Long userId,
+        @RequestParam(required = false) String status,
+        @RequestParam(required = false) String paymentStatus,
+        @RequestParam(required = false) String search,
+        @RequestParam(required = false) Long showroomId
+    ) {
+        return orderService.getOrders(authentication, userId, status, paymentStatus, search, showroomId);
     }
 
     @GetMapping("/{id}")
@@ -52,7 +60,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAuthority('order:update-status')")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.OrderManagement.ORDER_UPDATE_STATUS + "')")
     public OrderResponse updateOrderStatus(@PathVariable Long id, @RequestBody OrderStatusUpdateRequest request) {
         return orderService.updateOrderStatus(id, request);
     }

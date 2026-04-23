@@ -305,10 +305,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 roleData.put("type", "Individual Customer");
                 roleData.put("memberSince", user.getCreatedAt());
                 break;
-            case "STAFF":
-                roleData.put("type", "Store Staff");
-                roleData.put("department", "Sales/Support");
-                break;
             case "MANAGER":
                 roleData.put("type", "Store Manager");
                 roleData.put("authority", "Full Store Management");

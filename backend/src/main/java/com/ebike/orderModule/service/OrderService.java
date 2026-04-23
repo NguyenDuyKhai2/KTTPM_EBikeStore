@@ -10,7 +10,14 @@ import org.springframework.security.core.Authentication;
 
 public interface OrderService {
 
-    List<OrderResponse> getOrders(Authentication authentication, Long userId);
+    List<OrderResponse> getOrders(
+        Authentication authentication,
+        Long userId,
+        String status,
+        String paymentStatus,
+        String search,
+        Long showroomId
+    );
 
     OrderResponse getOrderById(Long id, Authentication authentication);
 

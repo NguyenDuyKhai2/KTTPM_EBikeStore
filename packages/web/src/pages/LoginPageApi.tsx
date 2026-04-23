@@ -57,7 +57,13 @@ const LoginPageApi = () => {
         password: formData.password
       }).unwrap();
 
-      navigate(result.roles.includes("ADMIN") ? "/admin" : "/customer/profile");
+      navigate(
+        result.roles.includes("ADMIN")
+          ? "/admin"
+          : result.roles.includes("MANAGER")
+            ? "/manager"
+            : "/customer/profile"
+      );
     } catch (loginError) {
       const message =
         loginError instanceof Error ? loginError.message : "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.";

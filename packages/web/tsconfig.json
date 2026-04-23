@@ -18,5 +18,5 @@
     "baseUrl": "."
   },
   "include": ["src", "vite.config.ts"],
-  "exclude": ["src/pages example"]
+  "exclude": ["src/page_manager_example"]
 }

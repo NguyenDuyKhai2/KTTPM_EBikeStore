@@ -33,7 +33,6 @@ public class AuthController {
 
     private static final String ACCESS_TOKEN_COOKIE_NAME = "ebike_access_token";
     private static final String ROLE_CUSTOMER = "CUSTOMER";
-    private static final String ROLE_STAFF = "STAFF";
     private static final String ROLE_MANAGER = "MANAGER";
     private static final String ROLE_ADMIN = "ADMIN";
 
@@ -97,22 +96,6 @@ public class AuthController {
         RoleSpecificLoginResponse response = authenticationService.roleSpecificLogin(
             request,
             ROLE_CUSTOMER,
-            httpServletRequest.getRemoteAddr(),
-            httpServletRequest.getHeader("User-Agent")
-        );
-        attachAuthCookie(httpServletResponse, response.authResponse().token());
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/login/staff")
-    public ResponseEntity<RoleSpecificLoginResponse> staffLogin(
-        @RequestBody LoginRequest request,
-        HttpServletRequest httpServletRequest,
-        HttpServletResponse httpServletResponse
-    ) {
-        RoleSpecificLoginResponse response = authenticationService.roleSpecificLogin(
-            request,
-            ROLE_STAFF,
             httpServletRequest.getRemoteAddr(),
             httpServletRequest.getHeader("User-Agent")
         );

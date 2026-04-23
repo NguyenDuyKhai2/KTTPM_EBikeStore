@@ -56,8 +56,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/showrooms").hasAuthority(PermissionConstants.Guest.PRODUCT_VIEW)
                 .requestMatchers(HttpMethod.POST, "/chatbot/ask").hasAuthority(PermissionConstants.ChatbotManagement.CHATBOT_USE)
                 .requestMatchers(HttpMethod.POST, "/chatbot/debug").hasAuthority(PermissionConstants.ChatbotManagement.CHATBOT_CONFIGURE)
-                .requestMatchers(HttpMethod.GET, "/auth/profile").hasAuthority(PermissionConstants.Customer.PROFILE_VIEW)
-                .requestMatchers(HttpMethod.PUT, "/auth/profile").hasAuthority(PermissionConstants.Customer.PROFILE_UPDATE)
+                .requestMatchers(HttpMethod.GET, "/auth/profile").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/auth/profile").authenticated()
                 .requestMatchers("/auth/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/orders", "/orders/*").hasAnyAuthority(
                     PermissionConstants.Customer.ORDER_VIEW_OWN,
@@ -79,13 +79,12 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
                 .requestMatchers(HttpMethod.PUT, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
                 .requestMatchers(HttpMethod.DELETE, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_DELETE)
-                .requestMatchers("/customer/**").hasAuthority(PermissionConstants.Customer.PROFILE_VIEW)
-                .requestMatchers("/staff/**").hasAnyAuthority(
-                    PermissionConstants.OrderManagement.ORDER_VIEW_ALL,
-                    PermissionConstants.ProductManagement.PRODUCT_UPDATE
+                .requestMatchers("/customer/**").hasAnyAuthority(
+                    PermissionConstants.Customer.PROFILE_VIEW,
+                    PermissionConstants.OrderManagement.ORDER_VIEW_ALL
                 )
                 .requestMatchers("/manager/**").hasAuthority(PermissionConstants.OrderManagement.ORDER_VIEW_ALL)
-                .requestMatchers("/admin/**").hasAuthority(PermissionConstants.UserManagement.PERMISSION_MANAGE)
+                .requestMatchers("/admin/**").hasAuthority(PermissionConstants.AccessControl.PERMISSION_MANAGE)
                 .anyRequest().denyAll()
             )
             .exceptionHandling(exceptions -> exceptions

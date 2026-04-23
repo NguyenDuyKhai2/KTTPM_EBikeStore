@@ -1,0 +1,6 @@
+{
+  "name": "Lumina Electric Admin",
+  "description": "Comprehensive fleet management console for Lumina Electric, featuring order tracking, payment management, customer directory, and inventory control.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

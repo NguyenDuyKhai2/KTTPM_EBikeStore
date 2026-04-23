@@ -36,25 +36,32 @@ public class ChatbotService {
     private final ProductRepository productRepository;
     private final ShowroomRepository showroomRepository;
     private final GeminiChatClient geminiChatClient;
+    private final PdfKnowledgeBaseService pdfKnowledgeBaseService;
     private final List<FaqEntry> faqEntries = new ArrayList<>();
     private final Map<String, List<ChatbotRecommendationDto>> recentRecommendationsByChatId = new ConcurrentHashMap<>();
 
     public ChatbotService(
         ProductRepository productRepository,
         ShowroomRepository showroomRepository,
-        GeminiChatClient geminiChatClient
+        GeminiChatClient geminiChatClient,
+        PdfKnowledgeBaseService pdfKnowledgeBaseService
     ) {
         this.productRepository = productRepository;
         this.showroomRepository = showroomRepository;
         this.geminiChatClient = geminiChatClient;
+        this.pdfKnowledgeBaseService = pdfKnowledgeBaseService;
         loadFaqEntries();
     }
 
     public ChatbotResponse ask(ChatbotAskRequest request) {
         ChatbotAnalysis analysis = analyze(request);
-        String aiAnswer = geminiChatClient.generateAnswer(buildGeminiPrompt(analysis));
-        if (aiAnswer != null && !aiAnswer.isBlank()) {
+        String aiAnswer = sanitizeAiAnswer(geminiChatClient.generateAnswer(buildAiPrompt(analysis)));
+        if (isUsableAiAnswer(aiAnswer)) {
             return new ChatbotResponse(aiAnswer, "ai_rag_light", analysis.recommendations());
+        }
+
+        if (analysis.pdfKnowledgeContext().hasSnippets()) {
+            return buildPdfFallbackResponse(analysis);
         }
 
         return analysis.ruleBasedResponse();
@@ -71,6 +78,8 @@ public class ChatbotService {
             geminiChatClient.isConfigured(),
             analysis.showroomContext(),
             analysis.orderPaymentContext(),
+            analysis.pdfKnowledgeContext().combinedContext(),
+            analysis.pdfKnowledgeContext().sourceLabels(),
             analysis.ruleBasedResponse().answer(),
             analysis.recommendations()
         );
@@ -94,6 +103,7 @@ public class ChatbotService {
         }
         String showroomContext = buildShowroomContext(normalizedMessage);
         String orderPaymentContext = buildOrderPaymentContext(normalizedMessage);
+        PdfKnowledgeBaseService.PdfKnowledgeContext pdfKnowledgeContext = pdfKnowledgeBaseService.findRelevantContext(userMessage);
         ChatbotResponse ruleBasedResponse = buildRuleBasedResponse(
             faqMatch,
             recommendations,
@@ -114,6 +124,7 @@ public class ChatbotService {
             recommendations,
             showroomContext,
             orderPaymentContext,
+            pdfKnowledgeContext,
             ruleBasedResponse
         );
     }
@@ -447,6 +458,105 @@ public class ChatbotService {
         return amount == null ? "đang cập nhật" : String.format("%,.0f VND", amount);
     }
 
+    private String buildAiPrompt(ChatbotAnalysis analysis) {
+        StringBuilder context = new StringBuilder();
+        appendContextSection(
+            context,
+            "FAQ lien quan",
+            analysis.faqMatch() == null
+                ? ""
+                : "- Cau hoi: " + analysis.faqMatch().question() + "\n- Tra loi: " + analysis.faqMatch().answer()
+        );
+
+        if (!analysis.recommendations().isEmpty()) {
+            StringBuilder recommendations = new StringBuilder();
+            for (ChatbotRecommendationDto recommendation : analysis.recommendations()) {
+                recommendations.append("- ")
+                    .append(recommendation.name())
+                    .append(" | Gia: ")
+                    .append(recommendation.price())
+                    .append(" VND | Ly do: ")
+                    .append(recommendation.reason())
+                    .append('\n');
+            }
+            appendContextSection(context, "San pham goi y tu database", recommendations.toString().trim());
+        }
+
+        appendContextSection(context, "Showroom dang hoat dong", analysis.showroomContext());
+        appendContextSection(context, "Thong tin dat hang va thanh toan", analysis.orderPaymentContext());
+        appendContextSection(context, "Tai lieu PDF lien quan", analysis.pdfKnowledgeContext().combinedContext());
+        appendContextSection(context, "Cau tra loi fallback neu thieu du lieu", analysis.ruleBasedResponse().answer());
+
+        return """
+            Ban la tro ly tu van xe dien cua Kinetic E-Bike.
+            Nhiem vu cua ban la tra loi bang tieng Viet ro rang, day du, than thien va dung thong tin trong CONTEXT.
+            Yeu cau bat buoc:
+            - Khong dung markdown nhu **, ##, hoac tieu de dang dang.
+            - Tra loi thanh 1 doan ngan hoac 3-5 bullet ro rang.
+            - Neu cau hoi ve chinh sach, quy trinh, bao hanh, doi tra, sac pin: hay tom tat y chinh that cu the.
+            - Neu thong tin trong tai lieu co dieu kien ap dung, phai neu ro dieu kien.
+            - Neu CONTEXT chua du, hay noi ro phan chua chac va huong dan khach lien he showroom.
+            - Khong bia dat thong so, gia, khuyen mai hoac chinh sach ngoai CONTEXT.
+
+            CONTEXT:
+            %s
+
+            CAU HOI KHACH HANG:
+            %s
+            """.formatted(context.toString().trim(), analysis.userMessage());
+    }
+
+    private void appendContextSection(StringBuilder context, String title, String content) {
+        if (content == null || content.isBlank()) {
+            return;
+        }
+        if (!context.isEmpty()) {
+            context.append("\n\n");
+        }
+        context.append(title).append(":\n").append(content.trim());
+    }
+
+    private ChatbotResponse buildPdfFallbackResponse(ChatbotAnalysis analysis) {
+        StringBuilder answer = new StringBuilder("Minh da tim thay thong tin lien quan trong tai lieu noi bo cua Kinetic:\n");
+        for (PdfKnowledgeBaseService.KnowledgeSnippet snippet : analysis.pdfKnowledgeContext().snippets().stream().limit(2).toList()) {
+            answer.append("\n- Tham khao ")
+                .append(snippet.sourceName())
+                .append(" (trang ")
+                .append(snippet.pageNumber())
+                .append(").");
+        }
+        answer.append("\n\nBan hay hoi cu the hon, vi du: \"pin duoc bao hanh bao lau\", \"truong hop nao khong duoc bao hanh\", hoac \"dieu kien doi tra la gi\" de minh tra loi dung muc hon.");
+        return new ChatbotResponse(answer.toString(), "pdf_knowledge", analysis.recommendations());
+    }
+
+    private String sanitizeAiAnswer(String text) {
+        if (text == null) {
+            return null;
+        }
+        String sanitized = text
+            .replace("\r", "")
+            .replace("**", "")
+            .replaceAll("[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]", "")
+            .replaceAll("\\n{3,}", "\n\n")
+            .trim();
+
+        if (sanitized.endsWith(":") || sanitized.endsWith("-")) {
+            sanitized = sanitized.substring(0, sanitized.length() - 1).trim();
+        }
+        return sanitized;
+    }
+
+    private boolean isUsableAiAnswer(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        if (text.length() < 40) {
+            return false;
+        }
+        String normalized = text.toLowerCase(Locale.ROOT);
+        return !normalized.matches(".*\\b(ve|muc|phan|chinh sach|bao hanh)\\b\\s*$");
+    }
+
     private record ChatbotAnalysis(
         String chatId,
         String userMessage,
@@ -455,6 +565,7 @@ public class ChatbotService {
         List<ChatbotRecommendationDto> recommendations,
         String showroomContext,
         String orderPaymentContext,
+        PdfKnowledgeBaseService.PdfKnowledgeContext pdfKnowledgeContext,
         ChatbotResponse ruleBasedResponse
     ) {
     }

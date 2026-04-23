@@ -73,7 +73,14 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<OrderResponse> getOrders(Authentication authentication, Long userId) {
+    public List<OrderResponse> getOrders(
+        Authentication authentication,
+        Long userId,
+        String status,
+        String paymentStatus,
+        String search,
+        Long showroomId
+    ) {
         User currentUser = getAuthenticatedUser(authentication);
         Long effectiveUserId = isBackOffice(authentication) ? userId : currentUser.getId();
 
@@ -82,6 +89,10 @@ public class OrderServiceImpl implements OrderService {
             : orderRepository.findByUserId(effectiveUserId);
 
         return orders.stream()
+            .filter(order -> matchesOrderStatus(order, status))
+            .filter(order -> matchesPaymentStatus(order, paymentStatus))
+            .filter(order -> matchesSearch(order, search))
+            .filter(order -> matchesShowroom(order, showroomId))
             .sorted(Comparator.comparing(Order::getCreatedAt).reversed())
             .map(this::toResponse)
             .toList();
@@ -358,6 +369,62 @@ public class OrderServiceImpl implements OrderService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private boolean matchesOrderStatus(Order order, String rawStatus) {
+        if (isBlank(rawStatus)) {
+            return true;
+        }
+        try {
+            OrderStatus status = OrderStatus.valueOf(rawStatus.trim().toUpperCase(Locale.ROOT));
+            return order.getStatus() == status;
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid order status filter");
+        }
+    }
+
+    private boolean matchesPaymentStatus(Order order, String rawPaymentStatus) {
+        if (isBlank(rawPaymentStatus)) {
+            return true;
+        }
+        Payment payment = order.getPayment();
+        if (payment == null) {
+            return false;
+        }
+        try {
+            PaymentStatus paymentStatus = PaymentStatus.valueOf(rawPaymentStatus.trim().toUpperCase(Locale.ROOT));
+            return payment.getPaymentStatus() == paymentStatus;
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid payment status filter");
+        }
+    }
+
+    private boolean matchesSearch(Order order, String rawSearch) {
+        if (isBlank(rawSearch)) {
+            return true;
+        }
+        String search = rawSearch.trim().toLowerCase(Locale.ROOT);
+        Shipment shipment = order.getShipment();
+        String customerName = shipment == null ? null : shipment.getRecipientName();
+        String phoneNumber = shipment == null ? null : shipment.getPhoneNumber();
+
+        return containsIgnoreCase(order.getOrderNumber(), search)
+            || containsIgnoreCase(order.getCustomerEmail(), search)
+            || containsIgnoreCase(customerName, search)
+            || containsIgnoreCase(phoneNumber, search);
+    }
+
+    private boolean matchesShowroom(Order order, Long showroomId) {
+        if (showroomId == null) {
+            return true;
+        }
+        Shipment shipment = order.getShipment();
+        Showroom showroom = shipment == null ? null : shipment.getPickupShowroom();
+        return showroom != null && showroomId.equals(showroom.getId());
+    }
+
+    private boolean containsIgnoreCase(String value, String search) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(search);
     }
 
     private String normalize(String value) {

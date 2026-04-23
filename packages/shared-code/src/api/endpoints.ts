@@ -25,6 +25,12 @@ export const API_ENDPOINTS = {
     quote: "/orders/quote",
     detail: (id: string) => `/orders/${id}`
   },
+  manager: {
+    dashboard: "/manager/dashboard",
+    payments: "/manager/payments",
+    paymentConfirm: (paymentId: number | string) => `/manager/payments/${paymentId}/confirm`,
+    customers: "/manager/customers"
+  },
   showrooms: {
     list: "/showrooms"
   },
