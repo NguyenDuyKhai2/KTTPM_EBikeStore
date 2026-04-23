@@ -67,10 +67,10 @@ const ManagerOrdersPage = () => {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Total Orders", value: metrics.total },
-          { label: "Pending Confirmation", value: metrics.pending },
-          { label: "In Transit", value: metrics.inTransit },
-          { label: "Completed", value: metrics.completed }
+          { label: "Tổng đơn hàng", value: metrics.total },
+          { label: "Chờ xác nhận", value: metrics.pending },
+          { label: "Đang vận chuyển", value: metrics.inTransit },
+          { label: "Hoàn tất", value: metrics.completed }
         ].map((metric) => (
           <article key={metric.label} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{metric.label}</p>
@@ -82,39 +82,39 @@ const ManagerOrdersPage = () => {
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="grid gap-4 xl:grid-cols-[1fr,1fr,1.4fr,auto]">
           <label className="space-y-2">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Order Status</span>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Trạng thái đơn</span>
             <select
               value={status}
               onChange={(event) => setStatus(event.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-[#003b93] focus:bg-white"
             >
-              <option value="">All Statuses</option>
-              <option value="PENDING">Pending</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="PROCESSING">Processing</option>
-              <option value="SHIPPED">Shipped</option>
-              <option value="DELIVERED">Delivered</option>
-              <option value="CANCELLED">Cancelled</option>
+              <option value="">Tất cả trạng thái</option>
+              <option value="PENDING">Chờ xử lý</option>
+              <option value="CONFIRMED">Đã xác nhận</option>
+              <option value="PROCESSING">Đang xử lý</option>
+              <option value="SHIPPED">Đang giao</option>
+              <option value="DELIVERED">Đã giao</option>
+              <option value="CANCELLED">Đã hủy</option>
             </select>
           </label>
 
           <label className="space-y-2">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Payment Status</span>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Trạng thái thanh toán</span>
             <select
               value={paymentStatus}
               onChange={(event) => setPaymentStatus(event.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-[#003b93] focus:bg-white"
             >
-              <option value="">All Payments</option>
-              <option value="PENDING">Pending</option>
-              <option value="PAID">Paid</option>
-              <option value="FAILED">Failed</option>
-              <option value="REFUNDED">Refunded</option>
+              <option value="">Tất cả thanh toán</option>
+              <option value="PENDING">Chờ xử lý</option>
+              <option value="PAID">Đã thanh toán</option>
+              <option value="FAILED">Thất bại</option>
+              <option value="REFUNDED">Đã hoàn tiền</option>
             </select>
           </label>
 
           <label className="space-y-2">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Search</span>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Tìm kiếm</span>
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -130,14 +130,14 @@ const ManagerOrdersPage = () => {
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
             >
               <RotateCcw className="h-4 w-4" />
-              <span>Reset</span>
+              <span>Đặt lại</span>
             </button>
             <button
               type="button"
               onClick={applyFilters}
               className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              Apply
+              Áp dụng
             </button>
           </div>
         </div>
@@ -151,13 +151,13 @@ const ManagerOrdersPage = () => {
             <table className="min-w-full text-left">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Order</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Customer</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Model</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Payment</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-right">Total</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-right">Action</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Đơn hàng</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Khách hàng</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Sản phẩm</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Trạng thái</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Thanh toán</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-right">Tổng tiền</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -168,13 +168,13 @@ const ManagerOrdersPage = () => {
                       <p className="mt-1 text-xs text-slate-400">{formatDate(order.createdAt)}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-slate-900">{order.shipment?.recipientName || "Guest order"}</p>
+                      <p className="text-sm font-semibold text-slate-900">{order.shipment?.recipientName || "Đơn khách vãng lai"}</p>
                       <p className="mt-1 text-xs text-slate-400">{order.shipment?.phoneNumber || order.customerEmail || "-"}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-slate-900">{order.items[0]?.productName || "Product"}</p>
+                      <p className="text-sm font-semibold text-slate-900">{order.items[0]?.productName || "Sản phẩm"}</p>
                       <p className="mt-1 text-xs text-slate-400">
-                        {order.items.length > 1 ? `${order.items.length} items` : formatManagerLabel(order.paymentMethod)}
+                        {order.items.length > 1 ? `${order.items.length} sản phẩm` : formatManagerLabel(order.paymentMethod)}
                       </p>
                     </td>
                     <td className="px-6 py-4">
@@ -191,7 +191,7 @@ const ManagerOrdersPage = () => {
                           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
                         >
                           <Eye className="h-4 w-4" />
-                          <span>View</span>
+                          <span>Xem</span>
                         </Link>
                       </div>
                     </td>

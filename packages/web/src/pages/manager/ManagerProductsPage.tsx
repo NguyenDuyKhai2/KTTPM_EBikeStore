@@ -50,22 +50,22 @@ const ManagerProductsPage = () => {
               <div className="p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{product.category?.name || "Vehicle"}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{product.category?.name || "Xe điện"}</p>
                     <h3 className="mt-2 text-xl font-bold text-slate-950">{product.name}</h3>
                   </div>
                   <span className="rounded-md bg-green-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-green-700">
-                    Live
+                    Đang bán
                   </span>
                 </div>
 
                 <div className="mt-5 grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Price</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Giá bán</p>
                     <p className="mt-2 text-base font-bold text-slate-950">{formatCurrency(product.discountPrice ?? product.price)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Stock</p>
-                    <p className="mt-2 text-base font-bold text-slate-950">{product.stockQuantity ?? 0} units</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Tồn kho</p>
+                    <p className="mt-2 text-base font-bold text-slate-950">{product.stockQuantity ?? 0} chiếc</p>
                   </div>
                 </div>
 

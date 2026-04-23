@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 const Footer = () => {
   const location = useLocation();
 
-  if (location.pathname.startsWith("/checkout")) {
+  if (location.pathname.startsWith("/checkout") || location.pathname.startsWith("/chatbot")) {
     return null;
   }
 

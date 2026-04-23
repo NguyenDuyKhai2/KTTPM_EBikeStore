@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, Clock3, ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { managerAPI } from "@ebike/shared-code/api";
-import type { ManagerDashboard } from "@ebike/shared-code/types";
-import type { Order } from "@ebike/shared-code/types";
+import type { ManagerDashboard, Order } from "@ebike/shared-code/types";
 import ManagerStatusBadge, { orderTone, paymentTone } from "../../components/manager/ManagerStatusBadge";
 
 const formatCurrency = (value: number) =>
@@ -34,7 +33,7 @@ const ManagerDashboardPage = () => {
         setDashboard(await managerAPI.getDashboard());
         setError("");
       } catch (dashboardError) {
-        setError(dashboardError instanceof Error ? dashboardError.message : "Không thể tải dashboard.");
+        setError(dashboardError instanceof Error ? dashboardError.message : "Không thể tải dữ liệu tổng quan.");
       } finally {
         setLoading(false);
       }
@@ -46,25 +45,25 @@ const ManagerDashboardPage = () => {
   const stats = useMemo(
     () => [
       {
-        label: "Total Orders",
+        label: "Tổng đơn hàng",
         value: String(dashboard.totalOrders),
         icon: ShoppingCart,
         tone: "text-blue-700 bg-blue-50"
       },
       {
-        label: "Pending Confirmation",
+        label: "Chờ xác nhận",
         value: String(dashboard.pendingOrders),
         icon: Clock3,
         tone: "text-orange-700 bg-orange-50"
       },
       {
-        label: "Unpaid Pay Later",
+        label: "Thanh toán sau chưa thu",
         value: String(dashboard.unpaidPayLaterOrders),
         icon: AlertCircle,
         tone: "text-purple-700 bg-purple-50"
       },
       {
-        label: "Revenue This Month",
+        label: "Doanh thu tháng này",
         value: formatCurrency(dashboard.monthRevenue),
         icon: CheckCircle2,
         tone: "text-green-700 bg-green-50"
@@ -95,36 +94,36 @@ const ManagerDashboardPage = () => {
         <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-950">Revenue Snapshot</h2>
+              <h2 className="text-xl font-bold text-slate-950">Tổng quan doanh thu</h2>
               <p className="mt-1 text-sm text-slate-500">Theo dõi doanh thu đã thanh toán trong các mốc gần nhất.</p>
             </div>
           </div>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Today</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Hôm nay</p>
               <p className="mt-2 text-xl font-bold text-slate-950">{formatCurrency(dashboard.todayRevenue)}</p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Last 7 Days</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">7 ngày gần nhất</p>
               <p className="mt-2 text-xl font-bold text-slate-950">{formatCurrency(dashboard.weekRevenue)}</p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Month To Date</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Từ đầu tháng</p>
               <p className="mt-2 text-xl font-bold text-slate-950">{formatCurrency(dashboard.monthRevenue)}</p>
             </div>
           </div>
         </article>
 
         <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-950">Action Required</h2>
+          <h2 className="text-xl font-bold text-slate-950">Cần xử lý</h2>
           <div className="mt-6 space-y-3">
             <div className="rounded-lg border border-orange-100 bg-orange-50 p-4">
-              <p className="text-sm font-bold text-slate-950">Pending orders cần xác nhận</p>
-              <p className="mt-1 text-sm text-slate-600">{dashboard.pendingOrders} đơn đang chờ manager xử lý.</p>
+              <p className="text-sm font-bold text-slate-950">Đơn hàng chờ xác nhận</p>
+              <p className="mt-1 text-sm text-slate-600">{dashboard.pendingOrders} đơn đang chờ quản lý xử lý.</p>
             </div>
             <div className="rounded-lg border border-purple-100 bg-purple-50 p-4">
-              <p className="text-sm font-bold text-slate-950">PAY_LATER chưa đối soát</p>
+              <p className="text-sm font-bold text-slate-950">Thanh toán sau chưa đối soát</p>
               <p className="mt-1 text-sm text-slate-600">{dashboard.unpaidPayLaterOrders} giao dịch đang ở trạng thái chờ.</p>
             </div>
           </div>
@@ -134,11 +133,11 @@ const ManagerDashboardPage = () => {
       <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div>
-            <h2 className="text-xl font-bold text-slate-950">Recent Orders</h2>
-            <p className="mt-1 text-sm text-slate-500">Các đơn mới nhất đang cần manager theo dõi.</p>
+            <h2 className="text-xl font-bold text-slate-950">Đơn hàng gần đây</h2>
+            <p className="mt-1 text-sm text-slate-500">Các đơn mới nhất đang cần quản lý theo dõi.</p>
           </div>
           <Link to="/manager/orders" className="text-sm font-bold text-[#003b93] transition hover:opacity-80">
-            View all
+            Xem tất cả
           </Link>
         </div>
 
@@ -151,11 +150,11 @@ const ManagerDashboardPage = () => {
             <table className="min-w-full text-left">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Order</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Customer</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Payment</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-right">Total</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Đơn hàng</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Khách hàng</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Trạng thái</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Thanh toán</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-right">Tổng tiền</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -168,7 +167,7 @@ const ManagerDashboardPage = () => {
                       <p className="mt-1 text-xs text-slate-400">{formatDate(order.createdAt)}</p>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      <p className="font-semibold text-slate-900">{order.shipment?.recipientName || "Guest order"}</p>
+                      <p className="font-semibold text-slate-900">{order.shipment?.recipientName || "Đơn khách vãng lai"}</p>
                       <p className="mt-1 text-xs text-slate-400">{order.customerEmail || "-"}</p>
                     </td>
                     <td className="px-6 py-4">

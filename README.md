@@ -208,36 +208,52 @@ Flyway chạy migration từ:
 
 - `backend/src/main/resources/db/migration`
 
+Hiện tại migration đã được squash thành baseline:
+
+- `backend/src/main/resources/db/migration/V2_0_0__baseline.sql`
+
+Các migration lịch sử `V1_*` được chuyển sang:
+
+- `backend/src/main/resources/db/migration-archive/`
+
 Schema tổng quan để đọc nhanh:
 
 - `backend/src/main/resources/db/schema-overview.sql`
 
-Một số mốc migration đáng chú ý:
+Ghi chú thêm về migration hiện tại:
 
-- `V1_0_4__chatbot_tables.sql`: phần schema chatbot
-- `V1_0_10__add_showroom_pickup_flow.sql`: luồng nhận xe tại showroom
-- `V1_0_16__add_vnpay_payment_fields.sql`: thanh toán VNPay
-- `V1_0_18__pbac_permission_seed.sql`: seed permission PBAC
-- `V1_0_19__allow_guest_orders.sql`: cho phép guest đặt hàng
-- `V1_0_21__merge_staff_into_manager.sql`: gộp vai trò staff vào manager
+- Flyway hiện chỉ đọc migration active trong `backend/src/main/resources/db/migration/`
+- `backend/src/main/resources/db/migration-archive/` chỉ dùng để lưu lịch sử `V1_*`, không còn được chạy trực tiếp
+- từ baseline `V2_0_0`, thay đổi schema mới nên được thêm bằng migration mới theo nhánh `V2_*`
 
-Seed dữ liệu mẫu hiện có:
+Baseline `V2_0_0` đã gộp toàn bộ các thay đổi chính trước đây:
 
-- `V1_0_7__sample_data.sql`
-- `V1_0_8__auth_seed_data.sql`
-- `V1_0_18__pbac_permission_seed.sql`
+- schema auth, product, order, user
+- showroom pickup flow
+- metadata ảnh S3
+- user favorites
+- VNPay payment fields
+- PBAC permissions
+- merge `STAFF` vào `MANAGER`
+- cấp quyền favorites cho manager
+
+Lưu ý khi chuyển sang baseline:
+
+- nếu database local cũ đang dùng lịch sử `V1_*`, nên reset DB dev một lần để sạch hoàn toàn
+- seed sản phẩm vẫn nằm ngoài Flyway, dùng file trong `backend/data-backup/`
 
 ## Import dữ liệu sản phẩm mẫu
 
 Nếu bạn đang dùng container PostgreSQL tên `ebike-postgres`, có thể import thêm dữ liệu SQL từ file:
 
-- `backend/data-backup/yadea_products.seed.sql`
+- `backend/data-backup/dataCawl/output/products_db_ready_clean.sql`: là SQL thật, nhưng `image_url` dùng đường dẫn ảnh local
+- `backend/data-backup/dataCawl/output/products_db_ready_clean.s3.sql`: là SQL thật và là file phù hợp nhất với DB/app hiện tại vì dùng URL ảnh S3
 
 Ví dụ:
 
 ```bash
-docker cp backend/data-backup/yadea_products.seed.sql ebike-postgres:/tmp/yadea_products.seed.sql
-docker exec -i ebike-postgres psql -U ebike_user -d ebike_db -v ON_ERROR_STOP=1 -f /tmp/yadea_products.seed.sql
+docker cp backend/data-backup/dataCawl/output/products_db_ready_clean.s3.sql ebike-postgres:/tmp/products_db_ready_clean.s3.sql
+docker exec -i ebike-postgres psql -U ebike_user -d ebike_db -v ON_ERROR_STOP=1 -f /tmp/products_db_ready_clean.s3.sql
 ```
 
 ## API và quyền truy cập

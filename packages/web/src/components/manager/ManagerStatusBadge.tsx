@@ -9,6 +9,27 @@ const toneClasses: Record<BadgeTone, string> = {
   slate: "border-slate-200 bg-slate-100 text-slate-700"
 };
 
+const labelMap: Record<string, string> = {
+  PENDING: "Chờ xử lý",
+  CONFIRMED: "Đã xác nhận",
+  PROCESSING: "Đang xử lý",
+  SHIPPED: "Đang giao",
+  DELIVERED: "Đã giao",
+  CANCELLED: "Đã hủy",
+  PAID: "Đã thanh toán",
+  FAILED: "Thất bại",
+  REFUNDED: "Đã hoàn tiền",
+  AUTHORIZED: "Đã xác thực",
+  PAY_LATER: "Thanh toán sau",
+  VNPAY: "VNPay",
+  CASH: "Tiền mặt",
+  BANK_TRANSFER: "Chuyển khoản",
+  ACTIVE: "Đang hoạt động",
+  INACTIVE: "Ngừng hoạt động",
+  VERIFIED: "Đã xác minh",
+  UNVERIFIED: "Chưa xác minh"
+};
+
 export const orderTone = (status?: string | null): BadgeTone => {
   switch (status) {
     case "DELIVERED":
@@ -40,14 +61,21 @@ export const paymentTone = (status?: string | null): BadgeTone => {
   }
 };
 
-export const formatManagerLabel = (value?: string | null) =>
-  value
-    ? value
-        .toLowerCase()
-        .split("_")
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ")
-    : "Unknown";
+export const formatManagerLabel = (value?: string | null) => {
+  if (!value) {
+    return "Không xác định";
+  }
+
+  if (labelMap[value]) {
+    return labelMap[value];
+  }
+
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+};
 
 const ManagerStatusBadge = ({
   label,

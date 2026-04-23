@@ -1,6 +1,10 @@
 -- =====================================================
 -- E-Bike Multiplatform Database Schema Overview
 -- =====================================================
+-- Current migration strategy:
+--   - Active Flyway baseline: db/migration/V2_0_0__baseline.sql
+--   - Archived migration history: db/migration-archive/V1_*.sql
+--
 -- Purpose:
 --   Consolidated overview of the current database schema
 --   derived from migrations V1_0_0 through V1_0_9.

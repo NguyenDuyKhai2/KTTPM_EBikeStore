@@ -77,7 +77,7 @@ const ManagerOrderDetailPage = () => {
         <div>
           <Link to="/manager/orders" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to orders</span>
+            <span>Quay lại danh sách đơn</span>
           </Link>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <h2 className="text-3xl font-bold text-slate-950">{order.orderNumber}</h2>
@@ -90,7 +90,7 @@ const ManagerOrderDetailPage = () => {
         <div className="space-y-6">
           <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-6 py-5">
-              <h3 className="text-lg font-bold text-slate-950">Purchased Products</h3>
+              <h3 className="text-lg font-bold text-slate-950">Sản phẩm đã mua</h3>
             </div>
             <div className="divide-y divide-slate-100">
               {order.items.map((item) => (
@@ -99,8 +99,8 @@ const ManagerOrderDetailPage = () => {
                     <Package className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold text-slate-950">{item.productName || `Product #${item.productId}`}</p>
-                    <p className="mt-1 text-sm text-slate-500">Quantity: {item.quantity}</p>
+                    <p className="font-bold text-slate-950">{item.productName || `Sản phẩm #${item.productId}`}</p>
+                    <p className="mt-1 text-sm text-slate-500">Số lượng: {item.quantity}</p>
                   </div>
                   <p className="text-sm font-bold text-slate-950">{formatCurrency(item.lineTotal ?? item.unitPrice ?? 0)}</p>
                 </div>
@@ -108,37 +108,37 @@ const ManagerOrderDetailPage = () => {
             </div>
             <div className="space-y-3 border-t border-slate-200 bg-slate-50 px-6 py-5 text-sm">
               <div className="flex items-center justify-between text-slate-600">
-                <span>Subtotal</span>
+                <span>Tạm tính</span>
                 <span>{formatCurrency(itemTotal || order.subtotal)}</span>
               </div>
               <div className="flex items-center justify-between text-slate-600">
-                <span>Registration Fee</span>
+                <span>Phí đăng ký</span>
                 <span>{formatCurrency(order.registrationFee)}</span>
               </div>
               <div className="flex items-center justify-between text-slate-600">
-                <span>Discount</span>
+                <span>Giảm giá</span>
                 <span>-{formatCurrency(order.discountAmount)}</span>
               </div>
               <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-base font-bold text-slate-950">
-                <span>Total</span>
+                <span>Tổng cộng</span>
                 <span>{formatCurrency(order.totalAmount)}</span>
               </div>
             </div>
           </section>
 
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-950">Order Notes</h3>
+            <h3 className="text-lg font-bold text-slate-950">Ghi chú đơn hàng</h3>
             <p className="mt-4 text-sm leading-7 text-slate-600">{order.notes || "Khách hàng chưa để lại ghi chú cho đơn hàng này."}</p>
           </section>
         </div>
 
         <div className="space-y-6">
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-950">Customer Details</h3>
+            <h3 className="text-lg font-bold text-slate-950">Thông tin khách hàng</h3>
             <div className="mt-5 space-y-4 text-sm text-slate-600">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Name</p>
-                <p className="mt-2 font-semibold text-slate-950">{order.shipment?.recipientName || "Guest order"}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Tên khách</p>
+                <p className="mt-2 font-semibold text-slate-950">{order.shipment?.recipientName || "Đơn khách vãng lai"}</p>
               </div>
               <div className="flex items-start gap-3">
                 <Phone className="mt-0.5 h-4 w-4 text-slate-400" />
@@ -156,7 +156,7 @@ const ManagerOrderDetailPage = () => {
           </section>
 
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-950">Pickup Showroom</h3>
+            <h3 className="text-lg font-bold text-slate-950">Showroom nhận xe</h3>
             <div className="mt-5 text-sm text-slate-600">
               <p className="font-semibold text-slate-950">{order.shipment?.pickupShowroom?.name || "-"}</p>
               <p className="mt-2 leading-7">{order.shipment?.pickupShowroom?.address || "-"}</p>
@@ -165,21 +165,21 @@ const ManagerOrderDetailPage = () => {
           </section>
 
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-950">Payment</h3>
+            <h3 className="text-lg font-bold text-slate-950">Thanh toán</h3>
             <div className="mt-5 space-y-4 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Method</span>
+                <span className="text-slate-500">Phương thức</span>
                 <span className="font-semibold text-slate-950">{formatManagerLabel(order.paymentMethod)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Status</span>
+                <span className="text-slate-500">Trạng thái</span>
                 <ManagerStatusBadge label={order.paymentStatus} tone={paymentTone(order.paymentStatus)} />
               </div>
             </div>
           </section>
 
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-950">Status Timeline</h3>
+            <h3 className="text-lg font-bold text-slate-950">Tiến trình đơn hàng</h3>
             <div className="mt-6 space-y-5">
               {statusTimeline(order).map((step) => (
                 <div key={step.status} className="flex items-start gap-3">
@@ -197,9 +197,9 @@ const ManagerOrderDetailPage = () => {
               ))}
             </div>
             <div className="mt-6 border-t border-slate-200 pt-4 text-xs text-slate-400">
-              Created: {formatDateTime(order.createdAt)}
+              Tạo lúc: {formatDateTime(order.createdAt)}
               <br />
-              Updated: {formatDateTime(order.updatedAt)}
+              Cập nhật lúc: {formatDateTime(order.updatedAt)}
             </div>
           </section>
         </div>

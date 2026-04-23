@@ -33,7 +33,7 @@ const ManagerPaymentsPage = () => {
       setPayments(await managerAPI.getPayments(params));
       setError("");
     } catch (paymentsError) {
-      setError(paymentsError instanceof Error ? paymentsError.message : "Không thể tải payment records.");
+      setError(paymentsError instanceof Error ? paymentsError.message : "Không thể tải danh sách giao dịch.");
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ const ManagerPaymentsPage = () => {
   const handleConfirm = async (paymentId: number) => {
     try {
       setSubmittingId(paymentId);
-      await managerAPI.confirmPayment(paymentId, { note: "Đã xác nhận thanh toán bởi manager." });
+      await managerAPI.confirmPayment(paymentId, { note: "Đã xác nhận thanh toán bởi quản lý." });
       await applyFilters();
     } catch (confirmError) {
       setError(confirmError instanceof Error ? confirmError.message : "Không thể xác nhận thanh toán.");
@@ -81,10 +81,10 @@ const ManagerPaymentsPage = () => {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Settled Volume", value: formatCurrency(stats.settled) },
-          { label: "Pending Deposits", value: formatCurrency(stats.pending) },
-          { label: "Failed Payments", value: String(stats.failed) },
-          { label: "Pay Later Pending", value: String(stats.payLaterPending) }
+          { label: "Doanh số đã thu", value: formatCurrency(stats.settled) },
+          { label: "Khoản chờ thanh toán", value: formatCurrency(stats.pending) },
+          { label: "Giao dịch thất bại", value: String(stats.failed) },
+          { label: "Thanh toán sau đang chờ", value: String(stats.payLaterPending) }
         ].map((stat) => (
           <article key={stat.label} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{stat.label}</p>
@@ -98,7 +98,7 @@ const ManagerPaymentsPage = () => {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by order number, customer, transaction"
+            placeholder="Tìm theo mã đơn, khách hàng, mã giao dịch"
             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-[#003b93] focus:bg-white"
           />
           <select
@@ -106,20 +106,20 @@ const ManagerPaymentsPage = () => {
             onChange={(event) => setPaymentMethod(event.target.value)}
             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-[#003b93] focus:bg-white"
           >
-            <option value="">All Methods</option>
-            <option value="PAY_LATER">PAY_LATER</option>
-            <option value="VNPAY">VNPAY</option>
+            <option value="">Tất cả phương thức</option>
+            <option value="PAY_LATER">Thanh toán sau</option>
+            <option value="VNPAY">VNPay</option>
           </select>
           <select
             value={paymentStatus}
             onChange={(event) => setPaymentStatus(event.target.value)}
             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-[#003b93] focus:bg-white"
           >
-            <option value="">All Statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="PAID">Paid</option>
-            <option value="FAILED">Failed</option>
-            <option value="REFUNDED">Refunded</option>
+            <option value="">Tất cả trạng thái</option>
+            <option value="PENDING">Chờ xử lý</option>
+            <option value="PAID">Đã thanh toán</option>
+            <option value="FAILED">Thất bại</option>
+            <option value="REFUNDED">Đã hoàn tiền</option>
           </select>
           <div className="flex gap-2">
             <button
@@ -127,14 +127,14 @@ const ManagerPaymentsPage = () => {
               onClick={applyFilters}
               className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              Apply
+              Áp dụng
             </button>
             <button
               type="button"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
             >
               <Download className="h-4 w-4" />
-              <span>Export</span>
+              <span>Xuất file</span>
             </button>
           </div>
         </div>
@@ -148,12 +148,12 @@ const ManagerPaymentsPage = () => {
             <table className="min-w-full text-left">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Transaction</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Customer</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Method</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-right">Amount</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-right">Action</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Giao dịch</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Khách hàng</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Phương thức</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Trạng thái</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-right">Số tiền</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -164,7 +164,7 @@ const ManagerPaymentsPage = () => {
                       <p className="mt-1 text-xs text-slate-400">{formatDateTime(payment.orderCreatedAt)}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-slate-900">{payment.customerName || "Guest order"}</p>
+                      <p className="text-sm font-semibold text-slate-900">{payment.customerName || "Đơn khách vãng lai"}</p>
                       <p className="mt-1 text-xs text-slate-400">{payment.customerEmail || "-"}</p>
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-slate-700">{formatManagerLabel(payment.paymentMethod)}</td>
@@ -182,7 +182,7 @@ const ManagerPaymentsPage = () => {
                             className="inline-flex items-center gap-2 rounded-lg bg-[#003b93] px-3.5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {submittingId === payment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                            <span>Confirm</span>
+                            <span>Xác nhận</span>
                           </button>
                         ) : (
                           <span className="text-xs text-slate-400">{payment.paidAt ? formatDateTime(payment.paidAt) : "-"}</span>

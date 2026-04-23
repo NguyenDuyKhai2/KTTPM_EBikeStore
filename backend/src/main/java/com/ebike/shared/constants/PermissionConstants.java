@@ -108,6 +108,8 @@ public final class PermissionConstants {
         public static final String PRODUCT_SEARCH = Guest.PRODUCT_SEARCH;
         public static final String CATEGORY_VIEW = Guest.CATEGORY_VIEW;
         public static final String REVIEW_VIEW = Guest.REVIEW_VIEW;
+        public static final String FAVORITE_VIEW = Customer.FAVORITE_VIEW;
+        public static final String FAVORITE_UPDATE = Customer.FAVORITE_UPDATE;
         public static final String PRODUCT_CREATE = ProductManagement.PRODUCT_CREATE;
         public static final String PRODUCT_UPDATE = ProductManagement.PRODUCT_UPDATE;
         public static final String PRODUCT_DELETE = ProductManagement.PRODUCT_DELETE;
