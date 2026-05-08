@@ -1,5 +1,6 @@
 package com.ebike.orderModule.controller;
 
+import com.ebike.orderModule.dto.request.OrderCancellationRequest;
 import com.ebike.orderModule.dto.request.OrderCreateRequest;
 import com.ebike.orderModule.dto.request.OrderQuoteRequest;
 import com.ebike.orderModule.dto.request.OrderStatusUpdateRequest;
@@ -63,6 +64,16 @@ public class OrderController {
     @PreAuthorize("hasAuthority('" + PermissionConstants.OrderManagement.ORDER_UPDATE_STATUS + "')")
     public OrderResponse updateOrderStatus(@PathVariable Long id, @RequestBody OrderStatusUpdateRequest request) {
         return orderService.updateOrderStatus(id, request);
+    }
+
+    @PostMapping("/{id}/cancellation-request")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.Customer.ORDER_CANCEL_OWN + "')")
+    public OrderResponse requestCancellation(
+        @PathVariable Long id,
+        @RequestBody(required = false) OrderCancellationRequest request,
+        Authentication authentication
+    ) {
+        return orderService.requestCancellation(id, request, authentication);
     }
 
 }

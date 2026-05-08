@@ -12,6 +12,7 @@ const toneClasses: Record<BadgeTone, string> = {
 const labelMap: Record<string, string> = {
   PENDING: "Chờ xử lý",
   CONFIRMED: "Đã xác nhận",
+  CANCELLATION_REQUESTED: "Chờ duyệt hủy",
   PROCESSING: "Đang xử lý",
   SHIPPED: "Đang giao",
   DELIVERED: "Đã giao",
@@ -37,6 +38,8 @@ export const orderTone = (status?: string | null): BadgeTone => {
     case "CONFIRMED":
     case "PROCESSING":
       return "orange";
+    case "CANCELLATION_REQUESTED":
+      return "red";
     case "SHIPPED":
       return "purple";
     case "CANCELLED":
@@ -51,6 +54,7 @@ export const paymentTone = (status?: string | null): BadgeTone => {
     case "PAID":
       return "green";
     case "FAILED":
+    case "CANCELLED":
       return "red";
     case "REFUNDED":
       return "slate";

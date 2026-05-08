@@ -70,7 +70,7 @@ const Header = () => {
             </button>
           </div>
           <NavLink to={isAuthenticated ? "/products" : "/auth"} className="btn-primary hidden text-sm sm:inline-flex">
-            {isAuthenticated ? "Đặt lịch lái thử" : "Đăng nhập"}
+            {isAuthenticated ? "Mua Ngay " : "Đăng nhập"}
           </NavLink>
           <button
             onClick={() => setMobileOpen((value) => !value)}
@@ -103,7 +103,7 @@ const Header = () => {
               </NavLink>
             ))}
             <NavLink to={isAuthenticated ? "/products" : "/auth"} className="btn-primary mt-2 w-full">
-              {isAuthenticated ? "Đặt lịch lái thử" : "Đăng nhập"}
+              {isAuthenticated ? "Mua Ngay " : "Đăng nhập"}
             </NavLink>
           </div>
         </div>

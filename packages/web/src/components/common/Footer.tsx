@@ -54,7 +54,6 @@ const Footer = () => {
         <div className="flex flex-col items-center justify-between gap-6 border-t border-outline-variant/10 pt-12 md:flex-row">
           <p className="text-sm text-muted-foreground">© 2026 Kinetic Precision. Bảo lưu mọi quyền.</p>
           <div className="flex gap-8 text-xs uppercase tracking-widest text-muted-foreground">
-            <span>Trụ sở toàn cầu: Berlin, Đức</span>
             <span>Văn phòng Việt Nam: TP.HCM, Việt Nam</span>
           </div>
         </div>

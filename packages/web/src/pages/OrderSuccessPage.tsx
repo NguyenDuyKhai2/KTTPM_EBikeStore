@@ -11,6 +11,7 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   PENDING: "Chưa thanh toán",
   PAID: "Đã thanh toán",
   FAILED: "Thanh toán thất bại",
+  CANCELLED: "Đã hủy",
   REFUNDED: "Đã hoàn tiền"
 };
 

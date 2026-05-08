@@ -7,6 +7,7 @@ import SectionShell from "../../components/common/SectionShell";
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "Chờ xác nhận",
   CONFIRMED: "Đã xác nhận",
+  CANCELLATION_REQUESTED: "Chờ duyệt hủy",
   SHIPPED: "Đang giao",
   DELIVERED: "Đã giao",
   CANCELLED: "Đã hủy"
@@ -15,6 +16,7 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_CLASSES: Record<string, string> = {
   PENDING: "bg-amber-50 text-amber-700 border-amber-200",
   CONFIRMED: "bg-blue-50 text-blue-700 border-blue-200",
+  CANCELLATION_REQUESTED: "bg-rose-50 text-rose-700 border-rose-200",
   SHIPPED: "bg-violet-50 text-violet-700 border-violet-200",
   DELIVERED: "bg-emerald-50 text-emerald-700 border-emerald-200",
   CANCELLED: "bg-rose-50 text-rose-700 border-rose-200"
@@ -24,6 +26,7 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   PENDING: "Chưa thanh toán",
   PAID: "Đã thanh toán",
   FAILED: "Thanh toán thất bại",
+  CANCELLED: "Đã hủy",
   REFUNDED: "Đã hoàn tiền"
 };
 
@@ -32,6 +35,11 @@ const CustomerOrdersSafePage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancellationError, setCancellationError] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
+  const [cancellationOrder, setCancellationOrder] = useState<Order | null>(null);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [cancellationValidationError, setCancellationValidationError] = useState("");
   const latestRequestId = useRef(0);
 
   useEffect(() => {
@@ -71,6 +79,55 @@ const CustomerOrdersSafePage = () => {
 
   const totalSpent = useMemo(() => orders.reduce((sum, order) => sum + order.totalAmount, 0), [orders]);
 
+  const canRequestCancellation = (order: Order) =>
+    order.paymentMethod === "PAY_LATER" &&
+    order.paymentStatus === "PENDING" &&
+    (order.status === "PENDING" || order.status === "CONFIRMED");
+
+  const openCancellationDialog = (order: Order) => {
+    setCancellationOrder(order);
+    setCancellationReason("");
+    setCancellationValidationError("");
+    setCancellationError(null);
+  };
+
+  const closeCancellationDialog = () => {
+    if (cancellingOrderId !== null) {
+      return;
+    }
+    setCancellationOrder(null);
+    setCancellationReason("");
+    setCancellationValidationError("");
+  };
+
+  const submitCancellationRequest = async () => {
+    if (!cancellationOrder) {
+      return;
+    }
+
+    const reason = cancellationReason.trim();
+    if (reason.length > 1000) {
+      setCancellationValidationError("Lý do hủy không được vượt quá 1000 ký tự.");
+      return;
+    }
+
+    setCancellationError(null);
+    setCancellationValidationError("");
+    setCancellingOrderId(cancellationOrder.id);
+    try {
+      const updatedOrder = await orderAPI.requestCancellation(cancellationOrder.id, { reason: reason || undefined });
+      setOrders((currentOrders) =>
+        currentOrders.map((currentOrder) => (currentOrder.id === updatedOrder.id ? updatedOrder : currentOrder))
+      );
+      setCancellationOrder(null);
+      setCancellationReason("");
+    } catch (cancelError) {
+      setCancellationError(cancelError instanceof Error ? cancelError.message : "Không thể gửi yêu cầu hủy đơn hàng.");
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
+
   return (
     <SectionShell
       eyebrow="Đơn hàng của tôi"
@@ -78,6 +135,11 @@ const CustomerOrdersSafePage = () => {
       description="Danh sách này hiển thị các đơn bạn đã tạo, trạng thái xử lý và địa điểm nhận xe tương ứng."
     >
       <div className="px-6 py-8">
+        {cancellationError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {cancellationError}
+          </div>
+        )}
         {!authUser?.id ? (
           <div className="rounded-lg bg-gray-50 p-6 text-center text-gray-600">
             Bạn cần đăng nhập để xem lịch sử đơn hàng.
@@ -135,10 +197,30 @@ const CustomerOrdersSafePage = () => {
                       <p className="mt-1 text-sm font-semibold text-muted-foreground">
                         Thanh toán: {PAYMENT_STATUS_LABELS[order.paymentStatus || ""] || "Chưa khởi tạo"}
                       </p>
+                      {order.status === "CANCELLATION_REQUESTED" && (
+                        <p className="mt-2 text-sm font-semibold text-rose-700">
+                          Yêu cầu hủy đang chờ manager xem xét.
+                        </p>
+                      )}
+                      {order.cancellationReviewNote && (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Phản hồi: {order.cancellationReviewNote}
+                        </p>
+                      )}
                     </div>
                     <div className="text-left md:text-right">
                       <p className="text-sm text-muted-foreground">Tổng thanh toán</p>
                       <p className="mt-2 text-2xl font-bold text-primary">{order.totalAmount.toLocaleString("vi-VN")}đ</p>
+                      {canRequestCancellation(order) && (
+                        <button
+                          type="button"
+                          onClick={() => openCancellationDialog(order)}
+                          disabled={cancellingOrderId === order.id}
+                          className="mt-4 rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {cancellingOrderId === order.id ? "Đang gửi..." : "Yêu cầu hủy"}
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -158,6 +240,57 @@ const CustomerOrdersSafePage = () => {
                   </div>
                 </article>
               ))}
+            </div>
+          </div>
+        )}
+
+        {cancellationOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
+            <div className="w-full max-w-lg rounded-lg bg-white shadow-2xl">
+              <div className="border-b border-slate-200 px-6 py-5">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-600">Yêu cầu hủy đơn</p>
+                <h3 className="mt-2 text-xl font-bold text-slate-950">{cancellationOrder.orderNumber}</h3>
+                <p className="mt-2 text-sm text-slate-500">
+                  Yêu cầu sẽ được gửi đến manager để xem xét trước khi đơn được hủy.
+                </p>
+              </div>
+
+              <div className="space-y-4 px-6 py-5">
+                <label className="block">
+                  <span className="text-sm font-semibold text-slate-700">Lý do hủy</span>
+                  <textarea
+                    value={cancellationReason}
+                    onChange={(event) => setCancellationReason(event.target.value)}
+                    rows={5}
+                    maxLength={1000}
+                    placeholder="Ví dụ: Tôi muốn thay đổi mẫu xe hoặc chưa sắp xếp được thời gian nhận xe."
+                    className="mt-2 w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-4 focus:ring-rose-100"
+                  />
+                </label>
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <span className="text-rose-600">{cancellationValidationError}</span>
+                  <span className="text-slate-400">{cancellationReason.length}/1000</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 px-6 py-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeCancellationDialog}
+                  disabled={cancellingOrderId === cancellationOrder.id}
+                  className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void submitCancellationRequest()}
+                  disabled={cancellingOrderId === cancellationOrder.id}
+                  className="rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {cancellingOrderId === cancellationOrder.id ? "Đang gửi..." : "Gửi yêu cầu"}
+                </button>
+              </div>
             </div>
           </div>
         )}

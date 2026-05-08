@@ -2,6 +2,7 @@ package com.ebike.orderModule.service.impl;
 
 import com.ebike.authModule.entity.User;
 import com.ebike.authModule.repository.UserRepository;
+import com.ebike.orderModule.dto.request.OrderCancellationRequest;
 import com.ebike.orderModule.dto.request.OrderCreateItemRequest;
 import com.ebike.orderModule.dto.request.OrderCreateRequest;
 import com.ebike.orderModule.dto.request.OrderQuoteRequest;
@@ -50,6 +51,7 @@ public class OrderServiceImpl implements OrderService {
     private static final int MAX_CUSTOMER_NAME_LENGTH = 100;
     private static final int MAX_DETAILED_ADDRESS_LENGTH = 500;
     private static final int MAX_NOTES_LENGTH = 1000;
+    private static final int MAX_CANCELLATION_REASON_LENGTH = 1000;
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
     private static final Pattern VIETNAM_PHONE_PATTERN = Pattern.compile("^0\\d{9,10}$");
     private static final Pattern IDENTITY_NUMBER_PATTERN = Pattern.compile("^(\\d{9}|\\d{12})$");
@@ -167,6 +169,47 @@ public class OrderServiceImpl implements OrderService {
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid order status");
         }
+
+        return toResponse(orderRepository.save(order));
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse requestCancellation(Long id, OrderCancellationRequest request, Authentication authentication) {
+        User currentUser = getAuthenticatedUser(authentication);
+        Order order = orderRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getUser() == null || !order.getUser().getId().equals(currentUser.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only request cancellation for your own orders");
+        }
+
+        Payment payment = order.getPayment();
+        if (payment == null || payment.getPaymentMethod() != PaymentMethod.PAY_LATER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only PAY_LATER orders can be requested for cancellation");
+        }
+        if (payment.getPaymentStatus() != PaymentStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only unpaid PAY_LATER orders can be requested for cancellation");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLATION_REQUESTED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancellation request is already pending manager review");
+        }
+        if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This order is no longer eligible for cancellation request");
+        }
+
+        String reason = normalizeOptional(request == null ? null : request.reason());
+        if (reason != null && reason.length() > MAX_CANCELLATION_REASON_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancellation reason cannot exceed " + MAX_CANCELLATION_REASON_LENGTH + " characters");
+        }
+
+        order.setCancellationRequestedFromStatus(order.getStatus());
+        order.setStatus(OrderStatus.CANCELLATION_REQUESTED);
+        order.setCancellationReason(reason);
+        order.setCancellationRequestedBy(currentUser);
+        order.setCancellationRequestedAt(java.time.LocalDateTime.now());
+        order.setCancellationReviewNote(null);
+        order.setCancellationReviewedAt(null);
 
         return toResponse(orderRepository.save(order));
     }
@@ -503,6 +546,12 @@ public class OrderServiceImpl implements OrderService {
             order.getNotes(),
             order.getCustomerEmail(),
             order.getCustomerIdentityNumber(),
+            order.getCancellationReason(),
+            order.getCancellationReviewNote(),
+            order.getCancellationRequestedFromStatus() == null ? null : order.getCancellationRequestedFromStatus().name(),
+            order.getCancellationRequestedBy() == null ? null : order.getCancellationRequestedBy().getId(),
+            order.getCancellationRequestedAt(),
+            order.getCancellationReviewedAt(),
             order.getCreatedAt(),
             order.getUpdatedAt(),
             order.getItems().stream()

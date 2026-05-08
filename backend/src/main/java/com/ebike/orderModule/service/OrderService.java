@@ -1,6 +1,7 @@
 package com.ebike.orderModule.service;
 
 import com.ebike.orderModule.dto.request.OrderCreateRequest;
+import com.ebike.orderModule.dto.request.OrderCancellationRequest;
 import com.ebike.orderModule.dto.request.OrderQuoteRequest;
 import com.ebike.orderModule.dto.request.OrderStatusUpdateRequest;
 import com.ebike.orderModule.dto.response.OrderQuoteResponse;
@@ -26,4 +27,6 @@ public interface OrderService {
     OrderResponse createOrder(OrderCreateRequest request, Authentication authentication);
 
     OrderResponse updateOrderStatus(Long id, OrderStatusUpdateRequest request);
+
+    OrderResponse requestCancellation(Long id, OrderCancellationRequest request, Authentication authentication);
 }

@@ -55,6 +55,7 @@ const ManagerOrdersPage = () => {
     () => ({
       total: orders.length,
       pending: orders.filter((order) => order.status === "PENDING").length,
+      cancellationRequested: orders.filter((order) => order.status === "CANCELLATION_REQUESTED").length,
       inTransit: orders.filter((order) => order.status === "SHIPPED" || order.status === "PROCESSING").length,
       completed: orders.filter((order) => order.status === "DELIVERED").length
     }),
@@ -69,6 +70,7 @@ const ManagerOrdersPage = () => {
         {[
           { label: "Tổng đơn hàng", value: metrics.total },
           { label: "Chờ xác nhận", value: metrics.pending },
+          { label: "Chờ duyệt hủy", value: metrics.cancellationRequested },
           { label: "Đang vận chuyển", value: metrics.inTransit },
           { label: "Hoàn tất", value: metrics.completed }
         ].map((metric) => (
@@ -91,6 +93,7 @@ const ManagerOrdersPage = () => {
               <option value="">Tất cả trạng thái</option>
               <option value="PENDING">Chờ xử lý</option>
               <option value="CONFIRMED">Đã xác nhận</option>
+              <option value="CANCELLATION_REQUESTED">Chờ duyệt hủy</option>
               <option value="PROCESSING">Đang xử lý</option>
               <option value="SHIPPED">Đang giao</option>
               <option value="DELIVERED">Đã giao</option>
@@ -109,6 +112,7 @@ const ManagerOrdersPage = () => {
               <option value="PENDING">Chờ xử lý</option>
               <option value="PAID">Đã thanh toán</option>
               <option value="FAILED">Thất bại</option>
+              <option value="CANCELLED">Đã hủy</option>
               <option value="REFUNDED">Đã hoàn tiền</option>
             </select>
           </label>

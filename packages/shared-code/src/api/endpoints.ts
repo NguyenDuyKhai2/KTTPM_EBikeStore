@@ -23,12 +23,15 @@ export const API_ENDPOINTS = {
     list: "/orders",
     create: "/orders",
     quote: "/orders/quote",
-    detail: (id: string) => `/orders/${id}`
+    detail: (id: string | number) => `/orders/${id}`,
+    cancellationRequest: (id: string | number) => `/orders/${id}/cancellation-request`
   },
   manager: {
     dashboard: "/manager/dashboard",
     payments: "/manager/payments",
     paymentConfirm: (paymentId: number | string) => `/manager/payments/${paymentId}/confirm`,
+    cancellationApprove: (orderId: number | string) => `/manager/orders/${orderId}/cancellation/approve`,
+    cancellationReject: (orderId: number | string) => `/manager/orders/${orderId}/cancellation/reject`,
     customers: "/manager/customers"
   },
   showrooms: {

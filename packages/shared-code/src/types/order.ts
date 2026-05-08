@@ -1,6 +1,7 @@
 export type OrderStatus =
   | "PENDING"
   | "CONFIRMED"
+  | "CANCELLATION_REQUESTED"
   | "PROCESSING"
   | "SHIPPED"
   | "DELIVERED"
@@ -87,6 +88,12 @@ export interface Order {
   notes?: string | null;
   customerEmail?: string | null;
   customerIdentityNumber?: string | null;
+  cancellationReason?: string | null;
+  cancellationReviewNote?: string | null;
+  cancellationRequestedFromStatus?: OrderStatus | string | null;
+  cancellationRequestedBy?: number | null;
+  cancellationRequestedAt?: string | null;
+  cancellationReviewedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
@@ -122,4 +129,9 @@ export interface OrderQuote {
   discountAmount: number;
   registrationFee: number;
   totalAmount: number;
+}
+
+export interface OrderCancellationRequest {
+  reason?: string;
+  reviewNote?: string;
 }

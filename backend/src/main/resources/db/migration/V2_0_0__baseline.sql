@@ -213,6 +213,12 @@ CREATE TABLE IF NOT EXISTS ebike_order.orders (
     notes TEXT,
     customer_email VARCHAR(255),
     customer_identity_number VARCHAR(30),
+    cancellation_reason TEXT,
+    cancellation_review_note TEXT,
+    cancellation_requested_from_status VARCHAR(30),
+    cancellation_requested_by BIGINT REFERENCES ebike_auth.users(id),
+    cancellation_requested_at TIMESTAMP,
+    cancellation_reviewed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

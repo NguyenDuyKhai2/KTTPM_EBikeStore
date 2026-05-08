@@ -119,6 +119,7 @@ const ManagerPaymentsPage = () => {
             <option value="PENDING">Chờ xử lý</option>
             <option value="PAID">Đã thanh toán</option>
             <option value="FAILED">Thất bại</option>
+            <option value="CANCELLED">Đã hủy</option>
             <option value="REFUNDED">Đã hoàn tiền</option>
           </select>
           <div className="flex gap-2">

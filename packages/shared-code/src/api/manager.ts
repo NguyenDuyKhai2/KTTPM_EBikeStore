@@ -4,7 +4,9 @@ import type {
   ManagerCustomer,
   ManagerDashboard,
   ManagerPayment,
-  ManagerPaymentConfirmationRequest
+  ManagerPaymentConfirmationRequest,
+  Order,
+  OrderCancellationRequest
 } from "../types";
 
 export const managerAPI = {
@@ -22,6 +24,14 @@ export const managerAPI = {
   },
   confirmPayment: async (paymentId: number, payload?: ManagerPaymentConfirmationRequest) => {
     const response = await apiClient.patch<ManagerPayment>(API_ENDPOINTS.manager.paymentConfirm(paymentId), payload);
+    return response.data;
+  },
+  approveCancellation: async (orderId: string | number, payload?: OrderCancellationRequest) => {
+    const response = await apiClient.patch<Order>(API_ENDPOINTS.manager.cancellationApprove(orderId), payload);
+    return response.data;
+  },
+  rejectCancellation: async (orderId: string | number, payload?: OrderCancellationRequest) => {
+    const response = await apiClient.patch<Order>(API_ENDPOINTS.manager.cancellationReject(orderId), payload);
     return response.data;
   },
   getCustomers: async (search?: string) => {

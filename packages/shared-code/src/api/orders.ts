@@ -1,6 +1,6 @@
 import { apiClient } from "./client";
 import { API_ENDPOINTS } from "./endpoints";
-import type { CreateOrderRequest, Order, OrderQuote, OrderQuoteRequest } from "../types";
+import type { CreateOrderRequest, Order, OrderCancellationRequest, OrderQuote, OrderQuoteRequest } from "../types";
 
 export type OrderListParams = {
   userId?: number;
@@ -28,6 +28,10 @@ export const orderAPI = {
   },
   create: async (payload: CreateOrderRequest) => {
     const response = await apiClient.post<Order>(API_ENDPOINTS.orders.create, payload);
+    return response.data;
+  },
+  requestCancellation: async (id: string | number, payload?: OrderCancellationRequest) => {
+    const response = await apiClient.post<Order>(API_ENDPOINTS.orders.cancellationRequest(id), payload);
     return response.data;
   }
 };

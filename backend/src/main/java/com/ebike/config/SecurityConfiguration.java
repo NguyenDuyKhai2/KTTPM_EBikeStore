@@ -64,6 +64,7 @@ public class SecurityConfiguration {
                     PermissionConstants.OrderManagement.ORDER_VIEW_ALL
                 )
                 .requestMatchers(HttpMethod.POST, "/orders").hasAuthority(PermissionConstants.Guest.ORDER_CREATE)
+                .requestMatchers(HttpMethod.POST, "/orders/*/cancellation-request").hasAuthority(PermissionConstants.Customer.ORDER_CANCEL_OWN)
                 .requestMatchers(HttpMethod.PATCH, "/orders/*/status").hasAuthority(PermissionConstants.OrderManagement.ORDER_UPDATE_STATUS)
                 .requestMatchers(HttpMethod.GET, "/favorites").hasAuthority(PermissionConstants.Customer.FAVORITE_VIEW)
                 .requestMatchers(HttpMethod.POST, "/favorites").hasAuthority(PermissionConstants.Customer.FAVORITE_UPDATE)

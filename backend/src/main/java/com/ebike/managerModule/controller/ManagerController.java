@@ -4,6 +4,8 @@ import com.ebike.managerModule.dto.request.ManagerPaymentConfirmationRequest;
 import com.ebike.managerModule.dto.response.ManagerCustomerResponse;
 import com.ebike.managerModule.dto.response.ManagerDashboardResponse;
 import com.ebike.managerModule.dto.response.ManagerPaymentResponse;
+import com.ebike.orderModule.dto.request.OrderCancellationRequest;
+import com.ebike.orderModule.dto.response.OrderResponse;
 import com.ebike.managerModule.service.ManagerService;
 import com.ebike.shared.constants.PermissionConstants;
 import java.util.List;
@@ -49,6 +51,24 @@ public class ManagerController {
         @RequestBody(required = false) ManagerPaymentConfirmationRequest request
     ) {
         return managerService.confirmPayLaterPayment(paymentId, request);
+    }
+
+    @PatchMapping("/orders/{orderId}/cancellation/approve")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.OrderManagement.ORDER_UPDATE_STATUS + "')")
+    public OrderResponse approveOrderCancellation(
+        @PathVariable Long orderId,
+        @RequestBody(required = false) OrderCancellationRequest request
+    ) {
+        return managerService.approveOrderCancellation(orderId, request);
+    }
+
+    @PatchMapping("/orders/{orderId}/cancellation/reject")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.OrderManagement.ORDER_UPDATE_STATUS + "')")
+    public OrderResponse rejectOrderCancellation(
+        @PathVariable Long orderId,
+        @RequestBody(required = false) OrderCancellationRequest request
+    ) {
+        return managerService.rejectOrderCancellation(orderId, request);
     }
 
     @GetMapping("/customers")
