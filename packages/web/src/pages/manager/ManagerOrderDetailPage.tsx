@@ -177,8 +177,12 @@ const ManagerOrderDetailPage = () => {
                 <span>{formatCurrency(itemTotal || order.subtotal)}</span>
               </div>
               <div className="flex items-center justify-between text-slate-600">
-                <span>Phí đăng ký</span>
+                <span>Phí làm giấy tờ xe</span>
                 <span>{formatCurrency(order.registrationFee)}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span>Dịch vụ đăng ký xe</span>
+                <span>{order.includeRegistrationService ? "Showroom hỗ trợ" : "Khách tự làm"}</span>
               </div>
               <div className="flex items-center justify-between text-slate-600">
                 <span>Giảm giá</span>
@@ -238,6 +242,12 @@ const ManagerOrderDetailPage = () => {
               <div className="flex items-start gap-3">
                 <MapPin className="mt-0.5 h-4 w-4 text-slate-400" />
                 <span>{order.shipment?.detailedAddress || "-"}</span>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Dịch vụ đăng ký xe</p>
+                <p className="mt-2 font-semibold text-slate-950">
+                  {order.includeRegistrationService ? "Khách nhờ showroom làm giấy tờ xe" : "Khách tự làm giấy tờ xe"}
+                </p>
               </div>
             </div>
           </section>

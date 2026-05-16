@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Battery, Heart, RotateCcw, Star, Zap } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { favoritesAPI, productAPI } from "@ebike/shared-code/api";
+import { useAuth } from "@ebike/shared-code/hooks";
 import type { ProductDetail } from "@ebike/shared-code/types";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
 
 const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +113,11 @@ const ProductDetailPage = () => {
       return;
     }
 
+    if (!isAuthenticated) {
+      setFavoriteMessage("Vui lòng đăng nhập để lưu sản phẩm yêu thích.");
+      return;
+    }
+
     setFavoriteSaving(true);
     setFavoriteMessage("");
 
@@ -122,7 +129,6 @@ const ProductDetailPage = () => {
       const status = (favoriteError as { response?: { status?: number } }).response?.status;
       if (status === 401) {
         setFavoriteMessage("Vui lòng đăng nhập để lưu sản phẩm yêu thích.");
-        navigate("/auth");
         return;
       }
       setFavoriteMessage("Không thể thêm vào yêu thích. Vui lòng thử lại.");

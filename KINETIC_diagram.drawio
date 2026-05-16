@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram name="Trang-1" id="-CzPnMIf-4afA4c1V7S_">
-    <mxGraphModel dx="3014" dy="1877" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="2778" dy="1748" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -182,7 +182,7 @@
           <mxGeometry height="70" width="240" x="30" y="250" as="geometry" />
         </mxCell>
         <mxCell id="Fx-VQc-FioCtc-Z6FgQd-61" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#D97706;fontSize=13;fontStyle=1;" value="packages/shared-code&#xa;TypeScript shared layer&#xa;- API clients&#xa;- Types / DTO contracts&#xa;- Hooks / Redux slices&#xa;- Services / utils" vertex="1">
-          <mxGeometry height="170" width="220" x="500" y="210" as="geometry" />
+          <mxGeometry height="170" width="220" x="480" y="120" as="geometry" />
         </mxCell>
         <mxCell id="Fx-VQc-FioCtc-Z6FgQd-62" parent="1" style="swimlane;whiteSpace=wrap;html=1;fillColor=#F0FDF4;strokeColor=#16A34A;fontSize=16;fontStyle=1;startSize=44;" value="backend - Spring Boot API&#xa;Java 17 / Spring Security / JWT / JPA / Flyway" vertex="1">
           <mxGeometry height="620" width="420" x="770" y="120" as="geometry" />
@@ -251,15 +251,30 @@
           <mxGeometry height="80" width="220" x="30" y="310" as="geometry" />
         </mxCell>
         <mxCell id="Fx-VQc-FioCtc-Z6FgQd-84" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDF2F8;strokeColor=#DB2777;fontSize=13;" value="Backend resources&#xa;docs/*.pdf&#xa;faq-data/faq.csv&#xa;Product seed data" vertex="1">
-          <mxGeometry height="120" width="300" x="300" y="690" as="geometry" />
+          <mxGeometry height="105" width="300" x="300" y="735" as="geometry" />
         </mxCell>
-        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-85" parent="1" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=13;fontStyle=1;" value="Redis Cache&#xa;Redis 7&#xa;Cache / session-ready infrastructure&#xa;Port 6379" vertex="1">
-          <mxGeometry height="105" width="300" x="300" y="555" as="geometry" />
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-85" parent="1" style="swimlane;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=15;fontStyle=1;startSize=40;" value="Redis 7 Cache Layer&#xa;Port 6379 - cache namespaces / session-ready" vertex="1">
+          <mxGeometry height="225" width="390" x="300" y="505" as="geometry" />
+        </mxCell>
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-100" parent="Fx-VQc-FioCtc-Z6FgQd-85" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#DC2626;fontSize=11;" value="auth-cache&#xa;session-ready&#xa;JWT blacklist / rate limit" vertex="1">
+          <mxGeometry height="56" width="165" x="20" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-101" parent="Fx-VQc-FioCtc-Z6FgQd-85" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#DC2626;fontSize=11;" value="product-cache&#xa;catalog list/detail&#xa;categories / specs" vertex="1">
+          <mxGeometry height="56" width="165" x="205" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-102" parent="Fx-VQc-FioCtc-Z6FgQd-85" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#DC2626;fontSize=11;" value="order-payment-cache&#xa;VNPay pending status&#xa;IPN idempotency" vertex="1">
+          <mxGeometry height="56" width="165" x="20" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-103" parent="Fx-VQc-FioCtc-Z6FgQd-85" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#DC2626;fontSize=11;" value="chatbot-cache&#xa;FAQ / PDF chunks&#xa;recommendation context" vertex="1">
+          <mxGeometry height="56" width="165" x="205" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-104" parent="Fx-VQc-FioCtc-Z6FgQd-85" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF2F2;strokeColor=#DC2626;fontSize=11;dashed=1;" value="manager-dashboard-cache&#xa;dashboard aggregates / reports" vertex="1">
+          <mxGeometry height="36" width="350" x="20" y="180" as="geometry" />
         </mxCell>
         <mxCell id="Fx-VQc-FioCtc-Z6FgQd-86" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE7C8;strokeColor=#D97706;fontSize=13;fontStyle=1;dashed=1;" value="Message Queue - Future&#xa;RabbitMQ / Kafka&#xa;Payment async events&#xa;Notification events" vertex="1">
-          <mxGeometry height="105" width="300" x="300" y="845" as="geometry" />
+          <mxGeometry height="105" width="300" x="300" y="855" as="geometry" />
         </mxCell>
-        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-87" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#64748B;fontSize=14;fontStyle=1;" value="Main runtime flow: Client Apps -&gt; shared-code -&gt; Spring Boot REST API -&gt; PostgreSQL / Redis / External Services. Future async flow: payment and notification events -&gt; RabbitMQ / Kafka." vertex="1">
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-87" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#64748B;fontSize=14;fontStyle=1;" value="Main runtime flow: Client Apps -&gt; shared-code -&gt; Spring Boot REST API -&gt; PostgreSQL / module-specific Redis cache namespaces / External Services. Future async flow: payment and notification events -&gt; RabbitMQ / Kafka." vertex="1">
           <mxGeometry height="50" width="1040" x="150" y="1010" as="geometry" />
         </mxCell>
         <mxCell id="Fx-VQc-FioCtc-Z6FgQd-88" edge="1" parent="1" source="Fx-VQc-FioCtc-Z6FgQd-58" style="endArrow=block;html=1;rounded=0;strokeColor=#D97706;fontSize=11;" target="Fx-VQc-FioCtc-Z6FgQd-61" value="uses">
@@ -277,7 +292,7 @@
         <mxCell id="Fx-VQc-FioCtc-Z6FgQd-92" edge="1" parent="1" source="Fx-VQc-FioCtc-Z6FgQd-62" style="endArrow=block;html=1;rounded=0;strokeColor=#4F46E5;fontSize=12;fontStyle=1;" target="Fx-VQc-FioCtc-Z6FgQd-74" value="JPA repositories&#xa;Flyway migrations">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-93" edge="1" parent="1" source="Fx-VQc-FioCtc-Z6FgQd-62" style="endArrow=block;html=1;rounded=0;strokeColor=#DC2626;fontSize=12;fontStyle=1;dashed=1;" target="Fx-VQc-FioCtc-Z6FgQd-85" value="cache / session-ready">
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-93" edge="1" parent="1" source="Fx-VQc-FioCtc-Z6FgQd-63" style="endArrow=block;html=1;rounded=0;strokeColor=#DC2626;fontSize=11;fontStyle=1;dashed=1;" target="Fx-VQc-FioCtc-Z6FgQd-100" value="auth session-ready">
           <mxGeometry relative="1" x="0.1238" y="10" as="geometry">
             <mxPoint as="offset" />
             <Array as="points">
@@ -285,10 +300,42 @@
             </Array>
           </mxGeometry>
         </mxCell>
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-105" edge="1" parent="1" source="Fx-VQc-FioCtc-Z6FgQd-65" style="endArrow=block;html=1;rounded=0;strokeColor=#DC2626;fontSize=11;fontStyle=1;dashed=1;" target="Fx-VQc-FioCtc-Z6FgQd-101" value="catalog cache">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="250" />
+              <mxPoint x="720" y="585" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-106" edge="1" parent="1" source="Fx-VQc-FioCtc-Z6FgQd-66" style="endArrow=block;html=1;rounded=0;strokeColor=#DC2626;fontSize=11;fontStyle=1;dashed=1;" target="Fx-VQc-FioCtc-Z6FgQd-102" value="payment status cache">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="725" y="330" />
+              <mxPoint x="725" y="655" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-107" edge="1" parent="1" source="Fx-VQc-FioCtc-Z6FgQd-68" style="endArrow=block;html=1;rounded=0;strokeColor=#DC2626;fontSize=11;fontStyle=1;dashed=1;" target="Fx-VQc-FioCtc-Z6FgQd-103" value="knowledge cache">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="735" y="455" />
+              <mxPoint x="735" y="655" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Fx-VQc-FioCtc-Z6FgQd-108" edge="1" parent="1" source="Fx-VQc-FioCtc-Z6FgQd-69" style="endArrow=block;html=1;rounded=0;strokeColor=#DC2626;fontSize=11;fontStyle=1;dashed=1;" target="Fx-VQc-FioCtc-Z6FgQd-104" value="dashboard aggregates">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="740" y="455" />
+              <mxPoint x="740" y="705" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="Fx-VQc-FioCtc-Z6FgQd-94" edge="1" parent="1" source="Fx-VQc-FioCtc-Z6FgQd-66" style="endArrow=block;html=1;rounded=0;strokeColor=#D97706;fontSize=12;dashed=1;" target="Fx-VQc-FioCtc-Z6FgQd-86" value="future async payment events">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="710" y="750" />
+              <mxPoint x="710" y="770" />
             </Array>
           </mxGeometry>
         </mxCell>

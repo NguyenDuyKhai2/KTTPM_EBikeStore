@@ -13,6 +13,7 @@ public record OrderResponse(
     BigDecimal shippingFee,
     BigDecimal discountAmount,
     BigDecimal registrationFee,
+    Boolean includeRegistrationService,
     BigDecimal totalAmount,
     String paymentMethod,
     String paymentStatus,

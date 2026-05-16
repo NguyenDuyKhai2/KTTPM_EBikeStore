@@ -63,6 +63,7 @@ const CheckoutPage = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"PAY_LATER" | "VNPAY">("PAY_LATER");
+  const [registrationService, setRegistrationService] = useState<"SELF" | "SHOWROOM">("SELF");
   const [form, setForm] = useState({
     customerName: authUser?.fullName ?? "",
     customerIdentityNumber: "",
@@ -112,6 +113,7 @@ const CheckoutPage = () => {
       setLoadingQuote(true);
       try {
         const quote = await orderAPI.quote({
+          includeRegistrationService: registrationService === "SHOWROOM",
           items: [
             {
               productId: product.id,
@@ -129,7 +131,7 @@ const CheckoutPage = () => {
     };
 
     void loadQuote();
-  }, [product, quantity]);
+  }, [product, quantity, registrationService]);
 
   const fallbackSubtotal = product ? product.price * quantity : 0;
   const subtotal = orderQuote?.subtotal ?? fallbackSubtotal;
@@ -226,6 +228,7 @@ const CheckoutPage = () => {
         pickupShowroomId: Number(form.pickupShowroomId),
         detailedAddress: form.detailedAddress.trim(),
         paymentMethod: selectedPaymentMethod,
+        includeRegistrationService: registrationService === "SHOWROOM",
         notes,
         items: [
           {
@@ -459,6 +462,57 @@ const CheckoutPage = () => {
           </section>
 
           <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
+            <h3 className="mb-6 text-xl font-bold">Dịch vụ đăng ký xe</h3>
+            <div className="space-y-4">
+              <label
+                className={`flex cursor-pointer items-start gap-4 rounded-xl border-2 p-5 transition-all ${
+                  registrationService === "SELF" ? "border-primary bg-surface-container-low" : "border-outline-variant/15 bg-white"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="registrationService"
+                  checked={registrationService === "SELF"}
+                  onChange={() => setRegistrationService("SELF")}
+                  className="mt-1 text-primary focus:ring-primary"
+                />
+                <div className="flex-grow">
+                  <div className="mb-1 flex items-center justify-between gap-4">
+                    <span className="text-base font-bold">Tôi tự làm giấy tờ xe</span>
+                    <span className="font-mono text-sm font-bold text-primary">0đ</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Không cộng phí đăng ký vào đơn hàng. Khách hàng tự thực hiện thủ tục đăng ký xe sau khi nhận xe.
+                  </p>
+                </div>
+              </label>
+
+              <label
+                className={`flex cursor-pointer items-start gap-4 rounded-xl border-2 p-5 transition-all ${
+                  registrationService === "SHOWROOM" ? "border-primary bg-surface-container-low" : "border-outline-variant/15 bg-white"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="registrationService"
+                  checked={registrationService === "SHOWROOM"}
+                  onChange={() => setRegistrationService("SHOWROOM")}
+                  className="mt-1 text-primary focus:ring-primary"
+                />
+                <div className="flex-grow">
+                  <div className="mb-1 flex items-center justify-between gap-4">
+                    <span className="text-base font-bold">Nhờ showroom làm giấy tờ xe</span>
+                    <span className="font-mono text-sm font-bold">+ 2.500.000đ</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Showroom hỗ trợ xử lý hồ sơ đăng ký xe. Khoản phí này sẽ được cộng vào tổng thanh toán.
+                  </p>
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
             <h3 className="mb-4 text-xl font-bold">Thông tin bổ sung</h3>
             <textarea
               rows={5}
@@ -511,8 +565,12 @@ const CheckoutPage = () => {
                   <span className="font-mono font-medium text-error">- {showroomIncentive.toLocaleString("vi-VN")}đ</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Phí đăng ký</span>
+                  <span className="text-muted-foreground">Phí làm giấy tờ xe</span>
                   <span className="font-mono font-medium">{registrationFee.toLocaleString("vi-VN")}đ</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Dịch vụ đăng ký xe</span>
+                  <span className="font-medium">{registrationService === "SHOWROOM" ? "Showroom hỗ trợ" : "Khách tự làm"}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Nhận tại showroom</span>

@@ -1,8 +1,10 @@
 import { Globe, Mail, Share2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@ebike/shared-code/hooks";
 
 const Footer = () => {
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
 
   if (location.pathname.startsWith("/checkout") || location.pathname.startsWith("/chatbot")) {
     return null;
@@ -29,7 +31,9 @@ const Footer = () => {
             <ul className="space-y-3">
               <li><Link to="/products" className="text-sm text-muted-foreground transition-colors hover:text-primary">Mẫu xe</Link></li>
               <li><Link to="/chatbot" className="text-sm text-muted-foreground transition-colors hover:text-primary">Tư vấn</Link></li>
-              <li><Link to="/favorites" className="text-sm text-muted-foreground transition-colors hover:text-primary">Đã lưu</Link></li>
+              {isAuthenticated ? (
+                <li><Link to="/favorites" className="text-sm text-muted-foreground transition-colors hover:text-primary">Đã lưu</Link></li>
+              ) : null}
             </ul>
           </div>
 

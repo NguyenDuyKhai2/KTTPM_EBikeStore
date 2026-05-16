@@ -194,6 +194,12 @@ const CustomerOrdersSafePage = () => {
                       <p className="mt-1 text-sm text-muted-foreground">
                         Nhận xe tại {order.shipment?.pickupShowroom?.name || "Showroom đang cập nhật"}
                       </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Dịch vụ đăng ký xe:{" "}
+                        <span className="font-semibold text-foreground">
+                          {order.includeRegistrationService ? "Nhờ showroom làm giấy tờ xe" : "Khách tự làm giấy tờ xe"}
+                        </span>
+                      </p>
                       <p className="mt-1 text-sm font-semibold text-muted-foreground">
                         Thanh toán: {PAYMENT_STATUS_LABELS[order.paymentStatus || ""] || "Chưa khởi tạo"}
                       </p>

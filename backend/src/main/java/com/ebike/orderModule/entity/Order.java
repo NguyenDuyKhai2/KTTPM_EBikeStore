@@ -53,6 +53,9 @@ public class Order {
     @Column(name = "registration_fee", nullable = false, precision = 12, scale = 2)
     private BigDecimal registrationFee = BigDecimal.ZERO;
 
+    @Column(name = "include_registration_service", nullable = false)
+    private Boolean includeRegistrationService = Boolean.FALSE;
+
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
@@ -174,6 +177,14 @@ public class Order {
 
     public void setRegistrationFee(BigDecimal registrationFee) {
         this.registrationFee = registrationFee;
+    }
+
+    public Boolean getIncludeRegistrationService() {
+        return includeRegistrationService;
+    }
+
+    public void setIncludeRegistrationService(Boolean includeRegistrationService) {
+        this.includeRegistrationService = includeRegistrationService;
     }
 
     public BigDecimal getTotalAmount() {

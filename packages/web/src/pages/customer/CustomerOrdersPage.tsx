@@ -116,6 +116,12 @@ const CustomerOrdersPage = () => {
                       <p className="mt-1 text-sm text-muted-foreground">
                         Nhận xe tại {order.shipment?.pickupShowroom?.name || "Showroom đang cập nhật"}
                       </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Dịch vụ đăng ký xe:{" "}
+                        <span className="font-semibold text-foreground">
+                          {order.includeRegistrationService ? "Nhờ showroom làm giấy tờ xe" : "Khách tự làm giấy tờ xe"}
+                        </span>
+                      </p>
                     </div>
                     <div className="text-left md:text-right">
                       <p className="text-sm text-muted-foreground">Tổng thanh toán</p>

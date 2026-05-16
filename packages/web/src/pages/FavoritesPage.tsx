@@ -2,16 +2,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { favoritesAPI } from "@ebike/shared-code/api";
+import { useAuth } from "@ebike/shared-code/hooks";
 import type { Product } from "@ebike/shared-code/types";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
 
 const FavoritesPage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, isBootstrapping } = useAuth();
   const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isBootstrapping) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      setFavoriteProducts([]);
+      setError("Vui lòng đăng nhập để xem danh sách yêu thích.");
+      setLoading(false);
+      return;
+    }
+
     const loadFavorites = async () => {
       setLoading(true);
       try {
@@ -28,7 +41,7 @@ const FavoritesPage = () => {
     };
 
     void loadFavorites();
-  }, []);
+  }, [isAuthenticated, isBootstrapping]);
 
   const subtotal = useMemo(
     () => favoriteProducts.reduce((sum, product) => sum + (product.discountPrice ?? product.price), 0),
@@ -36,6 +49,11 @@ const FavoritesPage = () => {
   );
 
   const removeFavorite = async (productId: number) => {
+    if (!isAuthenticated) {
+      setError("Vui lòng đăng nhập để cập nhật danh sách yêu thích.");
+      return;
+    }
+
     try {
       await favoritesAPI.remove(productId);
       setFavoriteProducts((items) => items.filter((product) => product.id !== productId));
@@ -81,7 +99,7 @@ const FavoritesPage = () => {
               Đang tải danh sách yêu thích...
             </div>
           ) : error ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-red-700 shadow-sm">
+            <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low p-8 text-center text-muted-foreground shadow-sm">
               {error}
             </div>
           ) : favoriteProducts.length === 0 ? (

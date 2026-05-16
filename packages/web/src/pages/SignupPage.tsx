@@ -1,7 +1,7 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { UserPlus } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Info, Lock, Mail, ShieldCheck, User, Zap } from "lucide-react";
 import { authAPI } from "@ebike/shared-code/api";
 import { useAuth } from "@ebike/shared-code/hooks";
 
@@ -27,7 +27,7 @@ const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) {
     return error.message;
   }
-  return "Tao tai khoan that bai. Vui long kiem tra lai thong tin.";
+  return "Tạo tài khoản thất bại. Vui lòng kiểm tra lại thông tin.";
 };
 
 const SignupPage = () => {
@@ -36,6 +36,8 @@ const SignupPage = () => {
   const [formData, setFormData] = useState<SignupFormData>(initialFormData);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -45,19 +47,19 @@ const SignupPage = () => {
 
   const validateForm = () => {
     if (!formData.username.trim() || !formData.email.trim() || !formData.password) {
-      setError("Username, email va mat khau la bat buoc.");
+      setError("Tên đăng nhập, email và mật khẩu là bắt buộc.");
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      setError("Email khong hop le.");
+      setError("Email không hợp lệ.");
       return false;
     }
     if (formData.password.length < 6) {
-      setError("Mat khau phai co it nhat 6 ky tu.");
+      setError("Mật khẩu phải có ít nhất 6 ký tự.");
       return false;
     }
     if (formData.password !== formData.confirmPassword) {
-      setError("Xac nhan mat khau khong khop.");
+      setError("Xác nhận mật khẩu không khớp.");
       return false;
     }
     return true;
@@ -96,133 +98,219 @@ const SignupPage = () => {
   const disabled = isSubmitting || isLoading;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f3faf7] px-4 py-10 sm:px-6 lg:px-8">
-      <div className="w-full max-w-lg">
-        <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-lg">
-            <UserPlus className="h-8 w-8" />
+    <div className="flex min-h-screen bg-surface">
+      <aside className="relative hidden w-1/2 overflow-hidden bg-primary lg:flex lg:items-end">
+        <img
+          src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=2000"
+          alt="Hạ tầng xe điện KINETIC"
+          className="absolute inset-0 h-full w-full object-cover opacity-60 mix-blend-overlay"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/95 via-primary/50 to-transparent" />
+        <div className="relative z-10 p-12 text-white">
+          <div className="mb-8 flex items-center gap-3">
+            <Zap className="h-8 w-8 fill-white" />
+            <span className="font-headline text-2xl font-bold tracking-tight">KINETIC Membership</span>
           </div>
-          <h1 className="mb-2 text-4xl font-bold text-slate-900">Tạo Tài Khoản</h1>
-          <p className="text-lg text-slate-600">Bắt đầu mua sắm và theo dõi đơn hàng của bạn</p>
+
+          <p className="max-w-md text-lg leading-8 text-white/80">
+            Tạo tài khoản để lưu thông tin mua xe, theo dõi đơn hàng và nhận hỗ trợ từ showroom KINETIC.
+          </p>
+
+          <div className="mt-12 rounded-xl border border-white/10 bg-primary-container/20 p-6 backdrop-blur-md">
+            <ShieldCheck className="mb-5 h-12 w-12 text-white" />
+            <h3 className="font-headline text-2xl font-bold">Bảo mật tài khoản</h3>
+            <p className="mt-3 text-sm leading-6 text-white/70">
+              Thông tin đăng nhập được dùng để bảo vệ lịch sử đơn hàng, thanh toán và hồ sơ khách hàng của bạn.
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex w-full flex-col items-center justify-center px-6 py-10 md:px-12 lg:w-1/2 lg:px-20">
+        <div className="w-full max-w-md">
+          <div className="mb-8">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-primary-fixed px-4 py-2 text-sm font-bold text-primary">
+              <User className="h-4 w-4" />
+              New KINETIC Account
+            </div>
+            <h2 className="font-headline text-4xl font-bold tracking-tight text-foreground">Tạo tài khoản</h2>
+            <p className="mt-3 text-base leading-7 text-muted-foreground">
+              Nhập thông tin cá nhân để bắt đầu mua sắm và theo dõi đơn hàng xe điện.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                {error}
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="firstName" className="mono-label mb-2 block text-muted-foreground">
+                  Họ
+                </label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-outline" />
+                  <input
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className="input-base py-4 pl-12"
+                    disabled={disabled}
+                    placeholder="Nguyễn"
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="lastName" className="mono-label mb-2 block text-muted-foreground">
+                  Tên
+                </label>
+                <input
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className="input-base py-4"
+                  disabled={disabled}
+                  placeholder="An"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="username" className="mono-label mb-2 block text-muted-foreground">
+                Tên đăng nhập
+              </label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-outline" />
+                <input
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="input-base py-4 pl-12"
+                  disabled={disabled}
+                  placeholder="nguyenvana"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="email" className="mono-label mb-2 block text-muted-foreground">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-outline" />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="input-base py-4 pl-12"
+                  disabled={disabled}
+                  placeholder="ban@example.com"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="password" className="mono-label mb-2 block text-muted-foreground">
+                  Mật khẩu
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-outline" />
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="input-base py-4 pl-12 pr-11"
+                    disabled={disabled}
+                    placeholder="Ít nhất 6 ký tự"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-outline transition hover:text-foreground"
+                    disabled={disabled}
+                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="confirmPassword" className="mono-label mb-2 block text-muted-foreground">
+                  Xác nhận
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-outline" />
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className="input-base py-4 pl-12 pr-11"
+                    disabled={disabled}
+                    placeholder="Nhập lại"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((value) => !value)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-outline transition hover:text-foreground"
+                    disabled={disabled}
+                    aria-label={showConfirmPassword ? "Ẩn mật khẩu xác nhận" : "Hiện mật khẩu xác nhận"}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 rounded-lg border border-outline-variant/30 bg-surface-container-low px-4 py-3">
+              <Info className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <p className="text-xs leading-6 text-muted-foreground">
+                Mật khẩu nên có chữ hoa, chữ thường và số để tăng độ an toàn cho tài khoản.
+              </p>
+            </div>
+
+            <button type="submit" disabled={disabled} className="btn-primary w-full py-4 group disabled:cursor-not-allowed disabled:opacity-60">
+              {disabled ? (
+                <>
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Đang tạo tài khoản...
+                </>
+              ) : (
+                <>
+                  Tạo tài khoản
+                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Đã có tài khoản?{" "}
+              <NavLink to="/auth" className="font-bold text-primary transition hover:text-primary-container">
+                Đăng nhập
+              </NavLink>
+            </p>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 rounded-lg bg-white p-8 shadow-xl">
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-              <p className="text-sm font-semibold text-red-700">{error}</p>
-            </div>
-          )}
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="firstName" className="mb-2 block text-sm font-semibold text-slate-900">
-                Họ
-              </label>
-              <input
-                id="firstName"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 transition placeholder:text-slate-400 focus:border-transparent focus:ring-2 focus:ring-emerald-500"
-                disabled={disabled}
-                placeholder="Nguyen"
-              />
-            </div>
-            <div>
-              <label htmlFor="lastName" className="mb-2 block text-sm font-semibold text-slate-900">
-                Tên
-              </label>
-              <input
-                id="lastName"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 transition placeholder:text-slate-400 focus:border-transparent focus:ring-2 focus:ring-emerald-500"
-                disabled={disabled}
-                placeholder="An"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="username" className="mb-2 block text-sm font-semibold text-slate-900">
-              Username
-            </label>
-            <input
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 transition placeholder:text-slate-400 focus:border-transparent focus:ring-2 focus:ring-emerald-500"
-              disabled={disabled}
-              placeholder="nguyenvana"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-900">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 transition placeholder:text-slate-400 focus:border-transparent focus:ring-2 focus:ring-emerald-500"
-              disabled={disabled}
-              placeholder="ban@example.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="mb-2 block text-sm font-semibold text-slate-900">
-              Mật Khẩu
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 transition placeholder:text-slate-400 focus:border-transparent focus:ring-2 focus:ring-emerald-500"
-              disabled={disabled}
-              placeholder="Ít nhất 6 ký tự"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="confirmPassword" className="mb-2 block text-sm font-semibold text-slate-900">
-              Xác Nhận Mật Khẩu
-            </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 transition placeholder:text-slate-400 focus:border-transparent focus:ring-2 focus:ring-emerald-500"
-              disabled={disabled}
-              placeholder="Nhập lại mật khẩu"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={disabled}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 font-semibold text-white shadow-lg transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {disabled ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
-          </button>
-
-          <p className="text-center text-sm text-slate-600">
-            Đã có tài khoản?{" "}
-            <NavLink to="/auth" className="font-semibold text-emerald-700 hover:text-emerald-800">
-              Đăng nhập
-            </NavLink>
-          </p>
-        </form>
-      </div>
+        <footer className="mt-auto pt-12 text-center text-xs text-muted-foreground/70">
+          Authorized KINETIC account access. Customer data is protected.
+        </footer>
+      </main>
     </div>
   );
 };

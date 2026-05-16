@@ -112,7 +112,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public OrderQuoteResponse quoteOrder(OrderQuoteRequest request) {
-        return buildQuote(validateQuoteItems(request == null ? null : request.items()));
+        return buildQuote(
+            validateQuoteItems(request == null ? null : request.items()),
+            shouldIncludeRegistrationService(request == null ? null : request.includeRegistrationService())
+        );
     }
 
     @Override
@@ -135,7 +138,9 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.PENDING);
         order.setShippingFee(ZERO);
         order.setDiscountAmount(SHOWROOM_INCENTIVE_AMOUNT);
-        order.setRegistrationFee(REGISTRATION_FEE_AMOUNT);
+        boolean includeRegistrationService = shouldIncludeRegistrationService(request.includeRegistrationService());
+        order.setIncludeRegistrationService(includeRegistrationService);
+        order.setRegistrationFee(includeRegistrationService ? REGISTRATION_FEE_AMOUNT : ZERO);
         validateCheckoutDetails(request);
         order.setNotes(normalizeOptional(request.notes()));
         order.setCustomerEmail(normalizeEmail(request.customerEmail()));
@@ -348,7 +353,7 @@ public class OrderServiceImpl implements OrderService {
         return items;
     }
 
-    private OrderQuoteResponse buildQuote(List<OrderCreateItemRequest> items) {
+    private OrderQuoteResponse buildQuote(List<OrderCreateItemRequest> items, boolean includeRegistrationService) {
         BigDecimal subtotal = ZERO;
 
         for (OrderCreateItemRequest itemRequest : items) {
@@ -357,13 +362,19 @@ public class OrderServiceImpl implements OrderService {
             subtotal = subtotal.add(unitPrice.multiply(BigDecimal.valueOf(itemRequest.quantity())));
         }
 
+        BigDecimal registrationFee = includeRegistrationService ? REGISTRATION_FEE_AMOUNT : ZERO;
+
         return new OrderQuoteResponse(
             subtotal,
             ZERO,
             SHOWROOM_INCENTIVE_AMOUNT,
-            REGISTRATION_FEE_AMOUNT,
-            calculateTotalAmount(subtotal, ZERO, SHOWROOM_INCENTIVE_AMOUNT, REGISTRATION_FEE_AMOUNT)
+            registrationFee,
+            calculateTotalAmount(subtotal, ZERO, SHOWROOM_INCENTIVE_AMOUNT, registrationFee)
         );
+    }
+
+    private boolean shouldIncludeRegistrationService(Boolean includeRegistrationService) {
+        return Boolean.TRUE.equals(includeRegistrationService);
     }
 
     private BigDecimal calculateTotalAmount(
@@ -540,6 +551,7 @@ public class OrderServiceImpl implements OrderService {
             order.getShippingFee(),
             order.getDiscountAmount(),
             order.getRegistrationFee(),
+            Boolean.TRUE.equals(order.getIncludeRegistrationService()),
             order.getTotalAmount(),
             payment == null ? null : payment.getPaymentMethod().name(),
             payment == null ? null : payment.getPaymentStatus().name(),

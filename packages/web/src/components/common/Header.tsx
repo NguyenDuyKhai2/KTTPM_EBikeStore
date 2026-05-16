@@ -15,9 +15,10 @@ const Header = () => {
   const { isAuthenticated, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isManager = user?.roles.includes("MANAGER");
-  const visibleNavItems = isManager
-    ? [...navItems, { to: "/manager", label: "Manager", end: false }]
-    : navItems;
+  const visibleNavItems = [
+    ...navItems.filter((item) => isAuthenticated || item.to !== "/favorites"),
+    ...(isManager ? [{ to: "/manager", label: "Manager", end: false }] : [])
+  ];
 
   useEffect(() => {
     setMobileOpen(false);

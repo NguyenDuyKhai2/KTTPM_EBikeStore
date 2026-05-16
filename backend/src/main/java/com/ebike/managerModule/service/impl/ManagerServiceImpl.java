@@ -325,6 +325,7 @@ public class ManagerServiceImpl implements ManagerService {
             order.getShippingFee(),
             order.getDiscountAmount(),
             order.getRegistrationFee(),
+            Boolean.TRUE.equals(order.getIncludeRegistrationService()),
             order.getTotalAmount(),
             payment == null ? null : payment.getPaymentMethod().name(),
             payment == null ? null : payment.getPaymentStatus().name(),

@@ -2,5 +2,5 @@ package com.ebike.orderModule.dto.request;
 
 import java.util.List;
 
-public record OrderQuoteRequest(List<OrderCreateItemRequest> items) {
+public record OrderQuoteRequest(Boolean includeRegistrationService, List<OrderCreateItemRequest> items) {
 }

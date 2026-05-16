@@ -14,6 +14,7 @@ public record OrderCreateRequest(
     String paymentMethod,
     BigDecimal shippingFee,
     BigDecimal discountAmount,
+    Boolean includeRegistrationService,
     String notes,
     List<OrderCreateItemRequest> items
 ) {

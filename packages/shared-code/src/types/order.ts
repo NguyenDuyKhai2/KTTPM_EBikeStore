@@ -82,6 +82,7 @@ export interface Order {
   shippingFee: number;
   discountAmount: number;
   registrationFee: number;
+  includeRegistrationService: boolean;
   totalAmount: number;
   paymentMethod?: "PAY_LATER" | "VNPAY" | string | null;
   paymentStatus?: string | null;
@@ -109,6 +110,7 @@ export interface CreateOrderRequest {
   pickupShowroomId: number;
   detailedAddress: string;
   paymentMethod: "PAY_LATER" | "VNPAY";
+  includeRegistrationService?: boolean;
   notes?: string;
   items: Array<{
     productId: number;
@@ -117,6 +119,7 @@ export interface CreateOrderRequest {
 }
 
 export interface OrderQuoteRequest {
+  includeRegistrationService?: boolean;
   items: Array<{
     productId: number;
     quantity: number;
