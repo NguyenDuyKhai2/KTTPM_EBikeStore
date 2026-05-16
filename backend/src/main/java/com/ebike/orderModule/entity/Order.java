@@ -30,8 +30,8 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @Column(name = "order_number", nullable = false, unique = true, length = 50)
@@ -50,11 +50,43 @@ public class Order {
     @Column(name = "discount_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
+    @Column(name = "registration_fee", nullable = false, precision = 12, scale = 2)
+    private BigDecimal registrationFee = BigDecimal.ZERO;
+
+    @Column(name = "include_registration_service", nullable = false)
+    private Boolean includeRegistrationService = Boolean.FALSE;
+
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @Column(name = "customer_email", length = 255)
+    private String customerEmail;
+
+    @Column(name = "customer_identity_number", length = 30)
+    private String customerIdentityNumber;
+
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    private String cancellationReason;
+
+    @Column(name = "cancellation_review_note", columnDefinition = "TEXT")
+    private String cancellationReviewNote;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancellation_requested_from_status", length = 30)
+    private OrderStatus cancellationRequestedFromStatus;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cancellation_requested_by")
+    private User cancellationRequestedBy;
+
+    @Column(name = "cancellation_requested_at")
+    private LocalDateTime cancellationRequestedAt;
+
+    @Column(name = "cancellation_reviewed_at")
+    private LocalDateTime cancellationReviewedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -139,6 +171,22 @@ public class Order {
         this.discountAmount = discountAmount;
     }
 
+    public BigDecimal getRegistrationFee() {
+        return registrationFee;
+    }
+
+    public void setRegistrationFee(BigDecimal registrationFee) {
+        this.registrationFee = registrationFee;
+    }
+
+    public Boolean getIncludeRegistrationService() {
+        return includeRegistrationService;
+    }
+
+    public void setIncludeRegistrationService(Boolean includeRegistrationService) {
+        this.includeRegistrationService = includeRegistrationService;
+    }
+
     public BigDecimal getTotalAmount() {
         return totalAmount;
     }
@@ -153,6 +201,70 @@ public class Order {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getCustomerEmail() {
+        return customerEmail;
+    }
+
+    public void setCustomerEmail(String customerEmail) {
+        this.customerEmail = customerEmail;
+    }
+
+    public String getCustomerIdentityNumber() {
+        return customerIdentityNumber;
+    }
+
+    public void setCustomerIdentityNumber(String customerIdentityNumber) {
+        this.customerIdentityNumber = customerIdentityNumber;
+    }
+
+    public String getCancellationReason() {
+        return cancellationReason;
+    }
+
+    public void setCancellationReason(String cancellationReason) {
+        this.cancellationReason = cancellationReason;
+    }
+
+    public String getCancellationReviewNote() {
+        return cancellationReviewNote;
+    }
+
+    public void setCancellationReviewNote(String cancellationReviewNote) {
+        this.cancellationReviewNote = cancellationReviewNote;
+    }
+
+    public OrderStatus getCancellationRequestedFromStatus() {
+        return cancellationRequestedFromStatus;
+    }
+
+    public void setCancellationRequestedFromStatus(OrderStatus cancellationRequestedFromStatus) {
+        this.cancellationRequestedFromStatus = cancellationRequestedFromStatus;
+    }
+
+    public User getCancellationRequestedBy() {
+        return cancellationRequestedBy;
+    }
+
+    public void setCancellationRequestedBy(User cancellationRequestedBy) {
+        this.cancellationRequestedBy = cancellationRequestedBy;
+    }
+
+    public LocalDateTime getCancellationRequestedAt() {
+        return cancellationRequestedAt;
+    }
+
+    public void setCancellationRequestedAt(LocalDateTime cancellationRequestedAt) {
+        this.cancellationRequestedAt = cancellationRequestedAt;
+    }
+
+    public LocalDateTime getCancellationReviewedAt() {
+        return cancellationReviewedAt;
+    }
+
+    public void setCancellationReviewedAt(LocalDateTime cancellationReviewedAt) {
+        this.cancellationReviewedAt = cancellationReviewedAt;
     }
 
     public LocalDateTime getCreatedAt() {

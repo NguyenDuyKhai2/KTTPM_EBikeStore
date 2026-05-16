@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: #003b93;
+  --color-primary-container: #0051c3;
+  --color-surface: #faf8ff;
+  --color-surface-container: #ededf7;
+  --color-on-surface: #191b22;
+  --color-on-surface-variant: #434653;
+  --color-outline: #737785;
+  --color-outline-variant: #c3c6d6;
+  
+  --radius-xl: 1.5rem;
+  --radius-lg: 1rem;
+  --radius-md: 0.75rem;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-sans antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-container text-white px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-primary transition-colors cursor-pointer;
+  }
+  
+  .input-field {
+    @apply w-full bg-white border border-outline-variant rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent transition-all;
+  }
+
+  .label-caps {
+    @apply text-[12px] font-semibold uppercase tracking-wider text-on-surface-variant mb-2 block;
+  }
+}

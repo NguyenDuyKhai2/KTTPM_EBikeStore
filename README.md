@@ -1,288 +1,297 @@
 # E-Bike Multiplatform
 
-Hệ thống bán xe điện đa nền tảng theo mô hình monorepo, định hướng giống các hãng như Yadea:
-- `backend`: Spring Boot, quản lý nghiệp vụ, dữ liệu, phân quyền
-- `packages/web`: web storefront/admin
-- `packages/mobile`: mobile app
-- `packages/desktop`: desktop app nội bộ
-- `packages/shared-code`: phần shared cho frontend clients
+Hệ thống bán xe điện đa nền tảng theo mô hình monorepo, gồm backend Spring Boot và các client web, mobile, desktop dùng chung code TypeScript qua workspace.
 
-Hiện tại nhóm đang đi theo hướng `backend-first`: xây domain model, database, phân quyền và API trước, sau đó mới kết nối web/mobile/desktop.
+## Tổng quan
 
-## Mục tiêu dự án
+Repository này tập trung vào các luồng cốt lõi của một hệ thống e-commerce cho xe điện:
 
-Project hướng tới một hệ thống thương mại điện tử cho xe điện với các khả năng chính:
-- quản lý danh mục xe điện, biến thể, màu sắc, hình ảnh, thông số kỹ thuật
-- quản lý người dùng, địa chỉ, preferences
-- đặt hàng, thanh toán, giao hàng
-- chatbot tư vấn sản phẩm và FAQ
-- phân quyền chi tiết theo `Permission-based Access Control (PBAC)`
+- quản lý người dùng, đăng nhập và phân quyền theo PBAC
+- quản lý danh mục sản phẩm, thông số kỹ thuật, hình ảnh và yêu thích
+- đặt hàng, báo giá checkout, nhận xe tại showroom
+- thanh toán VNPay
+- chatbot tư vấn sản phẩm, FAQ và truy xuất tri thức từ tài liệu PDF
+- giao diện web cho khách hàng, admin và manager
 
-## Công nghệ chính
+## Thành phần chính
+
+- `backend`: Spring Boot API, Flyway migration, bảo mật, business logic
+- `packages/web`: ứng dụng web React + Vite
+- `packages/mobile`: ứng dụng mobile React Native + Expo
+- `packages/desktop`: ứng dụng desktop React + Electron
+- `packages/shared-code`: types, API client và phần dùng chung giữa các client
+
+## Tính năng hiện có
 
 ### Backend
+
+- xác thực bằng JWT, có các endpoint `register`, `login`, `logout`, `session`, `profile`
+- phân quyền theo `PermissionConstants`, hỗ trợ guest/customer/manager/admin
+- API sản phẩm và chi tiết sản phẩm
+- quản lý danh sách yêu thích
+- tạo đơn hàng, báo giá checkout và xem đơn
+- hỗ trợ nhận xe tại showroom
+- thanh toán VNPay với `create`, `return`, `ipn`
+- upload/quản lý ảnh sản phẩm qua S3 metadata
+- dashboard manager, xác nhận thanh toán pay-later, tra cứu khách hàng
+- chatbot kết hợp FAQ, dữ liệu sản phẩm, showroom, quy trình thanh toán, Gemini và PDF knowledge base
+
+### Web
+
+- trang chủ, danh sách sản phẩm, chi tiết sản phẩm
+- đăng nhập, đăng ký
+- checkout, trang kết quả thanh toán
+- chatbot
+- khu vực khách hàng: dashboard, đơn hàng, hồ sơ
+- khu vực admin
+- khu vực manager: dashboard, orders, payments, customers, products
+
+## Công nghệ sử dụng
+
+### Backend
+
 - Java 17
-- Spring Boot
+- Spring Boot 3.1.5
+- Spring Web
 - Spring Data JPA
+- Spring Security
 - PostgreSQL
 - Flyway
-- Maven
+- JWT
+- AWS SDK S3
+- Apache PDFBox
 
-### Frontend/Clients
-- React + Vite
+### Frontend và workspace
+
+- Node.js workspaces
+- React 18
+- Vite 5
+- TypeScript 5
+- React Router
+- Redux Toolkit
 - React Native + Expo
-- Electron + React
-- shared TypeScript package trong monorepo
+- Electron
 
-## Cấu trúc repository
+## Cấu trúc thư mục
 
 ```text
 e-bike-multiplatform/
-├─ backend/
-│  ├─ src/main/java/com/ebike/
-│  │  ├─ authModule/
-│  │  ├─ productModule/
-│  │  ├─ orderModule/
-│  │  ├─ userModule/
-│  │  ├─ chatbotModule/
-│  │  ├─ shared/
-│  │  └─ config/
-│  └─ src/main/resources/db/migration/
-├─ packages/
-│  ├─ shared-code/
-│  ├─ web/
-│  ├─ mobile/
-│  └─ desktop/
-└─ package.json
+|-- backend/
+|   |-- src/main/java/com/ebike/
+|   |   |-- authModule/
+|   |   |-- chatbotModule/
+|   |   |-- managerModule/
+|   |   |-- orderModule/
+|   |   |-- productModule/
+|   |   |-- userModule/
+|   |   |-- shared/
+|   |   `-- config/
+|   `-- src/main/resources/
+|       |-- application.properties
+|       |-- db/migration/
+|       |-- db/schema-overview.sql
+|       |-- docs/
+|       `-- faq-data/
+|-- packages/
+|   |-- shared-code/
+|   |-- web/
+|   |-- mobile/
+|   `-- desktop/
+|-- package.json
+`-- README.md
 ```
 
-## Kiến trúc hiện tại
+## Yêu cầu môi trường
 
-### 1. Monorepo
-- tất cả source nằm trong một repo
-- backend và các app client phát triển song song
-- frontend clients có thể dùng chung types, API clients, hooks, redux từ `packages/shared-code`
+- Java 17
+- Maven 3.9+
+- Node.js 18+ và npm 9+
+- Docker Desktop nếu muốn chạy PostgreSQL nhanh bằng container
 
-### 2. Backend theo module
+## Chạy nhanh ở local
 
-Backend hiện được chia theo module nghiệp vụ:
+### 1. Cài dependencies cho workspace
 
-- `authModule`
-  - người dùng đăng nhập
-  - role, permission, PBAC
-  - authentication log
-- `productModule`
-  - category
-  - product
-  - review
-  - specification, variant, image cho xe điện
-- `orderModule`
-  - order
-  - order item
-  - payment
-  - shipment
-- `userModule`
-  - địa chỉ người dùng
-  - preference người dùng
-- `chatbotModule`
-  - đã tạo skeleton thư mục, chưa build đầy đủ entity/service
-- `shared`
-  - constants và các phần dùng chung
+```bash
+npm install
+```
 
-### 3. Permission-based Access Control
+### 2. Khởi động database
 
-Project không dừng ở RBAC đơn thuần. Hiện backend đang theo PBAC:
-
-- `Role`: nhóm quyền
-- `Permission`: quyền thao tác cụ thể
-- `UserPermission`: quyền gán trực tiếp cho user, có thể `grant` hoặc `deny`
-
-Ví dụ quyền:
-- `product:view`
-- `product:create`
-- `order:create`
-- `order:update-status`
-- `payment:refund`
-- `permission:manage`
-
-File hằng số quyền:
-- [backend/src/main/java/com/ebike/shared/constants/PermissionConstants.java](backend/src/main/java/com/ebike/shared/constants/PermissionConstants.java)
-
-## Những gì backend đã build xong
-
-### Auth domain
-- `User`
-- `Role`
-- `Permission`
-- `UserPermission`
-- `AuthenticationLog`
-
-### Product domain
-
-Phần này đã được thiết kế chi tiết theo domain xe điện kiểu Yadea:
-
-- `Category`
-- `Product`
-- `Review`
-- `ProductSpecification`
-- `ProductVariant`
-- `ProductImage`
-
-Một số thông tin kỹ thuật đã có trong `ProductSpecification`:
-- loại xe
-- loại pin
-- dung lượng pin
-- điện áp pin
-- thời gian sạc
-- tốc độ tối đa
-- quãng đường tối đa
-- công suất motor
-- tải trọng
-- kích thước bánh
-- loại phanh
-- kiểu truyền động
-- smart features
-- bảo hành
-
-### Order domain
-- `Order`
-- `OrderItem`
-- `Payment`
-- `Shipment`
-
-### User domain
-- `UserAddress`
-- `UserPreference`
-
-### Database migration
-
-Flyway đã có migration cho:
-- tạo schema ban đầu
-- auth tables
-- product tables
-- order tables
-- user tables
-
-Các file chính:
-- [backend/src/main/resources/db/migration/V1_0_0__Initial_Schema.sql](backend/src/main/resources/db/migration/V1_0_0__Initial_Schema.sql)
-- [backend/src/main/resources/db/migration/V1_0_1__auth_tables.sql](backend/src/main/resources/db/migration/V1_0_1__auth_tables.sql)
-- [backend/src/main/resources/db/migration/V1_0_2__product_tables.sql](backend/src/main/resources/db/migration/V1_0_2__product_tables.sql)
-- [backend/src/main/resources/db/migration/V1_0_3__order_tables.sql](backend/src/main/resources/db/migration/V1_0_3__order_tables.sql)
-- [backend/src/main/resources/db/migration/V1_0_5__user_tables.sql](backend/src/main/resources/db/migration/V1_0_5__user_tables.sql)
-
-## Các file quan trọng để đọc trước
-
-Nếu là thành viên mới trong nhóm, nên đọc theo thứ tự này:
-
-1. [backend/pom.xml](backend/pom.xml)
-2. [backend/src/main/resources/db/migration/V1_0_0__Initial_Schema.sql](backend/src/main/resources/db/migration/V1_0_0__Initial_Schema.sql)
-3. [backend/src/main/resources/db/migration/V1_0_1__auth_tables.sql](backend/src/main/resources/db/migration/V1_0_1__auth_tables.sql)
-4. [backend/src/main/resources/db/migration/V1_0_2__product_tables.sql](backend/src/main/resources/db/migration/V1_0_2__product_tables.sql)
-5. [backend/src/main/java/com/ebike/productModule/entity/Product.java](backend/src/main/java/com/ebike/productModule/entity/Product.java)
-6. [backend/src/main/java/com/ebike/productModule/entity/ProductSpecification.java](backend/src/main/java/com/ebike/productModule/entity/ProductSpecification.java)
-7. [backend/src/main/java/com/ebike/shared/constants/PermissionConstants.java](backend/src/main/java/com/ebike/shared/constants/PermissionConstants.java)
-8. [packages/shared-code/src/index.ts](packages/shared-code/src/index.ts)
-
-## Trạng thái hiện tại của project
-
-### Đã có
-- skeleton monorepo
-- backend entities và repositories cốt lõi
-- migration SQL cho auth/product/order/user
-- PBAC model
-- shared-code skeleton cho frontend
-- skeleton cho web/mobile/desktop
-
-### Chưa hoàn thiện
-- DTO cho backend
-- service business logic thật
-- controller endpoint thật
-- Spring Security tích hợp PBAC đầy đủ
-- seed dữ liệu role/permission mặc định
-- chatbot entity/service hoàn chỉnh
-- frontend UI thật sự kết nối API
-
-## Cách chạy backend
+Cách nhanh nhất là dùng PostgreSQL trong `backend/docker-compose.yml`:
 
 ```bash
 cd backend
-mvn clean compile
+docker compose up -d postgres
 ```
 
-Nếu muốn chạy app:
+Mặc định profile `dev` của backend dùng:
+
+- database: `ebike_db`
+- username: `ebike_user`
+- password: `ebike_password_123`
+- port: `5432`
+
+### 3. Chạy backend
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-Lưu ý:
-- cần cấu hình thêm `application.properties` và database nếu muốn chạy đầy đủ
-- hiện tại compile backend đã pass
+Thông tin mặc định:
 
-## Cách làm việc nhóm đề xuất
+- port: `8080`
+- context path: `/api/v1`
+- profile mặc định: `dev`
 
-### Nhánh Backend
-- hoàn thiện DTO
-- viết service cho auth/product/order
-- tích hợp security + permission check
-- thêm seed data role/permission/category/product
+### 4. Chạy web
 
-### Nhánh Frontend
-- dựa vào entity và DB model để chốt contract API
-- xây types shared bám theo backend
-- tạo UI cho catalog sản phẩm, chi tiết sản phẩm, giỏ hàng, đơn hàng
+Từ thư mục root:
 
-### Nhánh Chatbot
-- định nghĩa entity/migration cho conversation, faq, history
-- nối chatbot với product data để tư vấn xe điện
+```bash
+npm run dev:web
+```
 
-## Đề xuất permission mẫu cho hệ thống
+Web Vite thường chạy ở `http://localhost:5173`.
 
-### Guest
-- xem sản phẩm
-- tìm kiếm sản phẩm
-- xem danh mục
-- xem review
+### 5. Chạy mobile
 
-### Customer
-- quản lý giỏ hàng
-- tạo đơn hàng
-- xem đơn của chính mình
-- thanh toán
-- cập nhật hồ sơ
-- viết review
+```bash
+npm run dev:mobile
+```
 
-### Staff/Admin
-- tạo/sửa/xóa sản phẩm
-- quản lý tồn kho
-- cập nhật trạng thái đơn
-- hoàn tiền
-- quản lý user, role, permission
-- xem dashboard và báo cáo
+### 6. Chạy desktop
 
-## Hướng phát triển tiếp theo
+```bash
+npm run dev:desktop
+```
 
-Các bước nên làm tiếp theo theo thứ tự:
+## Scripts hữu ích ở root
 
-1. hoàn thiện auth DTO + login/register flow
-2. seed `roles` và `permissions` mặc định từ `PermissionConstants`
-3. tích hợp PBAC vào Spring Security
-4. viết `ProductDTO`, `ProductDetailDTO`, `ProductService`, `ProductController`
-5. viết `OrderService` và flow checkout cơ bản
-6. sau đó mới nối web/mobile/desktop vào API
+- `npm run dev`: chạy song song web, mobile, desktop
+- `npm run dev:backend`: chạy Spring Boot backend
+- `npm run build`: build toàn bộ workspace có script build
+- `npm run build:backend`: đóng gói backend bằng Maven
+- `npm run test`: chạy test ở các workspace có khai báo
+- `npm run lint`: chạy lint ở các workspace có khai báo
 
-## Ghi chú cho nhóm
+## Cấu hình backend quan trọng
 
-- Repo này hiện đang trong giai đoạn dựng nền kiến trúc, chưa phải production-ready
-- Nếu muốn thêm tính năng mới, ưu tiên cập nhật:
-  - migration SQL
-  - entity
-  - repository/service
-  - DTO/controller
-  - cuối cùng mới tới frontend
-- Không nên tự ý đổi tên permission code nếu chưa thống nhất vì frontend và security sau này sẽ phụ thuộc vào chúng
+Các file cấu hình chính:
 
-## Tác giả và nhóm
+- `backend/src/main/resources/application.properties`
+- `backend/src/main/resources/application-dev.properties`
+- `backend/src/main/resources/application-prod.properties`
 
-Project được xây để phục vụ bài tập/đồ án kiến trúc phần mềm. Mọi thành viên trong nhóm nên dùng README này làm điểm bắt đầu để hiểu codebase trước khi code tiếp.
+Một số cấu hình đáng chú ý:
+
+- `server.servlet.context-path=/api/v1`
+- `jwt.secret`, `jwt.expiration`
+- `app.cors.allowed-origin-patterns`
+- `app.storage.s3.*`
+- `vnpay.*`
+- `app.ai.gemini.*`
+- `app.ai.pdf-knowledge.*`
+
+PDF knowledge base của chatbot đang đọc tài liệu từ:
+
+- `backend/src/main/resources/docs/*.pdf`
+
+FAQ tĩnh đang nằm tại:
+
+- `backend/src/main/resources/faq-data/faq.csv`
+
+## Database và Flyway
+
+Flyway chạy migration từ:
+
+- `backend/src/main/resources/db/migration`
+
+Hiện tại migration đã được squash thành baseline:
+
+- `backend/src/main/resources/db/migration/V2_0_0__baseline.sql`
+
+Các migration lịch sử `V1_*` được chuyển sang:
+
+- `backend/src/main/resources/db/migration-archive/`
+
+Schema tổng quan để đọc nhanh:
+
+- `backend/src/main/resources/db/schema-overview.sql`
+
+Ghi chú thêm về migration hiện tại:
+
+- Flyway hiện chỉ đọc migration active trong `backend/src/main/resources/db/migration/`
+- `backend/src/main/resources/db/migration-archive/` chỉ dùng để lưu lịch sử `V1_*`, không còn được chạy trực tiếp
+- từ baseline `V2_0_0`, thay đổi schema mới nên được thêm bằng migration mới theo nhánh `V2_*`
+
+Baseline `V2_0_0` đã gộp toàn bộ các thay đổi chính trước đây:
+
+- schema auth, product, order, user
+- showroom pickup flow
+- metadata ảnh S3
+- user favorites
+- VNPay payment fields
+- PBAC permissions
+- merge `STAFF` vào `MANAGER`
+- cấp quyền favorites cho manager
+
+Lưu ý khi chuyển sang baseline:
+
+- nếu database local cũ đang dùng lịch sử `V1_*`, nên reset DB dev một lần để sạch hoàn toàn
+- seed sản phẩm vẫn nằm ngoài Flyway, dùng file trong `backend/data-backup/`
+
+## Import dữ liệu sản phẩm mẫu
+
+Nếu bạn đang dùng container PostgreSQL tên `ebike-postgres`, có thể import thêm dữ liệu SQL từ file:
+
+- `backend/data-backup/dataCawl/output/products_db_ready_clean.sql`: là SQL thật, nhưng `image_url` dùng đường dẫn ảnh local
+- `backend/data-backup/dataCawl/output/products_db_ready_clean.s3.sql`: là SQL thật và là file phù hợp nhất với DB/app hiện tại vì dùng URL ảnh S3
+
+Ví dụ:
+
+```bash
+docker cp backend/data-backup/dataCawl/output/products_db_ready_clean.s3.sql ebike-postgres:/tmp/products_db_ready_clean.s3.sql
+docker exec -i ebike-postgres psql -U ebike_user -d ebike_db -v ON_ERROR_STOP=1 -f /tmp/products_db_ready_clean.s3.sql
+```
+
+## API và quyền truy cập
+
+Một vài route đáng chú ý:
+
+- `GET /api/v1/products`
+- `POST /api/v1/orders`
+- `POST /api/v1/orders/quote`
+- `POST /api/v1/payments/vnpay/create`
+- `GET /api/v1/payments/vnpay/return`
+- `POST /api/v1/chatbot/ask`
+- `GET /api/v1/manager/dashboard`
+- `GET /api/v1/manager/payments`
+
+Security hiện cấu hình theo hướng:
+
+- guest vẫn có thể xem sản phẩm, tìm kiếm, dùng chatbot và tạo đơn trong một số luồng
+- customer có thể quản lý thông tin cá nhân, đơn hàng và yêu thích
+- manager có thể xem dashboard, khách hàng, payments và nghiệp vụ vận hành
+- admin có quyền quản trị sâu hơn theo permission
+
+## Gợi ý đọc code khi mới vào dự án
+
+Nếu cần hiểu nhanh codebase, nên đọc theo thứ tự:
+
+1. `backend/pom.xml`
+2. `backend/src/main/resources/application.properties`
+3. `backend/src/main/resources/application-dev.properties`
+4. `backend/src/main/resources/db/schema-overview.sql`
+5. `backend/src/main/resources/db/migration/`
+6. `backend/src/main/java/com/ebike/config/SecurityConfiguration.java`
+7. `backend/src/main/java/com/ebike/shared/constants/PermissionConstants.java`
+8. `packages/shared-code/src/api/endpoints.ts`
+9. `packages/web/src/router/index.tsx`
+
+## Ghi chú
+
+- Repo đang phát triển tích cực, có thể có thay đổi chưa phản ánh hết ở mọi màn hình hoặc tài liệu phụ.
+- Nếu thêm tính năng mới liên quan dữ liệu, ưu tiên cập nhật theo thứ tự: migration, entity, service, controller, shared types, frontend.
+- Không nên sửa migration cũ đã dùng chung trong team nếu không thật sự cần thiết; hãy thêm migration mới.
