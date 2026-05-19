@@ -1,11 +1,13 @@
 package com.ebike.managerModule.controller;
 
 import com.ebike.managerModule.dto.request.ManagerPaymentConfirmationRequest;
+import com.ebike.managerModule.dto.request.ManagerProductStockUpdateRequest;
 import com.ebike.managerModule.dto.response.ManagerCustomerResponse;
 import com.ebike.managerModule.dto.response.ManagerDashboardResponse;
 import com.ebike.managerModule.dto.response.ManagerPaymentResponse;
 import com.ebike.orderModule.dto.request.OrderCancellationRequest;
 import com.ebike.orderModule.dto.response.OrderResponse;
+import com.ebike.productModule.dto.response.ProductSummaryDto;
 import com.ebike.managerModule.service.ManagerService;
 import com.ebike.shared.constants.PermissionConstants;
 import java.util.List;
@@ -75,5 +77,14 @@ public class ManagerController {
     @PreAuthorize("hasAuthority('" + PermissionConstants.UserManagement.USER_VIEW + "')")
     public List<ManagerCustomerResponse> getCustomers(@RequestParam(required = false) String search) {
         return managerService.getCustomers(search);
+    }
+
+    @PatchMapping("/products/{productId}/stock")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.ProductManagement.PRODUCT_MANAGE_STOCK + "')")
+    public ProductSummaryDto updateProductStock(
+        @PathVariable Long productId,
+        @RequestBody ManagerProductStockUpdateRequest request
+    ) {
+        return managerService.updateProductStock(productId, request);
     }
 }

@@ -31,6 +31,7 @@ export const API_ENDPOINTS = {
     dashboard: "/manager/dashboard",
     payments: "/manager/payments",
     paymentConfirm: (paymentId: number | string) => `/manager/payments/${paymentId}/confirm`,
+    productStock: (productId: number | string) => `/manager/products/${productId}/stock`,
     cancellationApprove: (orderId: number | string) => `/manager/orders/${orderId}/cancellation/approve`,
     cancellationReject: (orderId: number | string) => `/manager/orders/${orderId}/cancellation/reject`,
     customers: "/manager/customers"

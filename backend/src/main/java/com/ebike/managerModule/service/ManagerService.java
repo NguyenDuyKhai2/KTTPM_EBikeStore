@@ -1,11 +1,13 @@
 package com.ebike.managerModule.service;
 
 import com.ebike.managerModule.dto.request.ManagerPaymentConfirmationRequest;
+import com.ebike.managerModule.dto.request.ManagerProductStockUpdateRequest;
 import com.ebike.managerModule.dto.response.ManagerCustomerResponse;
 import com.ebike.managerModule.dto.response.ManagerDashboardResponse;
 import com.ebike.managerModule.dto.response.ManagerPaymentResponse;
 import com.ebike.orderModule.dto.request.OrderCancellationRequest;
 import com.ebike.orderModule.dto.response.OrderResponse;
+import com.ebike.productModule.dto.response.ProductSummaryDto;
 import java.util.List;
 
 public interface ManagerService {
@@ -21,4 +23,6 @@ public interface ManagerService {
     OrderResponse rejectOrderCancellation(Long orderId, OrderCancellationRequest request);
 
     List<ManagerCustomerResponse> getCustomers(String search);
+
+    ProductSummaryDto updateProductStock(Long productId, ManagerProductStockUpdateRequest request);
 }
