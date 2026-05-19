@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Battery, Heart, RotateCcw, Star, Zap } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { favoritesAPI, productAPI } from "@ebike/shared-code/api";
 import { useAuth } from "@ebike/shared-code/hooks";
-import type { ProductDetail } from "@ebike/shared-code/types";
+import type { Product, ProductDetail } from "@ebike/shared-code/types";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
 
 const ProductDetailPage = () => {
@@ -18,6 +18,34 @@ const ProductDetailPage = () => {
   const [favoriteSaving, setFavoriteSaving] = useState(false);
   const [favoriteAdded, setFavoriteAdded] = useState(false);
   const [favoriteMessage, setFavoriteMessage] = useState("");
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
+  const [relatedError, setRelatedError] = useState<string | null>(null);
+
+  const loadFallbackRelatedProducts = async (currentProduct: ProductDetail) => {
+    const products = await productAPI.list();
+    const currentPrice = currentProduct.discountPrice ?? currentProduct.price;
+    const lowerPrice = currentPrice * 0.7;
+    const upperPrice = currentPrice * 1.3;
+
+    return products
+      .filter((item) => item.slug !== currentProduct.slug)
+      .map((item) => {
+        const itemPrice = item.discountPrice ?? item.price;
+        let score = 0;
+        if (currentProduct.category?.id && item.category?.id === currentProduct.category.id) {
+          score += 5;
+        }
+        if (itemPrice >= lowerPrice && itemPrice <= upperPrice) {
+          score += 2;
+        }
+        return { item, score };
+      })
+      .filter((candidate) => candidate.score > 0)
+      .sort((first, second) => second.score - first.score || first.item.name.localeCompare(second.item.name))
+      .slice(0, 4)
+      .map((candidate) => candidate.item);
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -47,6 +75,41 @@ const ProductDetailPage = () => {
     void load();
   }, [id]);
 
+  useEffect(() => {
+    const loadRelatedProducts = async () => {
+      if (!id) {
+        setRelatedProducts([]);
+        return;
+      }
+
+      setRelatedLoading(true);
+      setRelatedError(null);
+      try {
+        const data = await productAPI.getRelated(id, 4);
+        setRelatedProducts(data.filter((item) => item.slug !== id));
+      } catch (fetchError) {
+        if (!product) {
+          setRelatedError(fetchError instanceof Error ? fetchError.message : "Không thể tải sản phẩm liên quan");
+          setRelatedProducts([]);
+          return;
+        }
+
+        try {
+          const fallbackData = await loadFallbackRelatedProducts(product);
+          setRelatedProducts(fallbackData);
+          setRelatedError(null);
+        } catch (fallbackError) {
+          setRelatedError(fallbackError instanceof Error ? fallbackError.message : "Không thể tải sản phẩm liên quan");
+          setRelatedProducts([]);
+        }
+      } finally {
+        setRelatedLoading(false);
+      }
+    };
+
+    void loadRelatedProducts();
+  }, [id, product]);
+
   const variantMedia = useMemo(() => {
     if (!product?.variants?.length) {
       return [];
@@ -70,6 +133,23 @@ const ProductDetailPage = () => {
 
     return variantMedia.map(({ name, code }) => ({ name, code }));
   }, [variantMedia]);
+
+  const relatedDisplayProducts = useMemo(
+    () =>
+      relatedProducts.map((item, index) => ({
+        id: item.slug || String(item.id),
+        name: item.name,
+        type: item.category?.name || "E-BIKE",
+        price: `${(item.discountPrice ?? item.price).toLocaleString("vi-VN")}đ`,
+        image:
+          item.images?.[0] ||
+          "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&q=80&w=600",
+        badge: item.featured ? "FEATURED" : index === 0 ? "BEST SELLER" : "",
+        colors: ["#1a1a1a", "#3b82f6", "#d1d5db"],
+        meta: item.reviewCount ? `${item.reviewCount} đánh giá` : item.stockQuantity ? `${item.stockQuantity} trong kho` : "Sản phẩm mới"
+      })),
+    [relatedProducts]
+  );
 
   if (loading) {
     return <main className="flex min-h-screen items-center justify-center text-muted-foreground">Đang tải dữ liệu sản phẩm...</main>;
@@ -152,6 +232,10 @@ const ProductDetailPage = () => {
         quantity: 1
       }
     });
+  };
+
+  const handleRelatedProductClick = (slug: string) => {
+    navigate(`/product/${slug}`);
   };
 
   return (
@@ -322,6 +406,82 @@ const ProductDetailPage = () => {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-24 lg:px-12">
+        <div className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <span className="mono-label text-primary">Gợi ý phù hợp</span>
+            <h2 className="mt-3 text-3xl font-bold md:text-4xl">Sản phẩm liên quan</h2>
+            <p className="mt-2 max-w-2xl text-muted-foreground">
+              Những mẫu xe có cùng danh mục, loại xe, thương hiệu hoặc khoảng giá gần với sản phẩm bạn đang xem.
+            </p>
+          </div>
+        </div>
+
+        {relatedLoading ? (
+          <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-8 text-center text-muted-foreground">
+            Đang tải sản phẩm liên quan...
+          </div>
+        ) : relatedError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center text-red-700">
+            {relatedError}
+          </div>
+        ) : relatedDisplayProducts.length === 0 ? (
+          <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-8 text-center text-muted-foreground">
+            Hiện chưa có sản phẩm liên quan phù hợp với mẫu xe này.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
+            {relatedDisplayProducts.map((relatedProduct) => (
+              <div
+                key={relatedProduct.id}
+                className="group overflow-hidden rounded-2xl border border-outline-variant/10 bg-white transition-all duration-500 hover:shadow-xl"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-surface-container-low">
+                  <img
+                    src={resolveProductImage(relatedProduct.image)}
+                    alt={relatedProduct.name}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    onError={(event) => attachImageFallback(event, relatedProduct.name)}
+                    referrerPolicy="no-referrer"
+                  />
+                  {relatedProduct.badge ? (
+                    <span className="absolute left-4 top-4 rounded-full bg-black px-3 py-1 text-[10px] font-bold tracking-widest text-white">
+                      {relatedProduct.badge}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="p-6">
+                  <div className="mb-2 flex items-start justify-between gap-4">
+                    <h3 className="text-xl font-bold transition-colors group-hover:text-primary">{relatedProduct.name}</h3>
+                    <span className="font-bold text-primary">{relatedProduct.price}</span>
+                  </div>
+                  <p className="mb-6 text-xs uppercase tracking-wider text-muted-foreground">
+                    {relatedProduct.type} | {relatedProduct.meta}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                      {relatedProduct.colors.map((color, index) => (
+                        <div
+                          key={`${relatedProduct.id}-${index}`}
+                          className="h-3 w-3 rounded-full border border-outline-variant/20"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                    <Link to={`/product/${relatedProduct.id}`} className="flex items-center gap-1 text-sm font-bold">
+                      XEM CHI TIẾT
+                      <div className="ml-2 h-[2px] w-8 bg-primary transition-all group-hover:w-12" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="bg-white py-24">

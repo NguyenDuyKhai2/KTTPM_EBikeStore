@@ -12,6 +12,7 @@ export const API_ENDPOINTS = {
   products: {
     list: "/products",
     detail: (id: string) => `/products/${id}`,
+    related: (id: string) => `/products/${id}/related`,
     search: "/products/search"
   },
   favorites: {
