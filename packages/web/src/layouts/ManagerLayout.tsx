@@ -14,7 +14,7 @@ const ManagerLayout = () => {
     );
   }
 
-  if (!isAuthenticated || !user?.roles.includes("MANAGER")) {
+  if (!isAuthenticated || (!user?.roles.includes("MANAGER") && !user?.roles.includes("ADMIN"))) {
     return <Navigate to="/auth" replace />;
   }
 
