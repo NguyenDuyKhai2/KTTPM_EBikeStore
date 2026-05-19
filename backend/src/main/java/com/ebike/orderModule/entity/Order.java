@@ -1,9 +1,11 @@
 package com.ebike.orderModule.entity;
 
 import com.ebike.authModule.entity.User;
+import com.ebike.notificationModule.listener.OrderNotificationJpaListener;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -15,8 +17,10 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PostLoad;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
@@ -24,6 +28,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "orders", schema = "ebike_order")
+@EntityListeners(OrderNotificationJpaListener.class)
 public class Order {
 
     @Id
@@ -40,6 +45,9 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private OrderStatus status = OrderStatus.PENDING;
+
+    @Transient
+    private OrderStatus previousStatusForNotification;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal = BigDecimal.ZERO;
@@ -115,6 +123,11 @@ public class Order {
         updatedAt = LocalDateTime.now();
     }
 
+    @PostLoad
+    void rememberNotificationSnapshot() {
+        previousStatusForNotification = status;
+    }
+
     public Long getId() {
         return id;
     }
@@ -145,6 +158,10 @@ public class Order {
 
     public void setStatus(OrderStatus status) {
         this.status = status;
+    }
+
+    public OrderStatus getPreviousStatusForNotification() {
+        return previousStatusForNotification;
     }
 
     public BigDecimal getSubtotal() {

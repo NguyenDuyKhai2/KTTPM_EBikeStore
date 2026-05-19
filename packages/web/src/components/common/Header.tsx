@@ -2,6 +2,7 @@ import { Menu, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@ebike/shared-code/hooks";
+import NotificationBell from "./NotificationBell";
 
 const navItems = [
   { to: "/products", label: "Mẫu xe" },
@@ -43,6 +44,11 @@ const Header = () => {
             >
               Trang chủ
             </NavLink>
+            {isAuthenticated ? (
+              <NavLink to="/customer/notifications" className="font-headline text-foreground/70 hover:text-primary">
+                Thông báo
+              </NavLink>
+            ) : null}
             {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -62,6 +68,7 @@ const Header = () => {
 
         <div className="flex items-center gap-4">
           <div className="hidden items-center gap-4 lg:flex">
+            <NotificationBell enabled={isAuthenticated} />
             <button
               onClick={() => navigate(isAuthenticated ? "/customer/profile" : "/auth")}
               className="text-foreground/70 transition-colors hover:text-primary"
@@ -93,6 +100,11 @@ const Header = () => {
             >
               Trang chủ
             </NavLink>
+            {isAuthenticated ? (
+              <NavLink to="/customer/notifications" className="font-headline text-foreground/70 hover:text-primary">
+                Thông báo
+              </NavLink>
+            ) : null}
             {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
