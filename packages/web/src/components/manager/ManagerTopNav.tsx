@@ -19,21 +19,33 @@ const pageTitles: Record<string, { title: string; description: string }> = {
     description: "Tra cứu hồ sơ khách hàng và giá trị mua sắm."
   },
   "/manager/products": {
-    title: "Sản phẩm",
+    title: "Quản lý tồn kho",
+    description: "Theo dõi số lượng, cảnh báo sắp hết hàng và cập nhật tồn kho sản phẩm."
+  }
+};
+
+const managerPageTitles: Record<string, { title: string; description: string }> = {
+  ...pageTitles,
+  "/manager/products": {
+    title: "Quản lý sản phẩm",
     description: "Kiểm tra danh mục xe đang hiển thị trong hệ thống."
+  },
+  "/manager/inventory": {
+    title: "Quản lý tồn kho",
+    description: "Theo dõi số lượng, cảnh báo sắp hết hàng và cập nhật tồn kho sản phẩm."
   }
 };
 
 const ManagerTopNav = () => {
   const location = useLocation();
   const page =
-    pageTitles[location.pathname] ??
+    managerPageTitles[location.pathname] ??
     (location.pathname.startsWith("/manager/orders/")
       ? {
           title: "Chi tiết đơn hàng",
           description: "Xem đầy đủ thông tin đơn hàng, thanh toán và showroom nhận xe."
         }
-      : pageTitles["/manager"]);
+      : managerPageTitles["/manager"]);
 
   return (
     <header className="sticky top-0 z-30 flex min-h-[72px] items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur">

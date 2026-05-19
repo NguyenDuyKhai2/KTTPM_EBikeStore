@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Boxes, PackageCheck, PackageX } from "lucide-react";
 import { managerAPI, productAPI } from "@ebike/shared-code/api";
 import type { Product } from "@ebike/shared-code/types";
 import { attachImageFallback, createProductImageFallback, resolveProductImage } from "../../utils/media";
 
+const LOW_STOCK_THRESHOLD = 5;
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value);
-
-const LOW_STOCK_THRESHOLD = 5;
 
 const getStockBadge = (stockQuantity: number) => {
   if (stockQuantity <= 0) {
@@ -15,83 +16,10 @@ const getStockBadge = (stockQuantity: number) => {
   if (stockQuantity <= LOW_STOCK_THRESHOLD) {
     return { label: "Sắp hết hàng", className: "border-amber-200 bg-amber-50 text-amber-700" };
   }
-  return { label: "Đang bán", className: "border-green-200 bg-green-50 text-green-700" };
+  return { label: "Còn hàng", className: "border-green-200 bg-green-50 text-green-700" };
 };
 
-const ManagerProductsPage = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        setProducts(await productAPI.list());
-        setError("");
-      } catch (productsError) {
-        setError(productsError instanceof Error ? productsError.message : "Không thể tải danh sách sản phẩm.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadProducts();
-  }, []);
-
-  if (loading) {
-    return <div className="rounded-lg border border-slate-200 bg-white px-6 py-10 text-sm text-slate-500">Đang tải sản phẩm...</div>;
-  }
-
-  return (
-    <div className="space-y-6">
-      {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-
-      <section className="grid gap-5 xl:grid-cols-2">
-        {products.map((product) => (
-          <article key={product.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-            <div className="grid gap-0 md:grid-cols-[240px,1fr]">
-              <div className="h-[220px] bg-slate-100 md:h-full">
-                <img
-                  src={resolveProductImage(product.images?.[0]) || createProductImageFallback(product.name)}
-                  alt={product.name}
-                  className="h-full w-full object-cover"
-                  onError={(event) => attachImageFallback(event, product.name)}
-                />
-              </div>
-              <div className="p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{product.category?.name || "Xe điện"}</p>
-                    <h3 className="mt-2 text-xl font-bold text-slate-950">{product.name}</h3>
-                  </div>
-                  <span className="rounded-md bg-green-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-green-700">
-                    Đang bán
-                  </span>
-                </div>
-
-                <div className="mt-5 grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Giá bán</p>
-                    <p className="mt-2 text-base font-bold text-slate-950">{formatCurrency(product.discountPrice ?? product.price)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Tồn kho</p>
-                    <p className="mt-2 text-base font-bold text-slate-950">{product.stockQuantity ?? 0} chiếc</p>
-                  </div>
-                </div>
-
-                <p className="mt-5 line-clamp-3 text-sm leading-7 text-slate-600">{product.description}</p>
-              </div>
-            </div>
-          </article>
-        ))}
-      </section>
-    </div>
-  );
-};
-
-const ManagerProductsInventoryPage = () => {
+const ManagerInventoryPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [stockInputs, setStockInputs] = useState<Record<number, string>>({});
   const [savingProductId, setSavingProductId] = useState<number | null>(null);
@@ -113,7 +41,7 @@ const ManagerProductsInventoryPage = () => {
         );
         setError("");
       } catch (productsError) {
-        setError(productsError instanceof Error ? productsError.message : "Không thể tải danh sách sản phẩm.");
+        setError(productsError instanceof Error ? productsError.message : "Không thể tải danh sách tồn kho.");
       } finally {
         setLoading(false);
       }
@@ -121,6 +49,16 @@ const ManagerProductsInventoryPage = () => {
 
     void loadProducts();
   }, []);
+
+  const inventorySummary = useMemo(
+    () => ({
+      totalProducts: products.length,
+      totalStock: products.reduce((sum, product) => sum + (product.stockQuantity ?? 0), 0),
+      lowStock: products.filter((product) => (product.stockQuantity ?? 0) > 0 && (product.stockQuantity ?? 0) <= LOW_STOCK_THRESHOLD).length,
+      outOfStock: products.filter((product) => (product.stockQuantity ?? 0) <= 0).length
+    }),
+    [products]
+  );
 
   const updateStockInput = (productId: number, value: string) => {
     if (value === "" || /^\d+$/.test(value)) {
@@ -155,13 +93,36 @@ const ManagerProductsInventoryPage = () => {
   };
 
   if (loading) {
-    return <div className="rounded-lg border border-slate-200 bg-white px-6 py-10 text-sm text-slate-500">Đang tải sản phẩm...</div>;
+    return <div className="rounded-lg border border-slate-200 bg-white px-6 py-10 text-sm text-slate-500">Đang tải tồn kho...</div>;
   }
 
   return (
     <div className="space-y-6">
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {stockMessage && <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{stockMessage}</div>}
+
+      <section className="grid gap-4 md:grid-cols-4">
+        <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <Boxes className="h-5 w-5 text-blue-600" />
+          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Sản phẩm</p>
+          <p className="mt-2 text-2xl font-bold text-slate-950">{inventorySummary.totalProducts}</p>
+        </article>
+        <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <PackageCheck className="h-5 w-5 text-green-600" />
+          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Tổng tồn</p>
+          <p className="mt-2 text-2xl font-bold text-slate-950">{inventorySummary.totalStock}</p>
+        </article>
+        <article className="rounded-lg border border-amber-200 bg-amber-50 p-5 shadow-sm">
+          <AlertTriangle className="h-5 w-5 text-amber-700" />
+          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Sắp hết</p>
+          <p className="mt-2 text-2xl font-bold text-amber-800">{inventorySummary.lowStock}</p>
+        </article>
+        <article className="rounded-lg border border-red-200 bg-red-50 p-5 shadow-sm">
+          <PackageX className="h-5 w-5 text-red-700" />
+          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-red-700">Hết hàng</p>
+          <p className="mt-2 text-2xl font-bold text-red-800">{inventorySummary.outOfStock}</p>
+        </article>
+      </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
         {products.map((product) => {
@@ -173,7 +134,7 @@ const ManagerProductsInventoryPage = () => {
 
           return (
             <article key={product.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-              <div className="grid gap-0 md:grid-cols-[240px,1fr]">
+              <div className="grid gap-0 md:grid-cols-[220px,1fr]">
                 <div className="h-[220px] bg-slate-100 md:h-full">
                   <img
                     src={resolveProductImage(product.images?.[0]) || createProductImageFallback(product.name)}
@@ -228,14 +189,13 @@ const ManagerProductsInventoryPage = () => {
                         </button>
                       </div>
                     </label>
+                    {inputInvalid ? <p className="mt-3 text-xs font-semibold text-red-700">Không được nhập số lượng âm hoặc để trống.</p> : null}
                     {stockQuantity <= 0 ? (
                       <p className="mt-3 text-xs font-semibold text-red-700">Sản phẩm đã hết hàng, cần bổ sung trước khi bán tiếp.</p>
                     ) : stockQuantity <= LOW_STOCK_THRESHOLD ? (
                       <p className="mt-3 text-xs font-semibold text-amber-700">Sản phẩm sắp hết hàng, nên nhập thêm tồn kho.</p>
                     ) : null}
                   </div>
-
-                  <p className="mt-5 line-clamp-3 text-sm leading-7 text-slate-600">{product.description}</p>
                 </div>
               </div>
             </article>
@@ -246,4 +206,4 @@ const ManagerProductsInventoryPage = () => {
   );
 };
 
-export default ManagerProductsPage;
+export default ManagerInventoryPage;

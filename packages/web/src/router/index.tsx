@@ -28,6 +28,7 @@ import CustomerPaymentHistoryPage from "../pages/customer/CustomerPaymentHistory
 import CustomerProfilePage from "../pages/customer/CustomerProfilePage";
 import ManagerCustomersPage from "../pages/manager/ManagerCustomersPage";
 import ManagerDashboardPage from "../pages/manager/ManagerDashboardPage";
+import ManagerInventoryPage from "../pages/manager/ManagerInventoryPage";
 import ManagerOrderDetailPage from "../pages/manager/ManagerOrderDetailPage";
 import ManagerOrdersPage from "../pages/manager/ManagerOrdersPage";
 import ManagerPaymentsPage from "../pages/manager/ManagerPaymentsPage";
@@ -98,6 +99,7 @@ const router = createBrowserRouter([
       { path: "orders/:id", element: <ManagerOrderDetailPage /> },
       { path: "payments", element: <ManagerPaymentsPage /> },
       { path: "customers", element: <ManagerCustomersPage /> },
+      { path: "inventory", element: <ManagerInventoryPage /> },
       { path: "products", element: <ManagerProductsPage /> }
     ]
   },
