@@ -71,6 +71,11 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.DELETE, "/favorites/*").hasAuthority(PermissionConstants.Customer.FAVORITE_UPDATE)
                 .requestMatchers(HttpMethod.GET, "/notifications", "/notifications/unread-count", "/notifications/stream").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/notifications/*/read", "/notifications/read-all").authenticated()
+                .requestMatchers(HttpMethod.GET, "/payments/history").hasAnyAuthority(
+                    PermissionConstants.Customer.PAYMENT_VIEW_OWN,
+                    PermissionConstants.Customer.ORDER_VIEW_OWN,
+                    PermissionConstants.OrderManagement.ORDER_VIEW_ALL
+                )
                 .requestMatchers(HttpMethod.POST, "/payments/vnpay/create").hasAuthority(PermissionConstants.Guest.PAYMENT_CREATE)
                 .requestMatchers(HttpMethod.GET, "/users/**").hasAnyAuthority(
                     PermissionConstants.Customer.PROFILE_VIEW,

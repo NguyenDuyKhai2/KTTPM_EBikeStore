@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 const customerNavItems = [
   { to: "/customer", label: "Overview", end: true },
   { to: "/customer/orders", label: "Orders" },
+  { to: "/customer/payments", label: "Thanh toán" },
   { to: "/customer/notifications", label: "Thông báo" },
   { to: "/customer/profile", label: "Profile" }
 ];

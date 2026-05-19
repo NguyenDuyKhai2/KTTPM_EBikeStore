@@ -24,6 +24,7 @@ import SignupPage from "../pages/SignupPage";
 import CustomerDashboardPage from "../pages/customer/CustomerDashboardRealPage";
 import CustomerOrdersPage from "../pages/customer/CustomerOrdersSafePage";
 import CustomerNotificationsPage from "../pages/customer/CustomerNotificationsPage";
+import CustomerPaymentHistoryPage from "../pages/customer/CustomerPaymentHistoryPage";
 import CustomerProfilePage from "../pages/customer/CustomerProfilePage";
 import ManagerCustomersPage from "../pages/manager/ManagerCustomersPage";
 import ManagerDashboardPage from "../pages/manager/ManagerDashboardPage";
@@ -64,6 +65,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <CustomerDashboardPage /> },
           { path: "orders", element: <CustomerOrdersPage /> },
+          { path: "payments", element: <CustomerPaymentHistoryPage /> },
           { path: "notifications", element: <CustomerNotificationsPage /> },
           { path: "profile", element: <CustomerProfilePage /> }
         ]

@@ -42,6 +42,7 @@ export const API_ENDPOINTS = {
     history: "/chat/history"
   },
   payments: {
+    history: "/payments/history",
     vnpayCreate: "/payments/vnpay/create",
     vnpayReturn: "/payments/vnpay/return"
   }
