@@ -24,14 +24,24 @@ const Header = () => {
     setMobileOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
   return (
     <header className="glass-effect fixed left-0 right-0 top-0 z-50">
-      <nav className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-5 md:px-12">
-        <div className="flex items-center gap-12">
-          <NavLink to="/" className="font-headline text-2xl font-bold uppercase tracking-tight text-foreground">
+      <nav className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-4 py-4 sm:px-6 md:px-12 md:py-5">
+        <div className="flex min-w-0 items-center gap-4 md:gap-12">
+          <NavLink
+            to="/"
+            className="shrink-0 font-headline text-xl font-bold uppercase tracking-tight text-foreground sm:text-2xl"
+          >
             KINETIC
           </NavLink>
-          <div className="hidden items-center gap-8 md:flex">
+          <div className="hidden items-center gap-6 md:flex lg:gap-8">
             <NavLink
               to="/"
               end
@@ -60,23 +70,22 @@ const Header = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="hidden items-center gap-4 lg:flex">
-            <button
-              onClick={() => navigate(isAuthenticated ? "/customer/profile" : "/auth")}
-              className="text-foreground/70 transition-colors hover:text-primary"
-              aria-label="Tài khoản"
-            >
-              <User size={18} />
-            </button>
-          </div>
-          <NavLink to={isAuthenticated ? "/products" : "/auth"} className="btn-primary hidden text-sm sm:inline-flex">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+          <button
+            onClick={() => navigate(isAuthenticated ? "/customer/profile" : "/auth")}
+            className="hidden rounded-full p-2 text-foreground/70 transition-colors hover:bg-surface-container-low hover:text-primary sm:inline-flex"
+            aria-label="Tài khoản"
+          >
+            <User size={18} />
+          </button>
+          <NavLink to={isAuthenticated ? "/products" : "/auth"} className="btn-primary hidden px-4 py-2.5 text-sm sm:inline-flex md:px-6 md:py-3">
             {isAuthenticated ? "Mua Ngay " : "Đăng nhập"}
           </NavLink>
           <button
             onClick={() => setMobileOpen((value) => !value)}
-            className="text-foreground md:hidden"
-            aria-label="Mở menu điều hướng"
+            className="rounded-lg p-2 text-foreground transition hover:bg-surface-container-low md:hidden"
+            aria-label={mobileOpen ? "Đóng menu điều hướng" : "Mở menu điều hướng"}
+            aria-expanded={mobileOpen}
           >
             <Menu size={24} />
           </button>
@@ -84,12 +93,12 @@ const Header = () => {
       </nav>
 
       {mobileOpen && (
-        <div className="border-t border-outline-variant/20 bg-background px-6 py-6 md:hidden">
-          <div className="flex flex-col gap-4">
+        <div className="border-t border-outline-variant/20 bg-background px-4 py-5 sm:px-6 md:hidden">
+          <div className="flex flex-col gap-3">
             <NavLink
               to="/"
               end
-              className="font-headline text-foreground/70 hover:text-primary"
+              className="font-headline py-2 text-foreground/70 hover:text-primary"
             >
               Trang chủ
             </NavLink>
@@ -98,11 +107,19 @@ const Header = () => {
                 key={item.to}
                 to={item.to}
                 end={"end" in item ? item.end : undefined}
-                className="font-headline text-foreground/70 hover:text-primary"
+                className="font-headline py-2 text-foreground/70 hover:text-primary"
               >
                 {item.label}
               </NavLink>
             ))}
+            <button
+              type="button"
+              onClick={() => navigate(isAuthenticated ? "/customer/profile" : "/auth")}
+              className="flex items-center gap-2 py-2 font-headline text-foreground/70 hover:text-primary"
+            >
+              <User size={18} />
+              {isAuthenticated ? "Tài khoản" : "Đăng nhập"}
+            </button>
             <NavLink to={isAuthenticated ? "/products" : "/auth"} className="btn-primary mt-2 w-full">
               {isAuthenticated ? "Mua Ngay " : "Đăng nhập"}
             </NavLink>

@@ -1,9 +1,9 @@
 import { Clock, CreditCard, Lock, MapPin, Phone, Store, Zap } from "lucide-react";
-import { orderAPI, paymentAPI, showroomAPI } from "@ebike/shared-code/api";
+import { authAPI, orderAPI, paymentAPI, showroomAPI } from "@ebike/shared-code/api";
 import { useAppSelector } from "@ebike/shared-code/redux";
 import type { OrderQuote, Showroom } from "@ebike/shared-code/types";
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
 
 interface CheckoutState {
@@ -62,6 +62,7 @@ const CheckoutPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"PAY_LATER" | "VNPAY">("PAY_LATER");
   const [registrationService, setRegistrationService] = useState<"SELF" | "SHOWROOM">("SELF");
   const [form, setForm] = useState({
@@ -88,6 +89,28 @@ const CheckoutPage = () => {
       customerEmail: current.customerEmail || authUser?.email || ""
     }));
   }, [authUser?.email, authUser?.fullName]);
+
+  useEffect(() => {
+    if (authUser?.id) {
+      setEmailAlreadyRegistered(false);
+      return;
+    }
+
+    const email = form.customerEmail.trim();
+    if (!email || !email.includes("@")) {
+      setEmailAlreadyRegistered(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void authAPI
+        .isEmailRegistered(email)
+        .then(setEmailAlreadyRegistered)
+        .catch(() => setEmailAlreadyRegistered(false));
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [authUser?.id, form.customerEmail]);
 
   useEffect(() => {
     const loadShowrooms = async () => {
@@ -278,10 +301,10 @@ const CheckoutPage = () => {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-screen-2xl px-6 pb-24 pt-32 md:px-12">
+    <div className="container-responsive page-offset-header mx-auto min-h-screen max-w-screen-2xl pb-24">
       <div className="mb-16">
         <span className="mono-label mb-4 block text-primary">Secure Checkout</span>
-        <h1 className="text-5xl font-bold tracking-tighter md:text-6xl">
+        <h1 className="heading-page">
           Nhận xe tại showroom <br />
           phù hợp cho bạn ở TP.HCM.
         </h1>
@@ -380,6 +403,18 @@ const CheckoutPage = () => {
                   className={inputClassName(Boolean(fieldErrors.customerEmail))}
                 />
                 {fieldErrors.customerEmail ? <p className="text-sm text-red-600">{fieldErrors.customerEmail}</p> : null}
+                {!authUser?.id && emailAlreadyRegistered ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <p>Email này đã có tài khoản. Đăng nhập để đơn hàng được lưu vào mục Đơn hàng của tôi.</p>
+                    <Link
+                      to="/auth"
+                      state={{ from: { pathname: location.pathname, state: location.state } }}
+                      className="mt-2 inline-block font-semibold text-primary hover:underline"
+                    >
+                      Đăng nhập ngay
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             </div>
           </section>
@@ -582,7 +617,7 @@ const CheckoutPage = () => {
                 <div className="mb-8 flex items-baseline justify-between">
                   <span className="text-lg font-bold">Tổng thanh toán</span>
                   <div className="text-right">
-                    <span className="text-3xl font-bold tracking-tighter">{total.toLocaleString("vi-VN")}đ</span>
+                    <span className="price-display">{total.toLocaleString("vi-VN")}đ</span>
                     <p className="mt-1 text-[10px] font-mono text-muted-foreground">{loadingQuote ? "ĐANG TÍNH LẠI" : "ĐÃ BAO GỒM VAT"}</p>
                   </div>
                 </div>

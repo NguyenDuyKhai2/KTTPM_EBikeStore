@@ -16,10 +16,8 @@ import com.ebike.authModule.repository.UserRepository;
 import com.ebike.authModule.service.AuthenticationService;
 import com.ebike.authModule.service.JwtTokenProvider;
 import com.ebike.authModule.service.PermissionService;
-import com.ebike.orderModule.entity.Order;
-import com.ebike.orderModule.repository.OrderRepository;
+import com.ebike.orderModule.service.GuestOrderLinkService;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -49,7 +47,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PermissionService permissionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
-    private final OrderRepository orderRepository;
+    private final GuestOrderLinkService guestOrderLinkService;
 
     public AuthenticationServiceImpl(
         UserRepository userRepository,
@@ -58,7 +56,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         PermissionService permissionService,
         PasswordEncoder passwordEncoder,
         JwtTokenProvider jwtTokenProvider,
-        OrderRepository orderRepository
+        GuestOrderLinkService guestOrderLinkService
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -66,7 +64,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         this.permissionService = permissionService;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
-        this.orderRepository = orderRepository;
+        this.guestOrderLinkService = guestOrderLinkService;
     }
 
     @Override
@@ -95,7 +93,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         user.getRoles().add(defaultRole);
 
         User savedUser = userRepository.save(user);
-        linkGuestOrdersToUser(savedUser);
+        guestOrderLinkService.linkGuestOrdersToUser(savedUser);
         return toAuthResponse(savedUser);
     }
 
@@ -119,6 +117,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         log.setIpAddress(trimToNull(ipAddress));
         log.setUserAgent(trimToNull(userAgent));
         authenticationLogRepository.save(log);
+        guestOrderLinkService.linkGuestOrdersToUser(user);
 
         return toAuthResponse(user);
     }
@@ -143,8 +142,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         log.setIpAddress(trimToNull(ipAddress));
         log.setUserAgent(trimToNull(userAgent));
         authenticationLogRepository.save(log);
+        guestOrderLinkService.linkGuestOrdersToUser(user);
 
         return toEnhancedAuthResponse(user);
+    }
+
+    @Override
+    public boolean isEmailRegistered(String email) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+        return userRepository.existsByEmail(email.trim().toLowerCase(Locale.ROOT));
     }
 
     @Override
@@ -213,22 +221,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return userRepository.findByEmail(trimmed.toLowerCase(Locale.ROOT))
             .or(() -> userRepository.findByUsername(trimmed))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-    }
-
-    private void linkGuestOrdersToUser(User user) {
-        if (user == null || isBlank(user.getEmail())) {
-            return;
-        }
-
-        List<Order> guestOrders = new ArrayList<>(orderRepository.findByUserIsNullAndCustomerEmail(user.getEmail()));
-        if (guestOrders.isEmpty()) {
-            return;
-        }
-
-        for (Order order : guestOrders) {
-            order.setUser(user);
-        }
-        orderRepository.saveAll(guestOrders);
     }
 
     private void validateRegisterRequest(RegisterRequest request) {

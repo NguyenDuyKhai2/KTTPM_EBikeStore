@@ -98,10 +98,10 @@ const HomePage = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-background/78 via-background/36 to-transparent" />
         </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-7xl px-6 md:px-12">
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 md:px-12">
           <div className="max-w-3xl">
             <p className="mono-label mb-4 text-primary animate-fade-in">The Future of Personal Mobility</p>
-            <h1 className="mb-8 text-6xl font-bold leading-[0.9] tracking-tighter md:text-8xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+            <h1 className="heading-display mb-6 sm:mb-8 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
               Khai phá Kỷ nguyên <br /> <span className="text-primary">Di chuyển Xanh</span>
             </h1>
             <p className="mb-10 max-w-md text-lg leading-relaxed text-muted-foreground animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
@@ -126,13 +126,13 @@ const HomePage = () => {
       <section className="bg-surface-container-lowest px-6 py-24 md:px-12">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
-            <h2 className="mb-4 text-4xl font-bold">Sản phẩm nổi bật của Kinetic</h2>
+            <h2 className="heading-section mb-4">Sản phẩm nổi bật của Kinetic</h2>
             <div className="mx-auto h-1 w-20 bg-primary" />
           </div>
 
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
             {categoryCards.map((item) => (
-              <Link key={item.title + item.to} to={item.to} className="group relative h-[600px] overflow-hidden rounded-2xl">
+              <Link key={item.title + item.to} to={item.to} className="group relative h-[320px] overflow-hidden rounded-2xl sm:h-[420px] md:h-[520px] lg:h-[600px]">
                 <img
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                   src={resolveProductImage(item.image)}
@@ -141,11 +141,11 @@ const HomePage = () => {
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-12 text-white">
+                <div className="absolute bottom-0 left-0 p-6 text-white sm:p-10 md:p-12">
                   <span className="mono-label mb-4 inline-block rounded bg-white/10 px-3 py-1 text-primary backdrop-blur-md">
                     {item.label}
                   </span>
-                  <h3 className="mb-6 text-5xl font-bold">{item.title}</h3>
+                  <h3 className="heading-section mb-4 sm:mb-6">{item.title}</h3>
                   <p className="mb-8 max-w-xs text-lg text-white/70 line-clamp-4">{item.text}</p>
                   <span className="inline-flex rounded bg-white px-8 py-3 font-bold text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-white">
                     Xem chi tiết
@@ -169,7 +169,7 @@ const HomePage = () => {
               onError={(event) => attachImageFallback(event, featuredProducts[0]?.name || "Kinetic Technology", HERO_FALLBACK_IMAGE)}
               referrerPolicy="no-referrer"
             />
-            <div className="absolute -bottom-6 -right-6 z-20 max-w-xs rounded-xl bg-surface-container-lowest p-8 shadow-lg">
+            <div className="absolute -bottom-4 right-2 z-20 max-w-[85%] rounded-xl bg-surface-container-lowest p-4 shadow-lg sm:-bottom-6 sm:-right-6 sm:max-w-xs sm:p-8">
               <div className="mb-4 flex items-center gap-4">
                 <Zap className="text-primary" fill="currentColor" />
                 <span className="text-xl font-bold">GTR Engine</span>
@@ -181,7 +181,7 @@ const HomePage = () => {
           </div>
 
           <div className="space-y-12">
-            <h2 className="text-5xl font-bold leading-tight">
+            <h2 className="heading-section leading-tight">
               Công nghệ độc quyền <br />
               <span className="text-primary">Dẫn đầu hiệu năng</span>
             </h2>
@@ -224,7 +224,7 @@ const HomePage = () => {
       <section className="bg-surface-container-lowest px-6 py-24 md:px-12">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
-            <h2 className="mb-4 text-4xl font-bold">Tại sao chọn Kinetic?</h2>
+            <h2 className="heading-section mb-4">Tại sao chọn Kinetic?</h2>
             <p className="text-lg text-muted-foreground">Những đặc điểm vượt trội giúp bạn di chuyển thông minh</p>
           </div>
 
@@ -272,7 +272,7 @@ const HomePage = () => {
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 flex items-end justify-between">
               <div>
-                <h2 className="mb-4 text-4xl font-bold">Khám phá bộ sưu tập</h2>
+                <h2 className="heading-section mb-4">Khám phá bộ sưu tập</h2>
                 <div className="h-1 w-20 bg-primary" />
               </div>
               <Link to="/products" className="hidden text-sm font-bold text-primary hover:text-primary/80 md:block">
@@ -330,7 +330,7 @@ const HomePage = () => {
               { label: "Năm kinh nghiệm", value: "8+" }
             ].map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="mb-2 text-3xl font-bold text-primary">{stat.value}</div>
+                <div className="stat-value mb-2 text-primary">{stat.value}</div>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
               </div>
             ))}
@@ -342,7 +342,7 @@ const HomePage = () => {
       <section className="bg-surface-container-lowest px-6 py-24 md:px-12">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
-            <h2 className="mb-4 text-4xl font-bold">Khách hàng nói gì về Kinetic?</h2>
+            <h2 className="heading-section mb-4">Khách hàng nói gì về Kinetic?</h2>
             <p className="text-lg text-muted-foreground">Những bình luận thực từ những người dùng hài lòng</p>
           </div>
 
@@ -395,7 +395,7 @@ const HomePage = () => {
         </div>
 
         <div className="relative mx-auto max-w-4xl text-center text-white">
-          <h2 className="mb-6 text-4xl font-bold md:text-5xl">Sẵn sàng cho cuộc hành trình của bạn?</h2>
+          <h2 className="heading-section mb-6">Sẵn sàng cho cuộc hành trình của bạn?</h2>
           <p className="mb-10 text-lg text-white/80">
             Tham gia hàng nghìn khách hàng đã trải nghiệm tương lai của di chuyển cá nhân
           </p>
@@ -418,7 +418,7 @@ const HomePage = () => {
           <div className="rounded-2xl border border-border bg-surface-container p-12">
             <div className="text-center">
               <Smartphone className="mx-auto mb-4 h-8 w-8 text-primary" />
-              <h2 className="mb-3 text-3xl font-bold">Nhận thông tin mới nhất</h2>
+              <h2 className="heading-section mb-3">Nhận thông tin mới nhất</h2>
               <p className="mb-8 text-muted-foreground">
                 Đăng ký để nhận những cập nhật sản phẩm, ưu đãi độc quyền và lời khuyên về e-mobility
               </p>

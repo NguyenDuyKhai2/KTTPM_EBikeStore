@@ -155,8 +155,8 @@ const ProductDetailPage = () => {
   };
 
   return (
-    <div className="pb-20 pt-24">
-      <section className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-16 px-6 py-12 lg:grid-cols-12 lg:px-12 lg:py-20">
+    <div className="page-offset-header pb-16 sm:pb-20">
+      <section className="content-shell grid grid-cols-1 items-start gap-10 py-8 sm:gap-16 sm:py-12 lg:grid-cols-12 lg:py-20">
         <div className="space-y-6 lg:col-span-7">
           <div className="group relative aspect-[16/10] overflow-hidden rounded-xl bg-surface-container-low">
             <img
@@ -172,7 +172,7 @@ const ProductDetailPage = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {galleryImages.slice(0, 4).map((image, index) => (
               <button
                 type="button"
@@ -195,8 +195,8 @@ const ProductDetailPage = () => {
         <div className="space-y-10 lg:col-span-5">
           <div className="space-y-4">
             <span className="mono-label text-primary">{product.category?.name || "Prestige Series"}</span>
-            <h1 className="text-5xl font-bold leading-none tracking-tighter lg:text-6xl">{product.name}</h1>
-            <p className="text-3xl text-muted-foreground">{priceValue.toLocaleString("vi-VN")} VND</p>
+            <h1 className="heading-page leading-none">{product.name}</h1>
+            <p className="price-display text-muted-foreground">{priceValue.toLocaleString("vi-VN")} VND</p>
           </div>
 
           <div className="space-y-6">
@@ -267,17 +267,17 @@ const ProductDetailPage = () => {
         </div>
       </section>
 
-      <section className="bg-surface-container-low py-24">
-        <div className="mx-auto max-w-7xl px-6 lg:px-12">
-          <div className="mb-16">
-            <h2 className="text-4xl font-bold">Tính năng đột phá</h2>
+      <section className="bg-surface-container-low py-12 sm:py-24">
+        <div className="content-shell">
+          <div className="mb-10 sm:mb-16">
+            <h2 className="heading-section">Tính năng đột phá</h2>
             <p className="mt-2 text-muted-foreground">Kỹ thuật chính xác gặp gỡ công nghệ tương lai.</p>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
-            <div className="relative overflow-hidden rounded-xl bg-white p-10 md:col-span-8">
+            <div className="relative overflow-hidden rounded-xl bg-white p-6 sm:p-10 md:col-span-8">
               <div className="z-10 max-w-sm">
-                <h3 className="mb-4 text-3xl font-bold">Màn hình LCD 7 inch</h3>
+                <h3 className="heading-section mb-4">Màn hình LCD 7 inch</h3>
                 <p className="leading-relaxed text-muted-foreground">
                   Giao diện điều khiển thông minh tích hợp bản đồ thời gian thực, quản lý pin và kết nối smartphone.
                 </p>
@@ -305,30 +305,30 @@ const ProductDetailPage = () => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-6 py-24">
-        <h2 className="mb-12 text-center text-3xl font-bold">Thông số kỹ thuật chi tiết</h2>
+      <section className="content-shell max-w-4xl py-12 sm:py-24">
+        <h2 className="heading-section mb-8 text-center sm:mb-12">Thông số kỹ thuật chi tiết</h2>
         <div className="overflow-hidden rounded-xl border border-outline-variant/15">
-          <div className="grid grid-cols-2 border-b border-outline-variant/10 bg-surface-container-low p-6">
+          <div className="hidden grid-cols-2 border-b border-outline-variant/10 bg-surface-container-low p-4 sm:grid sm:p-6">
             <span className="mono-label text-muted-foreground">Hạng mục</span>
             <span className="mono-label text-muted-foreground">Thông số</span>
           </div>
           {specs.map((spec, index) => (
             <div
               key={spec.label}
-              className={`grid grid-cols-2 p-6 transition-colors hover:bg-surface-container-low ${index % 2 === 1 ? "bg-surface-container-low/30" : ""}`}
+              className={`grid grid-cols-1 gap-1 border-b border-outline-variant/10 p-4 transition-colors last:border-b-0 hover:bg-surface-container-low sm:grid-cols-2 sm:gap-4 sm:border-b-0 sm:p-6 ${index % 2 === 1 ? "sm:bg-surface-container-low/30" : ""}`}
             >
-              <span className="text-muted-foreground">{spec.label}</span>
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground sm:text-base sm:font-normal sm:normal-case">{spec.label}</span>
               <span className="font-bold">{spec.value}</span>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="bg-white py-24">
-        <div className="mx-auto max-w-7xl px-6 lg:px-12">
-          <div className="mb-16 flex items-end justify-between">
+      <section className="bg-white py-12 sm:py-24">
+        <div className="content-shell">
+          <div className="mb-10 flex flex-col gap-4 sm:mb-16 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-4xl font-bold">Đánh giá thực tế</h2>
+              <h2 className="heading-section">Đánh giá thực tế</h2>
               <div className="mt-2 flex items-center gap-2">
                 <div className="flex text-primary">
                   {[1, 2, 3, 4, 5].map((star) => (

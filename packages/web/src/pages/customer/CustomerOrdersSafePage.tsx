@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { orderAPI } from "@ebike/shared-code/api";
 import { useAppSelector } from "@ebike/shared-code/redux";
 import type { Order } from "@ebike/shared-code/types";
@@ -79,10 +80,16 @@ const CustomerOrdersSafePage = () => {
 
   const totalSpent = useMemo(() => orders.reduce((sum, order) => sum + order.totalAmount, 0), [orders]);
 
-  const canRequestCancellation = (order: Order) =>
-    order.paymentMethod === "PAY_LATER" &&
-    order.paymentStatus === "PENDING" &&
-    (order.status === "PENDING" || order.status === "CONFIRMED");
+  const canRequestCancellation = (order: Order) => {
+    if (order.status === "CANCELLED" || order.status === "CANCELLATION_REQUESTED" || order.status === "DELIVERED") {
+      return false;
+    }
+    const shipmentStatus = order.shipment?.shipmentStatus;
+    if (shipmentStatus === "SHIPPED" || shipmentStatus === "IN_TRANSIT" || shipmentStatus === "DELIVERED") {
+      return false;
+    }
+    return order.status === "PENDING" || order.status === "CONFIRMED" || order.status === "PROCESSING";
+  };
 
   const openCancellationDialog = (order: Order) => {
     setCancellationOrder(order);
@@ -134,7 +141,7 @@ const CustomerOrdersSafePage = () => {
       title="Theo dõi những lần mua xe điện hiện tại và trước đây."
       description="Danh sách này hiển thị các đơn bạn đã tạo, trạng thái xử lý và địa điểm nhận xe tương ứng."
     >
-      <div className="px-6 py-8">
+      <div className="space-y-6">
         {cancellationError && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {cancellationError}
@@ -161,15 +168,15 @@ const CustomerOrdersSafePage = () => {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="rounded-xl border border-outline-variant/15 bg-white p-5">
                 <p className="text-sm text-muted-foreground">Tổng số đơn</p>
-                <p className="mt-2 text-3xl font-bold">{orders.length}</p>
+                <p className="stat-value mt-2">{orders.length}</p>
               </div>
               <div className="rounded-xl border border-outline-variant/15 bg-white p-5">
                 <p className="text-sm text-muted-foreground">Đơn chờ xử lý</p>
-                <p className="mt-2 text-3xl font-bold">{orders.filter((order) => order.status === "PENDING").length}</p>
+                <p className="stat-value mt-2">{orders.filter((order) => order.status === "PENDING").length}</p>
               </div>
               <div className="rounded-xl border border-outline-variant/15 bg-white p-5">
                 <p className="text-sm text-muted-foreground">Tổng chi tiêu</p>
-                <p className="mt-2 text-3xl font-bold">{totalSpent.toLocaleString("vi-VN")}đ</p>
+                <p className="stat-value mt-2">{totalSpent.toLocaleString("vi-VN")}đ</p>
               </div>
             </div>
 
@@ -179,7 +186,9 @@ const CustomerOrdersSafePage = () => {
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="text-2xl font-bold">{order.orderNumber}</h2>
+                        <Link to={`/customer/orders/${order.id}`} className="text-2xl font-bold hover:text-primary">
+                          {order.orderNumber}
+                        </Link>
                         <span
                           className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                             STATUS_CLASSES[order.status] || "border-gray-200 bg-gray-50 text-gray-700"
@@ -217,16 +226,24 @@ const CustomerOrdersSafePage = () => {
                     <div className="text-left md:text-right">
                       <p className="text-sm text-muted-foreground">Tổng thanh toán</p>
                       <p className="mt-2 text-2xl font-bold text-primary">{order.totalAmount.toLocaleString("vi-VN")}đ</p>
-                      {canRequestCancellation(order) && (
-                        <button
-                          type="button"
-                          onClick={() => openCancellationDialog(order)}
-                          disabled={cancellingOrderId === order.id}
-                          className="mt-4 rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Link
+                          to={`/customer/orders/${order.id}`}
+                          className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                         >
-                          {cancellingOrderId === order.id ? "Đang gửi..." : "Yêu cầu hủy"}
-                        </button>
-                      )}
+                          Xem chi tiết
+                        </Link>
+                        {canRequestCancellation(order) && (
+                          <button
+                            type="button"
+                            onClick={() => openCancellationDialog(order)}
+                            disabled={cancellingOrderId === order.id}
+                            className="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {cancellingOrderId === order.id ? "Đang gửi..." : "Yêu cầu hủy"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 

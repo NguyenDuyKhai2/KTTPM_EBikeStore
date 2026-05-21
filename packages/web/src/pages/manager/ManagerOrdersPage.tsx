@@ -82,7 +82,7 @@ const ManagerOrdersPage = () => {
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-4 xl:grid-cols-[1fr,1fr,1.4fr,auto]">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[1fr,1fr,1.4fr,auto]">
           <label className="space-y-2">
             <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Trạng thái đơn</span>
             <select
@@ -127,7 +127,7 @@ const ManagerOrdersPage = () => {
             />
           </label>
 
-          <div className="flex items-end gap-2">
+          <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
             <button
               type="button"
               onClick={resetFilters}

@@ -4,9 +4,12 @@ import com.ebike.orderModule.dto.request.OrderCancellationRequest;
 import com.ebike.orderModule.dto.request.OrderCreateRequest;
 import com.ebike.orderModule.dto.request.OrderQuoteRequest;
 import com.ebike.orderModule.dto.request.OrderStatusUpdateRequest;
+import com.ebike.orderModule.dto.request.ShipmentUpdateRequest;
 import com.ebike.orderModule.dto.response.OrderQuoteResponse;
 import com.ebike.orderModule.dto.response.OrderResponse;
+import com.ebike.orderModule.dto.response.ShipmentTimelineResponse;
 import com.ebike.orderModule.service.OrderService;
+import com.ebike.orderModule.service.ShipmentService;
 import com.ebike.shared.constants.PermissionConstants;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -27,9 +30,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrderController {
 
     private final OrderService orderService;
+    private final ShipmentService shipmentService;
 
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService, ShipmentService shipmentService) {
         this.orderService = orderService;
+        this.shipmentService = shipmentService;
     }
 
     @GetMapping
@@ -74,6 +79,19 @@ public class OrderController {
         Authentication authentication
     ) {
         return orderService.requestCancellation(id, request, authentication);
+    }
+
+    @GetMapping("/{id}/shipment/timeline")
+    public ShipmentTimelineResponse getShipmentTimeline(@PathVariable Long id, Authentication authentication) {
+        return shipmentService.getShipmentTimeline(id, authentication);
+    }
+
+    @PatchMapping("/{id}/shipment")
+    @PreAuthorize("hasAnyAuthority('"
+        + PermissionConstants.OrderManagement.ORDER_UPDATE_STATUS + "', '"
+        + PermissionConstants.OrderManagement.SHIPMENT_MANAGE + "')")
+    public ShipmentTimelineResponse updateShipment(@PathVariable Long id, @RequestBody ShipmentUpdateRequest request) {
+        return shipmentService.updateShipment(id, request);
     }
 
 }

@@ -58,7 +58,7 @@ const CustomerDashboardRealPage = () => {
       title="Tổng quan nhanh về hoạt động gần đây của bạn."
       description="Theo dõi đơn hàng, chi tiêu và những bước tiếp theo trong hành trình mua xe điện."
     >
-      <div className="space-y-6 px-6 py-8">
+      <div className="space-y-6">
         {!authUser?.id ? (
           <div className="rounded-lg bg-gray-50 p-6 text-center text-gray-600">Bạn cần đăng nhập để xem dashboard.</div>
         ) : loading ? (
@@ -70,15 +70,15 @@ const CustomerDashboardRealPage = () => {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="rounded-xl border border-outline-variant/15 bg-white p-5">
                 <p className="text-sm text-muted-foreground">Tổng số đơn</p>
-                <p className="mt-2 text-3xl font-bold">{orders.length}</p>
+                <p className="stat-value mt-2">{orders.length}</p>
               </div>
               <div className="rounded-xl border border-outline-variant/15 bg-white p-5">
                 <p className="text-sm text-muted-foreground">Đơn chờ xử lý</p>
-                <p className="mt-2 text-3xl font-bold">{stats.pendingOrders}</p>
+                <p className="stat-value mt-2">{stats.pendingOrders}</p>
               </div>
               <div className="rounded-xl border border-outline-variant/15 bg-white p-5">
                 <p className="text-sm text-muted-foreground">Tổng chi tiêu</p>
-                <p className="mt-2 text-3xl font-bold">{stats.totalSpent.toLocaleString("vi-VN")}đ</p>
+                <p className="stat-value mt-2">{stats.totalSpent.toLocaleString("vi-VN")}đ</p>
               </div>
             </div>
 

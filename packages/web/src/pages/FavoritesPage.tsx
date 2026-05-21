@@ -87,12 +87,12 @@ const FavoritesPage = () => {
   };
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl px-6 pb-24 pt-32 md:px-12">
-      <h1 className="mb-12 text-5xl font-bold tracking-tighter">
+    <div className="container-responsive page-offset-header min-h-screen pb-24">
+      <h1 className="heading-page mb-8 sm:mb-12">
         Danh sách <span className="text-primary">yêu thích.</span>
       </h1>
 
-      <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-16">
         <div className="space-y-8 lg:col-span-8">
           {loading ? (
             <div className="rounded-2xl border border-outline-variant/10 bg-white p-8 text-center text-muted-foreground shadow-sm">
@@ -111,7 +111,7 @@ const FavoritesPage = () => {
             </div>
           ) : (
             favoriteProducts.map((product) => (
-              <div key={product.id} className="flex flex-col gap-8 rounded-2xl border border-outline-variant/10 bg-white p-8 shadow-sm sm:flex-row">
+              <div key={product.id} className="flex flex-col gap-6 rounded-2xl border border-outline-variant/10 bg-white p-5 shadow-sm sm:flex-row sm:gap-8 sm:p-8">
                 <div className="aspect-square w-full overflow-hidden rounded-xl bg-surface-container-low sm:w-48">
                   <img
                     src={resolveProductImage(product.images?.[0])}
@@ -160,7 +160,7 @@ const FavoritesPage = () => {
         </div>
 
         <div className="lg:col-span-4">
-          <div className="sticky top-32 rounded-2xl bg-surface-container-low p-8">
+          <div className="rounded-2xl bg-surface-container-low p-6 sm:p-8 lg:sticky lg:top-32">
             <h3 className="mb-8 text-xl font-bold">Tóm tắt yêu thích</h3>
             <div className="mb-8 space-y-4">
               <div className="flex justify-between text-sm">
@@ -178,7 +178,7 @@ const FavoritesPage = () => {
               <div className="my-4 h-px bg-outline-variant/20" />
               <div className="flex items-baseline justify-between">
                 <span className="text-lg font-bold">Tổng</span>
-                <span className="text-3xl font-bold tracking-tighter">{subtotal.toLocaleString("vi-VN")}đ</span>
+                <span className="price-display">{subtotal.toLocaleString("vi-VN")}đ</span>
               </div>
             </div>
 

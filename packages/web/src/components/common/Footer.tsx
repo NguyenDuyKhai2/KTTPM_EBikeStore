@@ -11,10 +11,10 @@ const Footer = () => {
   }
 
   return (
-    <footer className="mt-auto w-full border-t border-outline-variant/10 bg-surface-container-low px-6 py-20 md:px-12">
+    <footer className="mt-auto w-full border-t border-outline-variant/10 bg-surface-container-low px-4 py-12 sm:px-6 sm:py-16 md:px-12 md:py-20">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-16 grid grid-cols-2 gap-12 md:grid-cols-4">
-          <div className="col-span-2 space-y-6 md:col-span-1">
+        <div className="mb-10 grid grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-12 md:mb-16 md:grid-cols-4">
+          <div className="space-y-6 sm:col-span-2 md:col-span-1">
             <div className="font-headline text-xl font-bold uppercase text-foreground">KINETIC</div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
               Đồng hành cùng xu hướng di chuyển đô thị bền vững bằng kỹ thuật chính xác và thiết kế hiện đại.
@@ -55,11 +55,11 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-6 border-t border-outline-variant/10 pt-12 md:flex-row">
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-outline-variant/10 pt-8 text-center sm:gap-6 sm:pt-12 md:flex-row md:text-left">
           <p className="text-sm text-muted-foreground">© 2026 Kinetic Precision. Bảo lưu mọi quyền.</p>
-          <div className="flex gap-8 text-xs uppercase tracking-widest text-muted-foreground">
-            <span>Văn phòng Việt Nam: TP.HCM, Việt Nam</span>
-          </div>
+          <p className="max-w-xs text-xs uppercase tracking-widest text-muted-foreground sm:max-w-none">
+            Văn phòng Việt Nam: TP.HCM
+          </p>
         </div>
       </div>
     </footer>

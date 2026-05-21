@@ -2,18 +2,26 @@ package com.ebike.productModule.service;
 
 import com.ebike.productModule.dto.response.CategorySummaryDto;
 import com.ebike.productModule.dto.response.ProductDetailDto;
+import com.ebike.productModule.dto.response.ProductFilterOptionsDto;
 import com.ebike.productModule.dto.response.ProductSpecificationDto;
 import com.ebike.productModule.dto.response.ProductSummaryDto;
 import com.ebike.productModule.dto.response.ProductVariantDto;
+import com.ebike.productModule.entity.BatteryType;
 import com.ebike.productModule.entity.Product;
 import com.ebike.productModule.entity.ProductImage;
 import com.ebike.productModule.entity.ProductImageStatus;
 import com.ebike.productModule.entity.ProductSpecification;
 import com.ebike.productModule.entity.ProductVariant;
+import com.ebike.productModule.entity.VehicleType;
 import com.ebike.productModule.repository.ProductRepository;
+import jakarta.persistence.criteria.JoinType;
 import java.math.BigDecimal;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -30,7 +38,19 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
-    public List<ProductSummaryDto> getProducts(String query, Integer categoryId, BigDecimal minPrice, BigDecimal maxPrice) {
+    public List<ProductSummaryDto> getProducts(
+        String query,
+        Integer categoryId,
+        BigDecimal minPrice,
+        BigDecimal maxPrice,
+        String brand,
+        String batteryType,
+        String vehicleType,
+        BigDecimal minRangeKm,
+        BigDecimal maxRangeKm,
+        Boolean inStock,
+        String sort
+    ) {
         Specification<Product> specification = Specification.where(isActive());
 
         if (query != null && !query.trim().isEmpty()) {
@@ -45,10 +65,52 @@ public class ProductService {
         if (maxPrice != null) {
             specification = specification.and(hasMaxPrice(maxPrice));
         }
+        if (brand != null && !brand.trim().isEmpty()) {
+            specification = specification.and(hasBrand(brand.trim()));
+        }
+        if (batteryType != null && !batteryType.trim().isEmpty()) {
+            specification = specification.and(hasBatteryType(parseBatteryType(batteryType)));
+        }
+        if (vehicleType != null && !vehicleType.trim().isEmpty()) {
+            specification = specification.and(hasVehicleType(parseVehicleType(vehicleType)));
+        }
+        if (minRangeKm != null) {
+            specification = specification.and(hasMinRangeKm(minRangeKm));
+        }
+        if (maxRangeKm != null) {
+            specification = specification.and(hasMaxRangeKm(maxRangeKm));
+        }
+        if (Boolean.TRUE.equals(inStock)) {
+            specification = specification.and(hasStockAvailable());
+        }
 
-        return productRepository.findAll(specification).stream()
+        return productRepository.findAll(specification, resolveSort(sort)).stream()
             .map(this::toSummaryDto)
             .toList();
+    }
+
+    public ProductFilterOptionsDto getFilterOptions() {
+        Set<String> brands = new LinkedHashSet<>();
+        Set<String> batteryTypes = new LinkedHashSet<>();
+        Set<String> vehicleTypes = new LinkedHashSet<>();
+
+        productRepository.findAll(isActive()).forEach(product -> {
+            ProductSpecification specification = product.getSpecification();
+            if (specification == null) {
+                return;
+            }
+            if (specification.getBrand() != null && !specification.getBrand().isBlank()) {
+                brands.add(specification.getBrand());
+            }
+            if (specification.getBatteryType() != null) {
+                batteryTypes.add(specification.getBatteryType().name());
+            }
+            if (specification.getVehicleType() != null) {
+                vehicleTypes.add(specification.getVehicleType().name());
+            }
+        });
+
+        return new ProductFilterOptionsDto(List.copyOf(brands), List.copyOf(batteryTypes), List.copyOf(vehicleTypes));
     }
 
     public ProductDetailDto getProductBySlug(String slug) {
@@ -82,6 +144,75 @@ public class ProductService {
                 criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), pattern),
                 criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), pattern)
             );
+        };
+    }
+
+    private Specification<Product> hasBrand(String brand) {
+        return (root, query, criteriaBuilder) -> {
+            var specificationJoin = root.join("specification", JoinType.INNER);
+            return criteriaBuilder.equal(criteriaBuilder.lower(specificationJoin.get("brand")), brand.toLowerCase(Locale.ROOT));
+        };
+    }
+
+    private Specification<Product> hasBatteryType(BatteryType batteryType) {
+        return (root, query, criteriaBuilder) -> {
+            var specificationJoin = root.join("specification", JoinType.INNER);
+            return criteriaBuilder.equal(specificationJoin.get("batteryType"), batteryType);
+        };
+    }
+
+    private Specification<Product> hasVehicleType(VehicleType vehicleType) {
+        return (root, query, criteriaBuilder) -> {
+            var specificationJoin = root.join("specification", JoinType.INNER);
+            return criteriaBuilder.equal(specificationJoin.get("vehicleType"), vehicleType);
+        };
+    }
+
+    private Specification<Product> hasMinRangeKm(BigDecimal minRangeKm) {
+        return (root, query, criteriaBuilder) -> {
+            var specificationJoin = root.join("specification", JoinType.INNER);
+            return criteriaBuilder.greaterThanOrEqualTo(specificationJoin.get("maxRangeKm"), minRangeKm);
+        };
+    }
+
+    private Specification<Product> hasMaxRangeKm(BigDecimal maxRangeKm) {
+        return (root, query, criteriaBuilder) -> {
+            var specificationJoin = root.join("specification", JoinType.INNER);
+            return criteriaBuilder.lessThanOrEqualTo(specificationJoin.get("maxRangeKm"), maxRangeKm);
+        };
+    }
+
+    private Specification<Product> hasStockAvailable() {
+        return (root, query, criteriaBuilder) -> criteriaBuilder.greaterThan(root.get("stockQuantity"), 0);
+    }
+
+    private BatteryType parseBatteryType(String rawValue) {
+        try {
+            return BatteryType.valueOf(rawValue.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid battery type filter");
+        }
+    }
+
+    private VehicleType parseVehicleType(String rawValue) {
+        try {
+            return VehicleType.valueOf(rawValue.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid vehicle type filter");
+        }
+    }
+
+    private Sort resolveSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return Sort.by(Sort.Direction.DESC, "featured").and(Sort.by(Sort.Direction.ASC, "name"));
+        }
+        return switch (sort.trim().toLowerCase(Locale.ROOT)) {
+            case "price_asc" -> Sort.by(Sort.Direction.ASC, "price");
+            case "price_desc" -> Sort.by(Sort.Direction.DESC, "price");
+            case "name_asc" -> Sort.by(Sort.Direction.ASC, "name");
+            case "name_desc" -> Sort.by(Sort.Direction.DESC, "name");
+            case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt");
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid sort option");
         };
     }
 

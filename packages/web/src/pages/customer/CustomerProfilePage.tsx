@@ -89,7 +89,7 @@ const CustomerProfilePage = () => {
       title="Thông tin tài khoản"
       description="Quản lý thông tin cá nhân, trạng thái tài khoản và các quyền hiện đang được gán."
     >
-      <div className="grid gap-6 px-6 py-8 lg:grid-cols-12">
+      <div className="content-shell grid gap-6 py-6 sm:py-8 lg:grid-cols-12">
         <section className="rounded-xl border border-outline-variant/15 bg-white p-6 lg:col-span-7">
           {loading ? (
             <p className="text-muted-foreground">Đang tải hồ sơ...</p>
@@ -97,7 +97,7 @@ const CustomerProfilePage = () => {
             <>
               <div className="mb-6">
                 <p className="text-sm uppercase tracking-wider text-muted-foreground">Xin chào</p>
-                <h2 className="mt-1 text-3xl font-bold">{displayName}</h2>
+                <h2 className="heading-section mt-1">{displayName}</h2>
                 <p className="mt-2 text-sm text-muted-foreground">{profile?.email}</p>
               </div>
 

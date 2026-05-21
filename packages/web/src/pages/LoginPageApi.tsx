@@ -1,6 +1,6 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Zap } from "lucide-react";
 import { useAuth } from "@ebike/shared-code/hooks";
 
@@ -12,6 +12,8 @@ type LoginFormData = {
 
 const LoginPageApi = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as { from?: { pathname: string; state?: unknown } } | undefined)?.from;
   const { login, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -57,6 +59,11 @@ const LoginPageApi = () => {
         password: formData.password
       }).unwrap();
 
+      if (returnTo?.pathname && !result.roles.includes("ADMIN") && !result.roles.includes("MANAGER")) {
+        navigate(returnTo.pathname, { state: returnTo.state, replace: true });
+        return;
+      }
+
       navigate(
         result.roles.includes("ADMIN")
           ? "/admin"
@@ -87,7 +94,7 @@ const LoginPageApi = () => {
             <span className="font-headline text-2xl font-bold tracking-tight">KINETIC Electric</span>
           </div>
 
-          <h1 className="max-w-xl font-headline text-5xl font-bold leading-tight tracking-tight">
+          <h1 className="heading-section max-w-xl font-headline leading-tight tracking-tight">
             Quản lý hành trình xe điện của bạn.
           </h1>
           <p className="mt-6 max-w-md text-lg leading-8 text-white/80">
@@ -97,11 +104,11 @@ const LoginPageApi = () => {
           <div className="mt-10 flex gap-12">
             <div>
               <span className="mono-label text-white/60">SHOWROOM</span>
-              <p className="mt-2 font-headline text-3xl font-bold">TP.HCM</p>
+              <p className="stat-value mt-2 font-headline">TP.HCM</p>
             </div>
             <div>
               <span className="mono-label text-white/60">HỖ TRỢ</span>
-              <p className="mt-2 font-headline text-3xl font-bold">24/7</p>
+              <p className="stat-value mt-2 font-headline">24/7</p>
             </div>
           </div>
         </div>
@@ -114,7 +121,7 @@ const LoginPageApi = () => {
               <Zap className="h-4 w-4 fill-primary" />
               KINETIC Account
             </div>
-            <h2 className="font-headline text-4xl font-bold tracking-tight text-foreground">Chào mừng quay lại</h2>
+            <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Chào mừng quay lại</h2>
             <p className="mt-3 text-base leading-7 text-muted-foreground">
               Nhập thông tin tài khoản để truy cập khu vực khách hàng hoặc dashboard quản trị.
             </p>

@@ -79,4 +79,17 @@ export interface ProductFilter {
   categoryId?: number;
   minPrice?: number;
   maxPrice?: number;
+  brand?: string;
+  batteryType?: string;
+  vehicleType?: string;
+  minRangeKm?: number;
+  maxRangeKm?: number;
+  inStock?: boolean;
+  sort?: "price_asc" | "price_desc" | "name_asc" | "name_desc" | "newest";
+}
+
+export interface ProductFilterOptions {
+  brands: string[];
+  batteryTypes: string[];
+  vehicleTypes: string[];
 }

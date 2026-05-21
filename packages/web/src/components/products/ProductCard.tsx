@@ -65,7 +65,7 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
       <article
         className="pc-card group relative overflow-hidden rounded-[20px] border border-stone-100 bg-white font-['Be_Vietnam_Pro',sans-serif] shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-black/10"
       >
-        <div className="relative h-48 overflow-hidden bg-stone-50">
+        <div className="relative h-40 overflow-hidden bg-stone-50 sm:h-48">
           {imageUrl ? (
             <img
               src={resolveProductImage(imageUrl)}
@@ -96,7 +96,7 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
         </div>
 
         <div className="p-[18px]">
-          <h3 className="pc-name mb-2 line-clamp-2 font-['Syne',sans-serif] text-[17px] font-extrabold leading-tight tracking-tight text-stone-900 transition duration-200">
+          <h3 className="pc-name mb-2 line-clamp-2 font-['Syne',sans-serif] text-base font-extrabold leading-tight tracking-tight text-stone-900 transition duration-200 sm:text-[17px]">
             {product.name}
           </h3>
 
@@ -117,7 +117,7 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
             <p className="mb-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-stone-300">
               Giá bán
             </p>
-            <p className="font-['Syne',sans-serif] text-[22px] font-extrabold leading-none text-orange-600">
+            <p className="font-['Syne',sans-serif] text-lg font-extrabold leading-none text-orange-600 sm:text-[22px]">
               {priceValue.toLocaleString("vi-VN")}
               <span className="text-sm font-bold">đ</span>
             </p>

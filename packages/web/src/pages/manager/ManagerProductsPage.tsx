@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { productAPI } from "@ebike/shared-code/api";
 import type { Product } from "@ebike/shared-code/types";
 import { attachImageFallback, createProductImageFallback, resolveProductImage } from "../../utils/media";
+import ManagerProductImagesPanel from "./ManagerProductImagesPanel";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value);
@@ -10,6 +11,7 @@ const ManagerProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [expandedProductId, setExpandedProductId] = useState<number | null>(null);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -38,7 +40,7 @@ const ManagerProductsPage = () => {
       <section className="grid gap-5 xl:grid-cols-2">
         {products.map((product) => (
           <article key={product.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-            <div className="grid gap-0 md:grid-cols-[240px,1fr]">
+            <div className="grid grid-cols-1 gap-0 md:grid-cols-[minmax(0,240px),1fr]">
               <div className="h-[220px] bg-slate-100 md:h-full">
                 <img
                   src={resolveProductImage(product.images?.[0]) || createProductImageFallback(product.name)}
@@ -70,6 +72,16 @@ const ManagerProductsPage = () => {
                 </div>
 
                 <p className="mt-5 line-clamp-3 text-sm leading-7 text-slate-600">{product.description}</p>
+                <button
+                  type="button"
+                  onClick={() => setExpandedProductId((current) => (current === product.id ? null : product.id))}
+                  className="mt-4 text-sm font-semibold text-[#003b93] hover:underline"
+                >
+                  {expandedProductId === product.id ? "Ẩn quản lý ảnh" : "Quản lý hình ảnh"}
+                </button>
+                {expandedProductId === product.id && (
+                  <ManagerProductImagesPanel productId={product.id} productName={product.name} />
+                )}
               </div>
             </div>
           </article>

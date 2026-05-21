@@ -33,5 +33,11 @@ export const authAPI = {
   getUserFromToken: async () => {
     const response = await apiClient.get<string>(API_ENDPOINTS.auth.userFromToken);
     return response.data;
+  },
+  isEmailRegistered: async (email: string) => {
+    const response = await apiClient.get<{ registered: boolean }>(API_ENDPOINTS.auth.emailRegistered, {
+      params: { email: email.trim() }
+    });
+    return response.data.registered;
   }
 };

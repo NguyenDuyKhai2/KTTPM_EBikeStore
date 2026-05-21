@@ -35,21 +35,21 @@ const PaymentReturnPage = () => {
   const success = Boolean(result?.success);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6 py-32 text-center">
+    <div className="container-responsive page-offset-header mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 sm:py-24">
       {loading ? (
         <>
           <Loader2 className="mb-6 h-12 w-12 animate-spin text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">Đang kiểm tra thanh toán</h1>
+          <h1 className="heading-section tracking-tight">Đang kiểm tra thanh toán</h1>
           <p className="mt-3 text-muted-foreground">Vui lòng đợi trong giây lát.</p>
         </>
       ) : (
         <>
           {success ? (
-            <CheckCircle2 className="mb-6 h-16 w-16 text-emerald-600" />
+            <CheckCircle2 className="mb-6 h-14 w-14 text-emerald-600 sm:h-16 sm:w-16" />
           ) : (
-            <XCircle className="mb-6 h-16 w-16 text-red-600" />
+            <XCircle className="mb-6 h-14 w-14 text-red-600 sm:h-16 sm:w-16" />
           )}
-          <h1 className="text-4xl font-bold tracking-tight">
+          <h1 className="heading-section tracking-tight">
             {success ? "Thanh toan thanh cong" : "Thanh toan chua hoan tat"}
           </h1>
           <p className="mt-4 max-w-xl text-muted-foreground">
@@ -59,27 +59,27 @@ const PaymentReturnPage = () => {
           </p>
 
           {result ? (
-            <div className="mt-8 w-full rounded-lg border border-outline-variant/20 bg-white p-6 text-left text-sm">
-              <div className="flex justify-between gap-4 py-2">
+            <div className="mt-8 w-full rounded-lg border border-outline-variant/20 bg-white p-5 text-left text-sm sm:p-6">
+              <div className="flex flex-col gap-1 py-2 sm:flex-row sm:justify-between sm:gap-4">
                 <span className="text-muted-foreground">Mã đơn</span>
                 <span className="font-medium">{result.orderNumber || "-"}</span>
               </div>
-              <div className="flex justify-between gap-4 py-2">
+              <div className="flex flex-col gap-1 py-2 sm:flex-row sm:justify-between sm:gap-4">
                 <span className="text-muted-foreground">Mã giao dịch</span>
-                <span className="font-medium">{result.transactionNo || result.txnRef || "-"}</span>
+                <span className="font-medium break-all">{result.transactionNo || result.txnRef || "-"}</span>
               </div>
-              <div className="flex justify-between gap-4 py-2">
+              <div className="flex flex-col gap-1 py-2 sm:flex-row sm:justify-between sm:gap-4">
                 <span className="text-muted-foreground">Số tiền</span>
                 <span className="font-medium">{result.amount ? `${result.amount.toLocaleString("vi-VN")}d` : "-"}</span>
               </div>
-              <div className="flex justify-between gap-4 py-2">
+              <div className="flex flex-col gap-1 py-2 sm:flex-row sm:justify-between sm:gap-4">
                 <span className="text-muted-foreground">Trạng thái</span>
                 <span className="font-medium">{result.paymentStatus || "-"}</span>
               </div>
             </div>
           ) : null}
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center">
             <Link to="/customer/orders" className="rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white">
               Xem đơn hàng
             </Link>

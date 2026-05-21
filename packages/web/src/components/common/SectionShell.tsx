@@ -8,12 +8,12 @@ interface SectionShellProps extends PropsWithChildren {
 
 const SectionShell = ({ eyebrow, title, description, children }: SectionShellProps) => (
   <section className="min-h-screen">
-    <div className="py-12 px-6">
-      <span className="text-xs tracking-widest uppercase font-semibold text-primary mb-3 inline-block">{eyebrow}</span>
-      <h1 className="text-4xl md:text-5xl font-bold mb-4">{title}</h1>
-      <p className="text-lg text-gray-600 max-w-2xl">{description}</p>
+    <div className="content-shell page-offset-header pb-8 pt-4 sm:pb-12 sm:pt-6">
+      <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-primary">{eyebrow}</span>
+      <h1 className="heading-section mb-4 max-w-3xl">{title}</h1>
+      <p className="max-w-2xl text-base leading-relaxed text-gray-600 sm:text-lg">{description}</p>
     </div>
-    {children}
+    <div className="content-shell pb-12">{children}</div>
   </section>
 );
 

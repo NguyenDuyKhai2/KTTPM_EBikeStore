@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 const pageTitles: Record<string, { title: string; description: string }> = {
@@ -24,7 +24,11 @@ const pageTitles: Record<string, { title: string; description: string }> = {
   }
 };
 
-const ManagerTopNav = () => {
+type ManagerTopNavProps = {
+  onMenuClick?: () => void;
+};
+
+const ManagerTopNav = ({ onMenuClick }: ManagerTopNavProps) => {
   const location = useLocation();
   const page =
     pageTitles[location.pathname] ??
@@ -36,20 +40,31 @@ const ManagerTopNav = () => {
       : pageTitles["/manager"]);
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-[72px] items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur">
-      <div>
-        <h1 className="text-[28px] font-bold text-slate-950">{page.title}</h1>
-        <p className="mt-1 text-sm text-slate-500">{page.description}</p>
-      </div>
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <div className="flex min-h-[64px] flex-wrap items-center gap-3 px-4 py-3 sm:min-h-[72px] sm:gap-4 sm:px-6 sm:py-4">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-200 p-2.5 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+          aria-label="Mở menu điều hướng"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
 
-      <div className="hidden w-full max-w-sm items-center justify-end md:flex">
-        <div className="relative w-full">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Tìm đơn hàng, khách hàng, thanh toán"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-[#003b93] focus:bg-white"
-          />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-xl font-bold text-slate-950 sm:text-2xl lg:text-[28px]">{page.title}</h1>
+          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 sm:mt-1 sm:text-sm">{page.description}</p>
+        </div>
+
+        <div className="hidden w-full max-w-sm items-center md:flex md:w-auto md:flex-1 md:justify-end">
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Tìm đơn hàng, khách hàng, thanh toán"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-[#003b93] focus:bg-white"
+            />
+          </div>
         </div>
       </div>
     </header>

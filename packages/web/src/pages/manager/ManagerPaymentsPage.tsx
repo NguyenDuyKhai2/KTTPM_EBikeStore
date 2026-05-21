@@ -94,7 +94,7 @@ const ManagerPaymentsPage = () => {
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-4 xl:grid-cols-[1.3fr,1fr,1fr,auto]">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[1.3fr,1fr,1fr,auto]">
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}

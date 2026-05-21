@@ -30,4 +30,6 @@ public interface AuthenticationService {
     boolean validateToken(String token);
 
     String extractUsernameFromToken(String token);
+
+    boolean isEmailRegistered(String email);
 }
