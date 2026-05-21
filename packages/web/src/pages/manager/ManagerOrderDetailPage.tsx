@@ -2,8 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, CreditCard, MapPin, Package, Phone, X } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { managerAPI, orderAPI } from "@ebike/shared-code/api";
-import type { Order } from "@ebike/shared-code/types";
+import type { Order, ShipmentTimeline } from "@ebike/shared-code/types";
 import ManagerStatusBadge, { formatManagerLabel, orderTone, paymentTone } from "../../components/manager/ManagerStatusBadge";
+import ShipmentTimelineView from "../../components/orders/ShipmentTimeline";
+
+const SHIPMENT_STATUS_OPTIONS = [
+  { value: "PENDING", label: "Chờ xử lý" },
+  { value: "PREPARING", label: "Đang chuẩn bị" },
+  { value: "SHIPPED", label: "Đã gửi hàng" },
+  { value: "IN_TRANSIT", label: "Đang giao" },
+  { value: "DELIVERED", label: "Đã giao" }
+];
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value);
@@ -41,6 +50,29 @@ const ManagerOrderDetailPage = () => {
   const [reviewingCancellation, setReviewingCancellation] = useState<"approve" | "reject" | null>(null);
   const [reviewDialogAction, setReviewDialogAction] = useState<"approve" | "reject" | null>(null);
   const [reviewNote, setReviewNote] = useState("");
+  const [timeline, setTimeline] = useState<ShipmentTimeline | null>(null);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [shipmentStatus, setShipmentStatus] = useState("PENDING");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [updatingShipment, setUpdatingShipment] = useState(false);
+
+  const loadShipmentTimeline = async (orderId: number) => {
+    try {
+      setTimelineLoading(true);
+      const timelineData = await orderAPI.getShipmentTimeline(orderId);
+      setTimeline(timelineData);
+      if (timelineData.currentStatus) {
+        setShipmentStatus(timelineData.currentStatus);
+      }
+      if (timelineData.trackingNumber) {
+        setTrackingNumber(timelineData.trackingNumber);
+      }
+    } catch {
+      setTimeline(null);
+    } finally {
+      setTimelineLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -52,8 +84,10 @@ const ManagerOrderDetailPage = () => {
 
       try {
         setLoading(true);
-        setOrder(await orderAPI.getDetail(id));
+        const orderData = await orderAPI.getDetail(id);
+        setOrder(orderData);
         setError("");
+        await loadShipmentTimeline(orderData.id);
       } catch (orderError) {
         setError(orderError instanceof Error ? orderError.message : "Không thể tải chi tiết đơn hàng.");
       } finally {
@@ -63,6 +97,26 @@ const ManagerOrderDetailPage = () => {
 
     void loadOrder();
   }, [id]);
+
+  const submitShipmentUpdate = async () => {
+    if (!order) {
+      return;
+    }
+    try {
+      setUpdatingShipment(true);
+      setError("");
+      const updatedTimeline = await orderAPI.updateShipment(order.id, {
+        status: shipmentStatus,
+        trackingNumber: trackingNumber.trim() || undefined
+      });
+      setTimeline(updatedTimeline);
+      setOrder(await orderAPI.getDetail(order.id));
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Không thể cập nhật trạng thái giao hàng.");
+    } finally {
+      setUpdatingShipment(false);
+    }
+  };
 
   const itemTotal = useMemo(() => order?.items.reduce((sum, item) => sum + (item.lineTotal ?? 0), 0) ?? 0, [order]);
 
@@ -273,6 +327,48 @@ const ManagerOrderDetailPage = () => {
                 <ManagerStatusBadge label={order.paymentStatus} tone={paymentTone(order.paymentStatus)} />
               </div>
             </div>
+          </section>
+
+          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-950">Giao hàng & vận chuyển</h3>
+            <div className="mt-5">
+              <ShipmentTimelineView timeline={timeline} loading={timelineLoading} />
+            </div>
+            {order.status !== "CANCELLED" && timeline?.hasShipment && (
+              <div className="mt-6 space-y-3 border-t border-slate-200 pt-5">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Cập nhật trạng thái giao hàng
+                  <select
+                    value={shipmentStatus}
+                    onChange={(event) => setShipmentStatus(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    {SHIPMENT_STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Mã vận đơn
+                  <input
+                    value={trackingNumber}
+                    onChange={(event) => setTrackingNumber(event.target.value)}
+                    placeholder="Nhập mã tracking (tùy chọn)"
+                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void submitShipmentUpdate()}
+                  disabled={updatingShipment}
+                  className="rounded-lg bg-[#003b93] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#002f75] disabled:opacity-60"
+                >
+                  {updatingShipment ? "Đang lưu..." : "Lưu trạng thái giao hàng"}
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
