@@ -37,8 +37,29 @@ public class Payment {
     @Column(name = "transaction_reference", length = 100)
     private String transactionReference;
 
+    @Column(length = 10)
+    private String currency = "VND";
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
+
+    @Column(name = "provider_txn_id", length = 100)
+    private String providerTxnId;
+
+    @Column(name = "provider_response", columnDefinition = "TEXT")
+    private String providerResponse;
+
+    @Column(name = "vnpay_response_code", length = 10)
+    private String vnpayResponseCode;
+
+    @Column(name = "vnpay_bank_code", length = 30)
+    private String vnpayBankCode;
+
+    @Column(name = "vnpay_card_type", length = 30)
+    private String vnpayCardType;
+
+    @Column(name = "vnpay_secure_hash", length = 256)
+    private String vnpaySecureHash;
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
@@ -83,12 +104,68 @@ public class Payment {
         this.transactionReference = transactionReference;
     }
 
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
     public BigDecimal getAmount() {
         return amount;
     }
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    public String getProviderTxnId() {
+        return providerTxnId;
+    }
+
+    public void setProviderTxnId(String providerTxnId) {
+        this.providerTxnId = providerTxnId;
+    }
+
+    public String getProviderResponse() {
+        return providerResponse;
+    }
+
+    public void setProviderResponse(String providerResponse) {
+        this.providerResponse = providerResponse;
+    }
+
+    public String getVnpayResponseCode() {
+        return vnpayResponseCode;
+    }
+
+    public void setVnpayResponseCode(String vnpayResponseCode) {
+        this.vnpayResponseCode = vnpayResponseCode;
+    }
+
+    public String getVnpayBankCode() {
+        return vnpayBankCode;
+    }
+
+    public void setVnpayBankCode(String vnpayBankCode) {
+        this.vnpayBankCode = vnpayBankCode;
+    }
+
+    public String getVnpayCardType() {
+        return vnpayCardType;
+    }
+
+    public void setVnpayCardType(String vnpayCardType) {
+        this.vnpayCardType = vnpayCardType;
+    }
+
+    public String getVnpaySecureHash() {
+        return vnpaySecureHash;
+    }
+
+    public void setVnpaySecureHash(String vnpaySecureHash) {
+        this.vnpaySecureHash = vnpaySecureHash;
     }
 
     public LocalDateTime getPaidAt() {

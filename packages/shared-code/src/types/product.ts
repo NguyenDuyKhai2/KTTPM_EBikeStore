@@ -1,6 +1,7 @@
 export interface Category {
-  id: string;
+  id: number;
   name: string;
+  slug?: string;
 }
 
 export interface Review {
@@ -11,19 +12,71 @@ export interface Review {
 }
 
 export interface Product {
-  id: string;
+  id: number;
   name: string;
+  slug: string;
   description: string;
   price: number;
-  rating: number;
+  discountPrice?: number | null;
+  rating?: number | null;
+  reviewCount?: number | null;
+  stockQuantity?: number | null;
+  featured?: boolean | null;
   category: Category;
   images: string[];
-  reviews: Review[];
+  reviews?: Review[];
+}
+
+export interface ProductSpecification {
+  modelCode?: string | null;
+  brand?: string | null;
+  vehicleType?: string | null;
+  batteryType?: string | null;
+  batteryCapacityAh?: number | null;
+  maxSpeedKmh?: number | null;
+  maxRangeKm?: number | null;
+  motorPowerWatts?: number | null;
+  brakeType?: string | null;
+  driveType?: string | null;
+  chargingTimeHours?: number | null;
+  productWeightKg?: number | null;
+  warrantyMonths?: number | null;
+  smartFeatures?: string | null;
+}
+
+export interface ProductVariant {
+  id?: number | null;
+  sku?: string | null;
+  variantName?: string | null;
+  colorName?: string | null;
+  colorHex?: string | null;
+  imageUrl?: string | null;
+  batteryCapacityAh?: number | null;
+  additionalPrice?: number | null;
+  stockQuantity?: number | null;
+  defaultVariant?: boolean | null;
+}
+
+export interface ProductDetail {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  discountPrice?: number | null;
+  rating?: number | null;
+  reviewCount?: number | null;
+  stockQuantity?: number | null;
+  featured?: boolean | null;
+  category?: { id?: number; name?: string; slug?: string } | null;
+  specification?: ProductSpecification | null;
+  variants?: ProductVariant[] | null;
+  images?: string[] | null;
 }
 
 export interface ProductFilter {
   query?: string;
-  categoryId?: string;
+  categoryId?: number;
   minPrice?: number;
   maxPrice?: number;
 }

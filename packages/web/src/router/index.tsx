@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 // Layouts
 import AdminLayout from "../layouts/AdminLayout";
 import CustomerLayout from "../layouts/CustomerLayout";
+import ManagerLayout from "../layouts/ManagerLayout";
 import Layout from "../components/common/Layout";
 
 // Pages
@@ -15,11 +16,20 @@ import FavoritesPage from "../pages/FavoritesPage";
 import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPageApi";
 import NotFoundPage from "../pages/NotFoundPage";
+import OrderSuccessPage from "../pages/OrderSuccessPage";
+import PaymentReturnPage from "../pages/PaymentReturnPage";
 import ProductDetailPage from "../pages/ProductDetailPage";
 import ProductsPage from "../pages/ProductsPage";
-import CustomerDashboardPage from "../pages/customer/CustomerDashboardPage";
-import CustomerOrdersPage from "../pages/customer/CustomerOrdersPage";
-import CustomerProfilePage from "../pages/customer/CustomerProfilePageApi";
+import SignupPage from "../pages/SignupPage";
+import CustomerDashboardPage from "../pages/customer/CustomerDashboardRealPage";
+import CustomerOrdersPage from "../pages/customer/CustomerOrdersSafePage";
+import CustomerProfilePage from "../pages/customer/CustomerProfilePage";
+import ManagerCustomersPage from "../pages/manager/ManagerCustomersPage";
+import ManagerDashboardPage from "../pages/manager/ManagerDashboardPage";
+import ManagerOrderDetailPage from "../pages/manager/ManagerOrderDetailPage";
+import ManagerOrdersPage from "../pages/manager/ManagerOrdersPage";
+import ManagerPaymentsPage from "../pages/manager/ManagerPaymentsPage";
+import ManagerProductsPage from "../pages/manager/ManagerProductsPage";
 
 const router = createBrowserRouter([
   {
@@ -30,10 +40,15 @@ const router = createBrowserRouter([
       // Guest
       { index: true, element: <HomePage /> },
       { path: "auth", element: <LoginPage /> },
+      { path: "signup", element: <SignupPage /> },
       { path: "products", element: <ProductsPage /> },
+      { path: "models", element: <ProductsPage /> },
       { path: "product/:id", element: <ProductDetailPage /> },
+      { path: "models/:id", element: <ProductDetailPage /> },
       { path: "favorites", element: <FavoritesPage /> },
       { path: "checkout", element: <CheckoutPage /> },
+      { path: "checkout/success", element: <OrderSuccessPage /> },
+      { path: "payment/return", element: <PaymentReturnPage /> },
       { path: "chatbot", element: <ChatbotPage /> }
     ]
   },
@@ -67,6 +82,19 @@ const router = createBrowserRouter([
           { path: "users", element: <AdminUsersPage /> }
         ]
       }
+    ]
+  },
+  {
+    path: "/manager",
+    element: <ManagerLayout />,
+    errorElement: <NotFoundPage />,
+    children: [
+      { index: true, element: <ManagerDashboardPage /> },
+      { path: "orders", element: <ManagerOrdersPage /> },
+      { path: "orders/:id", element: <ManagerOrderDetailPage /> },
+      { path: "payments", element: <ManagerPaymentsPage /> },
+      { path: "customers", element: <ManagerCustomersPage /> },
+      { path: "products", element: <ManagerProductsPage /> }
     ]
   },
   {

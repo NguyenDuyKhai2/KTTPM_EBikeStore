@@ -1,15 +1,17 @@
 package com.ebike.productModule.service;
 
-import com.ebike.productModule.dto.CategorySummaryDto;
-import com.ebike.productModule.dto.ProductDetailDto;
-import com.ebike.productModule.dto.ProductSpecificationDto;
-import com.ebike.productModule.dto.ProductSummaryDto;
-import com.ebike.productModule.dto.ProductVariantDto;
+import com.ebike.productModule.dto.response.CategorySummaryDto;
+import com.ebike.productModule.dto.response.ProductDetailDto;
+import com.ebike.productModule.dto.response.ProductSpecificationDto;
+import com.ebike.productModule.dto.response.ProductSummaryDto;
+import com.ebike.productModule.dto.response.ProductVariantDto;
 import com.ebike.productModule.entity.Product;
 import com.ebike.productModule.entity.ProductImage;
+import com.ebike.productModule.entity.ProductImageStatus;
 import com.ebike.productModule.entity.ProductSpecification;
 import com.ebike.productModule.entity.ProductVariant;
 import com.ebike.productModule.repository.ProductRepository;
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
@@ -28,7 +30,7 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
-    public List<ProductSummaryDto> getProducts(String query, Integer categoryId) {
+    public List<ProductSummaryDto> getProducts(String query, Integer categoryId, BigDecimal minPrice, BigDecimal maxPrice) {
         Specification<Product> specification = Specification.where(isActive());
 
         if (query != null && !query.trim().isEmpty()) {
@@ -36,6 +38,12 @@ public class ProductService {
         }
         if (categoryId != null) {
             specification = specification.and(hasCategoryId(categoryId));
+        }
+        if (minPrice != null) {
+            specification = specification.and(hasMinPrice(minPrice));
+        }
+        if (maxPrice != null) {
+            specification = specification.and(hasMaxPrice(maxPrice));
         }
 
         return productRepository.findAll(specification).stream()
@@ -59,6 +67,14 @@ public class ProductService {
         return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("category").get("id"), categoryId);
     }
 
+    private Specification<Product> hasMinPrice(BigDecimal minPrice) {
+        return (root, query, criteriaBuilder) -> criteriaBuilder.greaterThanOrEqualTo(root.get("price"), minPrice);
+    }
+
+    private Specification<Product> hasMaxPrice(BigDecimal maxPrice) {
+        return (root, query, criteriaBuilder) -> criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice);
+    }
+
     private Specification<Product> nameOrDescriptionContains(String queryText) {
         return (root, query, criteriaBuilder) -> {
             String pattern = "%" + queryText.toLowerCase() + "%";
@@ -69,7 +85,7 @@ public class ProductService {
         };
     }
 
-    private ProductSummaryDto toSummaryDto(Product product) {
+    public ProductSummaryDto toSummaryDto(Product product) {
         return new ProductSummaryDto(
             product.getId(),
             product.getName(),
@@ -80,6 +96,7 @@ public class ProductService {
             product.getRating(),
             product.getReviewCount(),
             product.getStockQuantity(),
+            product.getFeatured(),
             new CategorySummaryDto(
                 product.getCategory().getId(),
                 product.getCategory().getName(),
@@ -141,6 +158,7 @@ public class ProductService {
             variant.getVariantName(),
             variant.getColorName(),
             variant.getColorHex(),
+            mapVariantImage(variant),
             variant.getBatteryCapacityAh(),
             variant.getAdditionalPrice(),
             variant.getStockQuantity(),
@@ -148,10 +166,24 @@ public class ProductService {
         );
     }
 
+    private String mapVariantImage(ProductVariant variant) {
+        return variant.getImages().stream()
+            .filter(this::isActiveImage)
+            .sorted(Comparator.comparing(ProductImage::getSortOrder))
+            .map(ProductImage::getImageUrl)
+            .findFirst()
+            .orElse(null);
+    }
+
     private List<String> mapImages(Product product) {
         return product.getImages().stream()
+            .filter(this::isActiveImage)
             .sorted(Comparator.comparing(ProductImage::getSortOrder))
             .map(ProductImage::getImageUrl)
             .toList();
+    }
+
+    private boolean isActiveImage(ProductImage image) {
+        return image.getStatus() == null || image.getStatus() == ProductImageStatus.ACTIVE;
     }
 }

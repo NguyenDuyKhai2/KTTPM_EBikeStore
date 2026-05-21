@@ -1,7 +1,8 @@
 package com.ebike.chatbotModule.controller;
 
-import com.ebike.chatbotModule.dto.ChatbotAskRequest;
-import com.ebike.chatbotModule.dto.ChatbotResponse;
+import com.ebike.chatbotModule.dto.request.ChatbotAskRequest;
+import com.ebike.chatbotModule.dto.response.ChatbotDebugResponse;
+import com.ebike.chatbotModule.dto.response.ChatbotResponse;
 import com.ebike.chatbotModule.service.ChatbotService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,5 +22,10 @@ public class ChatbotController {
     @PostMapping("/ask")
     public ChatbotResponse ask(@RequestBody ChatbotAskRequest request) {
         return chatbotService.ask(request);
+    }
+
+    @PostMapping("/debug")
+    public ChatbotDebugResponse debug(@RequestBody ChatbotAskRequest request) {
+        return chatbotService.debug(request);
     }
 }

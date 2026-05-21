@@ -1,7 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
 import productReducer from "./slices/productSlice";
-import cartReducer from "./slices/cartSlice";
 import chatbotReducer from "./slices/chatbotSlice";
 import orderReducer from "./slices/orderSlice";
 import uiReducer from "./slices/uiSlice";
@@ -11,7 +10,6 @@ export const createAppStore = () =>
     reducer: {
       auth: authReducer,
       products: productReducer,
-      cart: cartReducer,
       chatbot: chatbotReducer,
       orders: orderReducer,
       ui: uiReducer

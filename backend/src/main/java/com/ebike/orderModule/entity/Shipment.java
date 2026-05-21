@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
@@ -35,8 +36,21 @@ public class Shipment {
     @Column(name = "phone_number", length = 30)
     private String phoneNumber;
 
+    @Column(name = "recipient_email", length = 255)
+    private String recipientEmail;
+
     @Column(name = "shipping_address", columnDefinition = "TEXT")
     private String shippingAddress;
+
+    @Column(name = "pickup_district", length = 100)
+    private String pickupDistrict;
+
+    @Column(name = "detailed_address", columnDefinition = "TEXT")
+    private String detailedAddress;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pickup_showroom_id")
+    private Showroom pickupShowroom;
 
     @Column(name = "tracking_number", length = 100)
     private String trackingNumber;
@@ -93,6 +107,38 @@ public class Shipment {
 
     public void setShippingAddress(String shippingAddress) {
         this.shippingAddress = shippingAddress;
+    }
+
+    public String getRecipientEmail() {
+        return recipientEmail;
+    }
+
+    public void setRecipientEmail(String recipientEmail) {
+        this.recipientEmail = recipientEmail;
+    }
+
+    public String getPickupDistrict() {
+        return pickupDistrict;
+    }
+
+    public void setPickupDistrict(String pickupDistrict) {
+        this.pickupDistrict = pickupDistrict;
+    }
+
+    public String getDetailedAddress() {
+        return detailedAddress;
+    }
+
+    public void setDetailedAddress(String detailedAddress) {
+        this.detailedAddress = detailedAddress;
+    }
+
+    public Showroom getPickupShowroom() {
+        return pickupShowroom;
+    }
+
+    public void setPickupShowroom(Showroom pickupShowroom) {
+        this.pickupShowroom = pickupShowroom;
     }
 
     public String getTrackingNumber() {

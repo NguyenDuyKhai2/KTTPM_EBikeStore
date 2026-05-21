@@ -1,11 +1,12 @@
 package com.ebike.authModule.service.impl;
 
-import com.ebike.authModule.dto.AuthResponse;
-import com.ebike.authModule.dto.EnhancedAuthResponse;
-import com.ebike.authModule.dto.LoginRequest;
-import com.ebike.authModule.dto.RegisterRequest;
-import com.ebike.authModule.dto.RoleSpecificLoginResponse;
-import com.ebike.authModule.dto.UserProfileResponse;
+import com.ebike.authModule.dto.response.AuthResponse;
+import com.ebike.authModule.dto.response.EnhancedAuthResponse;
+import com.ebike.authModule.dto.request.LoginRequest;
+import com.ebike.authModule.dto.request.RegisterRequest;
+import com.ebike.authModule.dto.request.UpdateProfileRequest;
+import com.ebike.authModule.dto.response.RoleSpecificLoginResponse;
+import com.ebike.authModule.dto.response.UserProfileResponse;
 import com.ebike.authModule.entity.AuthenticationLog;
 import com.ebike.authModule.entity.Role;
 import com.ebike.authModule.entity.User;
@@ -15,13 +16,16 @@ import com.ebike.authModule.repository.UserRepository;
 import com.ebike.authModule.service.AuthenticationService;
 import com.ebike.authModule.service.JwtTokenProvider;
 import com.ebike.authModule.service.PermissionService;
+import com.ebike.orderModule.entity.Order;
+import com.ebike.orderModule.repository.OrderRepository;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -45,6 +49,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PermissionService permissionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final OrderRepository orderRepository;
 
     public AuthenticationServiceImpl(
         UserRepository userRepository,
@@ -52,7 +57,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         AuthenticationLogRepository authenticationLogRepository,
         PermissionService permissionService,
         PasswordEncoder passwordEncoder,
-        JwtTokenProvider jwtTokenProvider
+        JwtTokenProvider jwtTokenProvider,
+        OrderRepository orderRepository
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -60,6 +66,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         this.permissionService = permissionService;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.orderRepository = orderRepository;
     }
 
     @Override
@@ -88,6 +95,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         user.getRoles().add(defaultRole);
 
         User savedUser = userRepository.save(user);
+        linkGuestOrdersToUser(savedUser);
         return toAuthResponse(savedUser);
     }
 
@@ -171,17 +179,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         User user = findUser(usernameOrEmail);
-        return new UserProfileResponse(
-            user.getId(),
-            user.getUsername(),
-            user.getEmail(),
-            user.getFirstName(),
-            user.getLastName(),
-            user.getActive(),
-            user.getVerified(),
-            extractRoleNames(user),
-            permissionService.resolvePermissionCodes(user)
-        );
+        return toUserProfileResponse(user);
+    }
+
+    @Override
+    public UserProfileResponse updateProfile(String usernameOrEmail, UpdateProfileRequest request) {
+        if (isBlank(usernameOrEmail)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "usernameOrEmail is required");
+        }
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
+        }
+
+        User user = findUser(usernameOrEmail);
+        user.setFirstName(trimToNull(request.firstName()));
+        user.setLastName(trimToNull(request.lastName()));
+        User savedUser = userRepository.save(user);
+        return toUserProfileResponse(savedUser);
     }
 
     @Override
@@ -201,6 +215,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
+    private void linkGuestOrdersToUser(User user) {
+        if (user == null || isBlank(user.getEmail())) {
+            return;
+        }
+
+        List<Order> guestOrders = new ArrayList<>(orderRepository.findByUserIsNullAndCustomerEmail(user.getEmail()));
+        if (guestOrders.isEmpty()) {
+            return;
+        }
+
+        for (Order order : guestOrders) {
+            order.setUser(user);
+        }
+        orderRepository.saveAll(guestOrders);
+    }
+
     private void validateRegisterRequest(RegisterRequest request) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
@@ -215,12 +245,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private AuthResponse toAuthResponse(User user) {
         Set<String> roles = extractRoleNames(user);
+        String jwtToken = jwtTokenProvider.generateToken(user);
         return new AuthResponse(
             user.getId(),
             user.getUsername(),
             user.getEmail(),
             buildFullName(user),
-            "demo-token-" + UUID.randomUUID(),
+            jwtToken,
             roles
         );
     }
@@ -249,6 +280,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         );
     }
 
+    private UserProfileResponse toUserProfileResponse(User user) {
+        return new UserProfileResponse(
+            user.getId(),
+            user.getUsername(),
+            user.getEmail(),
+            user.getFirstName(),
+            user.getLastName(),
+            user.getActive(),
+            user.getVerified(),
+            extractRoleNames(user),
+            permissionService.resolvePermissionCodes(user)
+        );
+    }
+
     private Object buildRoleSpecificData(User user, String role) {
         Map<String, Object> roleData = new HashMap<>();
         roleData.put("role", role);
@@ -259,10 +304,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             case "CUSTOMER":
                 roleData.put("type", "Individual Customer");
                 roleData.put("memberSince", user.getCreatedAt());
-                break;
-            case "STAFF":
-                roleData.put("type", "Store Staff");
-                roleData.put("department", "Sales/Support");
                 break;
             case "MANAGER":
                 roleData.put("type", "Store Manager");

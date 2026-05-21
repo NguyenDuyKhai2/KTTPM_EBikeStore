@@ -29,3 +29,17 @@ export interface ChatResponse {
   message: Message;
   suggestions?: string[];
 }
+
+export interface ChatbotRecommendation {
+  productId: number;
+  name: string;
+  slug: string;
+  price: number;
+  reason: string;
+}
+
+export interface ChatbotAdvisorResponse {
+  answer: string;
+  matchedIntent: string;
+  recommendations: ChatbotRecommendation[];
+}

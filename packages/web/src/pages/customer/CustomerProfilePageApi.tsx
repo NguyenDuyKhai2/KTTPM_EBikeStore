@@ -1,237 +1,544 @@
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, CircleAlert, KeyRound, Mail, RefreshCcw, ShieldCheck, User2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { authAPI } from "@ebike/shared-code/api";
 import { useAuth } from "@ebike/shared-code/hooks";
 import type { UserProfileResponse } from "@ebike/shared-code/types";
-import { useNavigate } from "react-router-dom";
 import SectionShell from "../../components/common/SectionShell";
 
-const pillBaseClass =
-  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold tracking-[0.08em] uppercase";
+/* ─── tiny helpers ─────────────────────────────────────────────── */
+const initials = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+
+/* ─── sub-components ────────────────────────────────────────────── */
+
+function StatusDot({ active }: { active: boolean }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: 8,
+        height: 8,
+        borderRadius: "50%",
+        background: active ? "#22c55e" : "#f59e0b",
+        boxShadow: active ? "0 0 0 3px rgba(34,197,94,.22)" : "0 0 0 3px rgba(245,158,11,.22)",
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+function Tag({
+  children,
+  variant = "default",
+}: {
+  children: React.ReactNode;
+  variant?: "default" | "sky" | "green" | "amber";
+}) {
+  const colors: Record<string, { bg: string; color: string; border: string }> = {
+    default: { bg: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.65)", border: "rgba(255,255,255,.12)" },
+    sky: { bg: "rgba(14,165,233,.15)", color: "#7dd3fc", border: "rgba(14,165,233,.3)" },
+    green: { bg: "rgba(34,197,94,.12)", color: "#86efac", border: "rgba(34,197,94,.25)" },
+    amber: { bg: "rgba(245,158,11,.12)", color: "#fcd34d", border: "rgba(245,158,11,.25)" },
+  };
+  const c = colors[variant];
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 12px",
+        borderRadius: 999,
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        background: c.bg,
+        color: c.color,
+        border: `1px solid ${c.border}`,
+        fontFamily: "'DM Mono', monospace",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function PermissionChip({ label }: { label: string }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "5px 12px",
+        background: "rgba(255,255,255,.04)",
+        border: "1px solid rgba(255,255,255,.1)",
+        borderRadius: 8,
+        fontSize: 11,
+        fontFamily: "'DM Mono', monospace",
+        color: "rgba(255,255,255,.55)",
+        letterSpacing: "0.06em",
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function SkeletonLine({ w = "100%", h = 14 }: { w?: string; h?: number }) {
+  return (
+    <div
+      style={{
+        width: w,
+        height: h,
+        borderRadius: 6,
+        background: "rgba(255,255,255,.07)",
+        animation: "pulse 1.4s ease-in-out infinite",
+      }}
+    />
+  );
+}
+
+/* ─── main component ────────────────────────────────────────────── */
 
 const CustomerProfilePageApi = () => {
   const navigate = useNavigate();
-  const { token, user, logout } = useAuth();
+  const { isAuthenticated, isBootstrapping, user, logout } = useAuth();
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
   const profileLabel = useMemo(() => {
-    if (!profile) {
-      return "";
-    }
-
+    if (!profile) return "";
     const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim();
     return fullName || user?.fullName || profile.username;
   }, [profile, user?.fullName]);
 
   useEffect(() => {
-    if (!token) {
-      navigate("/auth", { replace: true });
-    }
-  }, [navigate, token]);
+    if (!isBootstrapping && !isAuthenticated) navigate("/auth", { replace: true });
+  }, [isAuthenticated, isBootstrapping, navigate]);
 
   useEffect(() => {
     let isMounted = true;
-
     const loadProfile = async () => {
-      if (!token) {
-        if (isMounted) {
-          setError("Bạn chưa đăng nhập. Vui lòng đăng nhập để xem hồ sơ.");
-          setIsLoading(false);
-        }
+      if (isBootstrapping) {
         return;
       }
-
-      setIsLoading(true);
-      setError("");
-
+      if (!isAuthenticated) {
+        if (isMounted) { setError("B???n ch??a ????ng nh???p."); setIsLoading(false); }
+        return;
+      }
+      setIsLoading(true); setError("");
       try {
-        const identity = user?.username || user?.email || (await authAPI.getUserFromToken());
-        if (!identity) {
-          throw new Error("Không thể xác định người dùng hiện tại từ phiên đăng nhập.");
-        }
-
-        const response = await authAPI.getProfile(identity);
-        if (isMounted) {
-          setProfile(response);
-        }
-      } catch (fetchError) {
-        if (isMounted) {
-          const message =
-            fetchError instanceof Error ? fetchError.message : "Không thể tải hồ sơ từ hệ thống lúc này.";
-          setError(message);
-        }
+        const response = await authAPI.getProfile();
+        if (isMounted) setProfile(response);
+      } catch (err) {
+        if (isMounted)
+          setError(err instanceof Error ? err.message : "Kh??ng th??? t???i h??? s?? l??c n??y.");
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
-
     void loadProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [token, user?.email, user?.username]);
+    return () => { isMounted = false; };
+  }, [isAuthenticated, isBootstrapping]);
+  const label = profileLabel || "Tài khoản";
+  const mono = "'DM Mono', 'Fira Mono', monospace";
+  const serif = "'Playfair Display', Georgia, serif";
 
   return (
     <SectionShell
       eyebrow="Hồ Sơ Khách Hàng"
-      title="Một trang hồ sơ gọn, sáng và bám dữ liệu thật từ backend."
-      description="Trang này đọc JWT hiện tại, gọi API hồ sơ người dùng và hiển thị vai trò, trạng thái xác minh cùng quyền truy cập của tài khoản."
+      title="Thông tin tài khoản"
+      description=""
     >
-      <div className="px-6 pb-12">
-        <div className="relative overflow-hidden rounded-[32px] border border-emerald-100 bg-[linear-gradient(135deg,_rgba(255,255,255,0.98),_rgba(236,253,245,0.96)_46%,_rgba(239,246,255,0.96)_100%)] shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-          <div className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.22),_transparent_40%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.18),_transparent_38%)]" />
-          <div className="relative grid gap-6 p-6 lg:grid-cols-[1.25fr_0.9fr] lg:p-8">
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-[26px] bg-slate-950 text-white shadow-lg">
-                    <User2 className="h-10 w-10" />
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium uppercase tracking-[0.18em] text-emerald-700">Identity</p>
-                      <h2 className="text-3xl font-black tracking-tight text-slate-950">{profileLabel || "Hồ sơ tài khoản"}</h2>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <span
-                        className={`${pillBaseClass} ${
-                          profile?.active
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-amber-200 bg-amber-50 text-amber-700"
-                        }`}
-                      >
-                        {profile?.active ? "Đang hoạt động" : "Tạm khóa"}
-                      </span>
-                      <span
-                        className={`${pillBaseClass} ${
-                          profile?.verified
-                            ? "border-sky-200 bg-sky-50 text-sky-700"
-                            : "border-slate-200 bg-slate-50 text-slate-700"
-                        }`}
-                      >
-                        {profile?.verified ? "Đã xác minh" : "Chưa xác minh"}
-                      </span>
-                    </div>
-                  </div>
+      {/* ── font import ── */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&display=swap');
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+        .profile-card { animation: fadeUp .45s ease both; }
+      `}</style>
+
+      <div style={{ padding: "0 24px 64px" }}>
+        {/* ── outer shell ── */}
+        <div
+          className="profile-card"
+          style={{
+            background: "#0c0f12",
+            borderRadius: 28,
+            border: "1px solid rgba(255,255,255,.09)",
+            overflow: "hidden",
+            position: "relative",
+          }}
+        >
+          {/* ambient glow top-left */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(ellipse 56% 40% at 8% 0%, rgba(99,102,241,.18) 0%, transparent 70%), " +
+                "radial-gradient(ellipse 40% 30% at 90% 0%, rgba(20,184,166,.14) 0%, transparent 65%)",
+              pointerEvents: "none",
+            }}
+          />
+
+          {/* ── top bar ── */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "18px 28px",
+              borderBottom: "1px solid rgba(255,255,255,.06)",
+              position: "relative",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#ef4444",
+                  boxShadow: "14px 0 0 #f59e0b, 28px 0 0 #22c55e",
+                }}
+              />
+            </div>
+
+            <span
+              style={{
+                fontFamily: mono,
+                fontSize: 11,
+                color: "rgba(255,255,255,.3)",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+              }}
+            >
+              ebike / profile
+            </span>
+
+            <button
+              type="button"
+              onClick={() => { logout(); setProfile(null); }}
+              style={{
+                fontFamily: mono,
+                fontSize: 11,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,.4)",
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,.12)",
+                borderRadius: 8,
+                padding: "5px 14px",
+                cursor: "pointer",
+                transition: "color .2s, border-color .2s",
+              }}
+              onMouseEnter={(e) => {
+                (e.target as HTMLButtonElement).style.color = "#f87171";
+                (e.target as HTMLButtonElement).style.borderColor = "rgba(239,68,68,.4)";
+              }}
+              onMouseLeave={(e) => {
+                (e.target as HTMLButtonElement).style.color = "rgba(255,255,255,.4)";
+                (e.target as HTMLButtonElement).style.borderColor = "rgba(255,255,255,.12)";
+              }}
+            >
+              Đăng xuất
+            </button>
+          </div>
+
+          {/* ── main content ── */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 340px",
+              gap: 0,
+              position: "relative",
+            }}
+          >
+            {/* ── LEFT COLUMN ── */}
+            <div style={{ padding: "36px 36px 40px", borderRight: "1px solid rgba(255,255,255,.06)" }}>
+              {/* hero row */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 20, marginBottom: 32 }}>
+                {/* avatar */}
+                <div
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 20,
+                    background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: serif,
+                    fontSize: 28,
+                    fontWeight: 700,
+                    color: "#fff",
+                    flexShrink: 0,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {initials(label)}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    logout();
-                    setProfile(null);
-                  }}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  Đăng xuất
-                </button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p
+                    style={{
+                      margin: "0 0 4px",
+                      fontFamily: mono,
+                      fontSize: 10,
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      color: "#818cf8",
+                    }}
+                  >
+                    Người dùng
+                  </p>
+                  <h2
+                    style={{
+                      margin: "0 0 12px",
+                      fontFamily: serif,
+                      fontSize: "clamp(24px, 3vw, 36px)",
+                      fontWeight: 900,
+                      color: "#fff",
+                      lineHeight: 1.1,
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {label}
+                  </h2>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    <Tag variant={profile?.active ? "green" : "amber"}>
+                      <StatusDot active={!!profile?.active} />
+                      {profile?.active ? "Đang hoạt động" : "Tạm khóa"}
+                    </Tag>
+                    <Tag variant={profile?.verified ? "sky" : "default"}>
+                      {profile?.verified ? "✓ Đã xác minh" : "Chưa xác minh"}
+                    </Tag>
+                  </div>
+                </div>
               </div>
 
+              {/* ── info / error / loading ── */}
               {isLoading ? (
-                <div className="rounded-[24px] border border-slate-200 bg-white/90 p-6 text-slate-600">
-                  <div className="mb-3 h-5 w-44 animate-pulse rounded-full bg-slate-200" />
-                  <div className="mb-2 h-4 w-full animate-pulse rounded-full bg-slate-100" />
-                  <div className="h-4 w-4/5 animate-pulse rounded-full bg-slate-100" />
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <SkeletonLine w="60%" />
+                  <SkeletonLine />
+                  <SkeletonLine w="80%" />
                 </div>
               ) : error ? (
-                <div className="rounded-[24px] border border-rose-200 bg-rose-50 p-5 text-rose-700">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.12em]">
-                    <CircleAlert className="h-4 w-4" />
-                    Không tải được hồ sơ
-                  </div>
-                  <p className="m-0 text-sm leading-6">{error}</p>
+                <div
+                  style={{
+                    background: "rgba(239,68,68,.08)",
+                    border: "1px solid rgba(239,68,68,.25)",
+                    borderRadius: 16,
+                    padding: "16px 20px",
+                    color: "#fca5a5",
+                    fontFamily: mono,
+                    fontSize: 13,
+                    lineHeight: 1.7,
+                  }}
+                >
+                  ✕ {error}
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  <article className="rounded-[24px] border border-white/70 bg-white/95 p-5 shadow-sm">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Thông tin chính</p>
-                    <div className="space-y-3 text-sm text-slate-700">
-                      <div className="flex items-center gap-3">
-                        <Mail className="h-4 w-4 text-emerald-600" />
-                        <span>{profile?.email}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <User2 className="h-4 w-4 text-emerald-600" />
-                        <span>@{profile?.username}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <BadgeCheck className="h-4 w-4 text-emerald-600" />
-                        <span>Mã người dùng: #{profile?.userId}</span>
-                      </div>
+                <>
+                  {/* info rows */}
+                  {[
+                    { label: "Email", value: profile?.email },
+                    { label: "Username", value: `@${profile?.username}` },
+                    { label: "User ID", value: `#${profile?.userId}` },
+                  ].map(({ label: lbl, value }) => (
+                    <div
+                      key={lbl}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "100px 1fr",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 0",
+                        borderBottom: "1px solid rgba(255,255,255,.05)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: mono,
+                          fontSize: 10,
+                          letterSpacing: "0.14em",
+                          textTransform: "uppercase",
+                          color: "rgba(255,255,255,.3)",
+                        }}
+                      >
+                        {lbl}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: mono,
+                          fontSize: 13,
+                          color: "rgba(255,255,255,.8)",
+                        }}
+                      >
+                        {value}
+                      </span>
                     </div>
-                  </article>
+                  ))}
 
-                  <article className="rounded-[24px] border border-white/70 bg-slate-950 p-5 text-white shadow-sm">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">Tóm tắt quyền</p>
-                    <div className="space-y-3">
-                      <p className="m-0 text-sm text-slate-300">
-                        Tài khoản hiện có {profile?.roles.length ?? 0} vai trò và {profile?.permissions.length ?? 0} quyền truy cập.
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {(profile?.roles ?? []).map((role) => (
-                          <span key={role} className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.08em] text-white">
-                            {role}
-                          </span>
-                        ))}
-                      </div>
+                  {/* roles section */}
+                  <div style={{ marginTop: 28 }}>
+                    <p
+                      style={{
+                        fontFamily: mono,
+                        fontSize: 10,
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase",
+                        color: "rgba(255,255,255,.3)",
+                        marginBottom: 12,
+                      }}
+                    >
+                      Vai trò
+                    </p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {(profile?.roles ?? []).map((role) => (
+                        <Tag key={role} variant="sky">
+                          {role}
+                        </Tag>
+                      ))}
+                      {(profile?.roles.length ?? 0) === 0 && (
+                        <span style={{ fontFamily: mono, fontSize: 12, color: "rgba(255,255,255,.25)" }}>
+                          Chưa có vai trò
+                        </span>
+                      )}
                     </div>
-                  </article>
-                </div>
+                  </div>
+                </>
               )}
             </div>
 
-            <div className="grid gap-4 self-start">
-              <article className="rounded-[26px] border border-slate-200 bg-white/90 p-5 shadow-sm">
-                <div className="mb-4 flex items-center gap-3">
-                  <ShieldCheck className="h-5 w-5 text-sky-600" />
-                  <h3 className="m-0 text-base font-bold text-slate-900">Vai trò hiện có</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(profile?.roles ?? []).map((role) => (
-                    <span key={role} className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-sky-700">
-                      {role}
-                    </span>
-                  ))}
-                  {!isLoading && !error && (profile?.roles.length ?? 0) === 0 ? (
-                    <span className="text-sm text-slate-500">Chưa có vai trò nào được gán.</span>
-                  ) : null}
-                </div>
-              </article>
-
-              <article className="rounded-[26px] border border-slate-200 bg-white/90 p-5 shadow-sm">
-                <div className="mb-4 flex items-center gap-3">
-                  <KeyRound className="h-5 w-5 text-emerald-600" />
-                  <h3 className="m-0 text-base font-bold text-slate-900">Permissions từ API</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(profile?.permissions ?? []).map((permission) => (
-                    <span
-                      key={permission}
-                      className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800"
-                    >
-                      {permission}
-                    </span>
-                  ))}
-                  {!isLoading && !error && (profile?.permissions.length ?? 0) === 0 ? (
-                    <span className="text-sm text-slate-500">Hệ thống chưa trả permission nào cho tài khoản này.</span>
-                  ) : null}
-                </div>
-              </article>
-
-              <article className="rounded-[26px] border border-amber-200 bg-amber-50/90 p-5 shadow-sm">
-                <div className="mb-3 flex items-center gap-3">
-                  <RefreshCcw className="h-5 w-5 text-amber-700" />
-                  <h3 className="m-0 text-base font-bold text-amber-950">Luồng dữ liệu</h3>
-                </div>
-                <p className="m-0 text-sm leading-6 text-amber-900">
-                  Trang này dùng JWT đã lưu sau khi đăng nhập, xác định người dùng hiện tại và gọi endpoint hồ sơ để lấy dữ liệu thật từ backend Spring.
+            {/* ── RIGHT COLUMN ── */}
+            <div style={{ padding: "36px 28px 40px", display: "flex", flexDirection: "column", gap: 24 }}>
+              {/* stat card */}
+              <div
+                style={{
+                  background: "rgba(255,255,255,.03)",
+                  border: "1px solid rgba(255,255,255,.07)",
+                  borderRadius: 18,
+                  padding: "20px 22px",
+                }}
+              >
+                <p
+                  style={{
+                    fontFamily: mono,
+                    fontSize: 10,
+                    letterSpacing: "0.16em",
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,.3)",
+                    marginBottom: 16,
+                  }}
+                >
+                  Tổng quan
                 </p>
-              </article>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  {[
+                    { label: "Vai trò", value: profile?.roles.length ?? "—" },
+                    { label: "Permissions", value: profile?.permissions.length ?? "—" },
+                  ].map(({ label: lbl, value }) => (
+                    <div
+                      key={lbl}
+                      style={{
+                        background: "rgba(255,255,255,.04)",
+                        borderRadius: 12,
+                        padding: "14px 16px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontFamily: mono,
+                          fontSize: 9,
+                          letterSpacing: "0.14em",
+                          textTransform: "uppercase",
+                          color: "rgba(255,255,255,.3)",
+                          margin: "0 0 6px",
+                        }}
+                      >
+                        {lbl}
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: serif,
+                          fontSize: 32,
+                          fontWeight: 900,
+                          color: "#fff",
+                          margin: 0,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* permissions */}
+              <div
+                style={{
+                  background: "rgba(255,255,255,.03)",
+                  border: "1px solid rgba(255,255,255,.07)",
+                  borderRadius: 18,
+                  padding: "20px 22px",
+                  flex: 1,
+                }}
+              >
+                <p
+                  style={{
+                    fontFamily: mono,
+                    fontSize: 10,
+                    letterSpacing: "0.16em",
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,.3)",
+                    marginBottom: 14,
+                  }}
+                >
+                  Permissions
+                </p>
+                {isLoading ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <SkeletonLine /><SkeletonLine w="70%" /><SkeletonLine w="85%" />
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {(profile?.permissions ?? []).map((p) => (
+                      <PermissionChip key={p} label={p} />
+                    ))}
+                    {(profile?.permissions.length ?? 0) === 0 && (
+                      <span style={{ fontFamily: mono, fontSize: 12, color: "rgba(255,255,255,.22)" }}>
+                        Không có permission nào.
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* footnote */}
+              <p
+                style={{
+                  fontFamily: mono,
+                  fontSize: 10,
+                  letterSpacing: "0.1em",
+                  color: "rgba(255,255,255,.2)",
+                  lineHeight: 1.8,
+                  margin: 0,
+                  borderTop: "1px solid rgba(255,255,255,.06)",
+                  paddingTop: 16,
+                }}
+              >
+                Dữ liệu được đọc trực tiếp từ JWT và endpoint hồ sơ backend Spring.
+              </p>
             </div>
           </div>
         </div>
@@ -241,3 +548,4 @@ const CustomerProfilePageApi = () => {
 };
 
 export default CustomerProfilePageApi;
+

@@ -1,155 +1,199 @@
-import { Heart, ShoppingCart, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-
-interface FavoriteProduct {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
-  rating: number;
-  category: string;
-}
-
-const mockFavorites: FavoriteProduct[] = [
-  {
-    id: 1,
-    name: "Đô thị Commuter Pro",
-    price: 450,
-    image: "Scooter",
-    rating: 4.8,
-    category: "Đô thị di động"
-  },
-  {
-    id: 3,
-    name: "Street Beast 3000",
-    price: 750,
-    image: "Sport",
-    rating: 4.9,
-    category: "Hiệu suất đường phố"
-  }
-];
+﻿import { ArrowRight, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { favoritesAPI } from "@ebike/shared-code/api";
+import { useAuth } from "@ebike/shared-code/hooks";
+import type { Product } from "@ebike/shared-code/types";
+import { attachImageFallback, resolveProductImage } from "../utils/media";
 
 const FavoritesPage = () => {
   const navigate = useNavigate();
-  const [favorites, setFavorites] = useState<FavoriteProduct[]>(mockFavorites);
+  const { isAuthenticated, isBootstrapping } = useAuth();
+  const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRemove = (id: number) => {
-    setFavorites(favorites.filter(item => item.id !== id));
+  useEffect(() => {
+    if (isBootstrapping) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      setFavoriteProducts([]);
+      setError("Vui lòng đăng nhập để xem danh sách yêu thích.");
+      setLoading(false);
+      return;
+    }
+
+    const loadFavorites = async () => {
+      setLoading(true);
+      try {
+        const data = await favoritesAPI.list();
+        setFavoriteProducts(data);
+        setError(null);
+      } catch (fetchError) {
+        const status = (fetchError as { response?: { status?: number } }).response?.status;
+        setFavoriteProducts([]);
+        setError(status === 401 ? "Vui lòng đăng nhập để xem danh sách yêu thích." : "Không thể tải danh sách yêu thích.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadFavorites();
+  }, [isAuthenticated, isBootstrapping]);
+
+  const subtotal = useMemo(
+    () => favoriteProducts.reduce((sum, product) => sum + (product.discountPrice ?? product.price), 0),
+    [favoriteProducts]
+  );
+
+  const removeFavorite = async (productId: number) => {
+    if (!isAuthenticated) {
+      setError("Vui lòng đăng nhập để cập nhật danh sách yêu thích.");
+      return;
+    }
+
+    try {
+      await favoritesAPI.remove(productId);
+      setFavoriteProducts((items) => items.filter((product) => product.id !== productId));
+      setError(null);
+    } catch (removeError) {
+      const status = (removeError as { response?: { status?: number } }).response?.status;
+      setError(status === 401 ? "Vui lòng đăng nhập để cập nhật danh sách yêu thích." : "Không thể xóa sản phẩm khỏi yêu thích.");
+    }
   };
 
-  const handleBuyNow = (id: number) => {
-    navigate(`/product/${id}`);
+  const proceedToCheckout = () => {
+    const firstProduct = favoriteProducts[0];
+    if (!firstProduct) {
+      return;
+    }
+
+    navigate("/checkout", {
+      state: {
+        product: {
+          id: firstProduct.id,
+          name: firstProduct.name,
+          slug: firstProduct.slug,
+          price: firstProduct.discountPrice ?? firstProduct.price,
+          image: firstProduct.images?.[0],
+          categoryName: firstProduct.category?.name
+        },
+        selectedColor: "Mặc định",
+        quantity: 1
+      }
+    });
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white px-4 py-12 sm:px-6 lg:px-14">
-      <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="mb-12 text-center">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
-            <Heart className="text-orange-600" size={24} />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
-            Sản Phẩm Yêu Thích
-          </h1>
-          <p className="mt-2 text-gray-600">
-            {favorites.length} sản phẩm đã lưu
-          </p>
-        </div>
+    <div className="mx-auto min-h-screen max-w-7xl px-6 pb-24 pt-32 md:px-12">
+      <h1 className="mb-12 text-5xl font-bold tracking-tighter">
+        Danh sách <span className="text-primary">yêu thích.</span>
+      </h1>
 
-        {favorites.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 py-16">
-            <Heart className="mb-4 text-gray-300" size={48} />
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
-              Chưa có sản phẩm yêu thích
-            </h2>
-            <p className="mb-6 text-gray-600">
-              Khám phá các sản phẩm xe điện của chúng tôi
-            </p>
-            <button
-              onClick={() => navigate("/products")}
-              className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-6 py-3 font-semibold text-white transition hover:bg-orange-700"
-            >
-              Xem Sản Phẩm
-              <ArrowRight size={18} />
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {favorites.map((product) => (
-              <div
-                key={product.id}
-                className="group animate-slideInUp overflow-hidden rounded-xl border border-gray-200 bg-white transition hover:shadow-lg"
-              >
-                {/* Product Image Placeholder */}
-                <div className="relative h-48 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <div className="text-6xl opacity-20 font-bold text-gray-400">
-                    {product.image}
-                  </div>
-                  <button
-                    onClick={() => handleRemove(product.id)}
-                    className="absolute right-3 top-3 rounded-full bg-red-500 p-2 text-white transition hover:bg-red-600"
-                    title="Xóa khỏi yêu thích"
-                  >
-                    <Heart size={18} fill="currentColor" />
-                  </button>
+      <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
+        <div className="space-y-8 lg:col-span-8">
+          {loading ? (
+            <div className="rounded-2xl border border-outline-variant/10 bg-white p-8 text-center text-muted-foreground shadow-sm">
+              Đang tải danh sách yêu thích...
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low p-8 text-center text-muted-foreground shadow-sm">
+              {error}
+            </div>
+          ) : favoriteProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center space-y-4 rounded-2xl border-2 border-dashed border-outline-variant/30 p-8 text-center">
+              <p className="text-muted-foreground">Bạn chưa lưu sản phẩm yêu thích nào.</p>
+              <Link to="/products" className="font-bold text-primary hover:underline">
+                Khám phá sản phẩm
+              </Link>
+            </div>
+          ) : (
+            favoriteProducts.map((product) => (
+              <div key={product.id} className="flex flex-col gap-8 rounded-2xl border border-outline-variant/10 bg-white p-8 shadow-sm sm:flex-row">
+                <div className="aspect-square w-full overflow-hidden rounded-xl bg-surface-container-low sm:w-48">
+                  <img
+                    src={resolveProductImage(product.images?.[0])}
+                    alt={product.name}
+                    className="h-full w-full object-cover"
+                    onError={(event) => attachImageFallback(event, product.name)}
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
 
-                {/* Product Info */}
-                <div className="p-4">
-                  <p className="text-xs font-semibold uppercase text-orange-600 mb-1">
-                    {product.category}
-                  </p>
-                  <h3 className="mb-2 font-bold text-gray-900 line-clamp-2">
-                    {product.name}
-                  </h3>
-
-                  {/* Rating */}
-                  <div className="mb-4 flex items-center gap-1">
-                    <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i}>★</span>
-                      ))}
+                <div className="flex flex-grow flex-col justify-between py-2">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="mb-1 text-2xl font-bold">{product.name}</h3>
+                      <p className="text-sm text-muted-foreground">{product.category?.name || "Xe điện"}</p>
                     </div>
-                    <span className="text-xs text-gray-600">
-                      ({product.rating})
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFavorite(product.id)}
+                      className="text-muted-foreground transition-colors hover:text-error"
+                      aria-label={`Xóa ${product.name} khỏi yêu thích`}
+                    >
+                      <Trash2 size={20} />
+                    </button>
                   </div>
 
-                  {/* Price */}
-                  <div className="mb-4 flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-orange-600">
-                      {product.price.toLocaleString()}đ
+                  <div className="mt-8 flex items-end justify-between sm:mt-0">
+                    <Link to={`/product/${product.slug}`} className="font-bold text-primary hover:underline">
+                      Xem chi tiết
+                    </Link>
+                    <span className="text-2xl font-bold text-primary">
+                      {(product.discountPrice ?? product.price).toLocaleString("vi-VN")}đ
                     </span>
                   </div>
-
-                  {/* Button */}
-                  <button
-                    onClick={() => handleBuyNow(product.id)}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white transition hover:bg-orange-700 active:scale-95"
-                  >
-                    <ShoppingCart size={18} />
-                    Mua Ngay
-                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
 
-        {/* Continue Shopping */}
-        <div className="mt-12 text-center">
-          <button
-            onClick={() => navigate("/products")}
-            className="inline-flex items-center gap-2 text-orange-600 font-semibold transition hover:gap-3"
-          >
-            Tiếp tục mua sắm
-            <ArrowRight size={18} />
-          </button>
+          <div className="flex flex-col items-center justify-center space-y-4 rounded-2xl border-2 border-dashed border-outline-variant/30 p-8 text-center">
+            <p className="text-muted-foreground">Muốn thêm mẫu xe khác vào danh sách yêu thích?</p>
+            <Link to="/products" className="font-bold text-primary hover:underline">
+              Tiếp tục mua sắm
+            </Link>
+          </div>
+        </div>
+
+        <div className="lg:col-span-4">
+          <div className="sticky top-32 rounded-2xl bg-surface-container-low p-8">
+            <h3 className="mb-8 text-xl font-bold">Tóm tắt yêu thích</h3>
+            <div className="mb-8 space-y-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Số sản phẩm</span>
+                <span className="font-bold">{favoriteProducts.length}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Tạm tính</span>
+                <span className="font-bold">{subtotal.toLocaleString("vi-VN")}đ</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Ghi chú</span>
+                <span className="font-bold text-primary">Chọn 1 sản phẩm để đặt</span>
+              </div>
+              <div className="my-4 h-px bg-outline-variant/20" />
+              <div className="flex items-baseline justify-between">
+                <span className="text-lg font-bold">Tổng</span>
+                <span className="text-3xl font-bold tracking-tighter">{subtotal.toLocaleString("vi-VN")}đ</span>
+              </div>
+            </div>
+
+            <button onClick={proceedToCheckout} disabled={favoriteProducts.length === 0} className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60">
+              Tiếp tục đặt hàng
+              <ArrowRight size={20} />
+            </button>
+
+            <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">
+              Giá đã bao gồm VAT. Phí đăng ký biển số sẽ được tính toán ở bước tiếp theo.
+            </p>
+          </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 };
 
