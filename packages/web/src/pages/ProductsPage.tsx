@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight, Filter, Search, X } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { productAPI } from "@ebike/shared-code/api";
 import type { Product, ProductFilter, ProductFilterOptions } from "@ebike/shared-code/types";
@@ -39,6 +39,7 @@ const ProductsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState(searchParams.get("q") || "");
   const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get("q") || "");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const selectedCategoryId = searchParams.get("category") ? Number(searchParams.get("category")) : null;
   const selectedPriceKey = (searchParams.get("price") as (typeof PRICE_OPTIONS)[number]["value"]) || "all";
@@ -164,19 +165,40 @@ const ProductsPage = () => {
     [paginatedProducts]
   );
 
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (debouncedQuery) count += 1;
+    if (selectedCategoryId) count += 1;
+    if (selectedPriceKey !== "all") count += 1;
+    if (selectedBrand) count += 1;
+    if (selectedBattery) count += 1;
+    if (minRangeKm != null || maxRangeKm != null) count += 1;
+    if (inStockOnly) count += 1;
+    return count;
+  }, [
+    debouncedQuery,
+    selectedCategoryId,
+    selectedPriceKey,
+    selectedBrand,
+    selectedBattery,
+    minRangeKm,
+    maxRangeKm,
+    inStockOnly
+  ]);
+
   return (
-    <div className="pt-20">
-      <section className="relative h-[60vh] overflow-hidden">
+    <div className="page-offset-header">
+      <section className="relative h-[40vh] min-h-[280px] overflow-hidden sm:h-[50vh] md:h-[60vh]">
         <img
           src="https://images.unsplash.com/photo-1615172282427-9a57ef2d142e?auto=format&fit=crop&q=80&w=2000"
           alt="Collection"
           className="absolute inset-0 h-full w-full object-cover"
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 flex items-center bg-gradient-to-r from-black/60 to-transparent px-6 md:px-12">
+        <div className="absolute inset-0 flex items-center bg-gradient-to-r from-black/60 to-transparent px-4 sm:px-6 md:px-12">
           <div className="mx-auto w-full max-w-7xl">
             <span className="mb-4 block text-sm font-bold tracking-widest text-primary">2026 COLLECTION</span>
-            <h1 className="mb-6 text-6xl font-bold leading-none tracking-tighter text-white md:text-8xl">
+            <h1 className="heading-display mb-4 text-white sm:mb-6">
               Precision
               <br />
               <span className="text-primary">Engineering.</span>
@@ -188,9 +210,37 @@ const ProductsPage = () => {
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl px-6 py-16 md:px-12">
-        <div className="flex flex-col gap-12 lg:flex-row">
-          <aside className="w-full flex-shrink-0 space-y-10 lg:w-72">
+      <div className="container-responsive py-10 sm:py-16">
+        <div className="mb-6 flex items-center justify-between gap-3 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="btn-outline w-full justify-center py-2.5 text-sm"
+            aria-expanded={filtersOpen}
+          >
+            <Filter className="h-4 w-4" />
+            {filtersOpen ? "Ẩn bộ lọc" : "Bộ lọc"}
+            {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
+          <aside
+            className={`w-full flex-shrink-0 space-y-8 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-5 lg:block lg:w-72 lg:space-y-10 lg:border-0 lg:bg-transparent lg:p-0 ${
+              filtersOpen ? "block" : "hidden"
+            }`}
+          >
+            <div className="flex items-center justify-between lg:hidden">
+              <h3 className="text-sm font-bold uppercase tracking-wider">Bộ lọc</h3>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                className="rounded-lg p-2 text-muted-foreground hover:bg-surface-container-low"
+                aria-label="Đóng bộ lọc"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
             <div>
               <h3 className="mb-6 text-sm font-bold uppercase tracking-wider">Tìm kiếm</h3>
               <div className="relative">
@@ -348,7 +398,7 @@ const ProductsPage = () => {
           <main className="flex-grow">
             <div className="mb-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h2 className="text-3xl font-bold">Tất cả sản phẩm</h2>
+                <h2 className="heading-section">Tất cả sản phẩm</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Hiển thị {displayProducts.length} / {products.length} mẫu xe
                 </p>
@@ -356,7 +406,7 @@ const ProductsPage = () => {
               <select
                 value={sortBy}
                 onChange={(event) => updateParams({ sort: event.target.value === "default" ? null : event.target.value })}
-                className="rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-bold focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-bold focus:border-primary focus:outline-none sm:w-auto"
               >
                 <option value="default">Mặc định</option>
                 <option value="newest">Mới nhất</option>

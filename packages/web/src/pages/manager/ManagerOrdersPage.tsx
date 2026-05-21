@@ -127,7 +127,7 @@ const ManagerOrdersPage = () => {
             />
           </label>
 
-          <div className="flex items-end gap-2">
+          <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
             <button
               type="button"
               onClick={resetFilters}

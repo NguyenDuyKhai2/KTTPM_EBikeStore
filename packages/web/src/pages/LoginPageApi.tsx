@@ -121,7 +121,7 @@ const LoginPageApi = () => {
               <Zap className="h-4 w-4 fill-primary" />
               KINETIC Account
             </div>
-            <h2 className="font-headline text-4xl font-bold tracking-tight text-foreground">Chào mừng quay lại</h2>
+            <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Chào mừng quay lại</h2>
             <p className="mt-3 text-base leading-7 text-muted-foreground">
               Nhập thông tin tài khoản để truy cập khu vực khách hàng hoặc dashboard quản trị.
             </p>

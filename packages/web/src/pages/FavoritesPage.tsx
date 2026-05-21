@@ -87,7 +87,7 @@ const FavoritesPage = () => {
   };
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl px-6 pb-24 pt-32 md:px-12">
+    <div className="container-responsive page-offset-header min-h-screen pb-24">
       <h1 className="mb-12 text-5xl font-bold tracking-tighter">
         Danh sách <span className="text-primary">yêu thích.</span>
       </h1>

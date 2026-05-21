@@ -301,7 +301,7 @@ const CheckoutPage = () => {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-screen-2xl px-6 pb-24 pt-32 md:px-12">
+    <div className="container-responsive page-offset-header mx-auto min-h-screen max-w-screen-2xl pb-24">
       <div className="mb-16">
         <span className="mono-label mb-4 block text-primary">Secure Checkout</span>
         <h1 className="text-5xl font-bold tracking-tighter md:text-6xl">

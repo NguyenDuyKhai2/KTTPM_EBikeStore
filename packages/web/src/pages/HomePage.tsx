@@ -98,10 +98,10 @@ const HomePage = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-background/78 via-background/36 to-transparent" />
         </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-7xl px-6 md:px-12">
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 md:px-12">
           <div className="max-w-3xl">
             <p className="mono-label mb-4 text-primary animate-fade-in">The Future of Personal Mobility</p>
-            <h1 className="mb-8 text-6xl font-bold leading-[0.9] tracking-tighter md:text-8xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+            <h1 className="heading-display mb-6 sm:mb-8 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
               Khai phá Kỷ nguyên <br /> <span className="text-primary">Di chuyển Xanh</span>
             </h1>
             <p className="mb-10 max-w-md text-lg leading-relaxed text-muted-foreground animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
@@ -126,7 +126,7 @@ const HomePage = () => {
       <section className="bg-surface-container-lowest px-6 py-24 md:px-12">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
-            <h2 className="mb-4 text-4xl font-bold">Sản phẩm nổi bật của Kinetic</h2>
+            <h2 className="heading-section mb-4">Sản phẩm nổi bật của Kinetic</h2>
             <div className="mx-auto h-1 w-20 bg-primary" />
           </div>
 
@@ -224,7 +224,7 @@ const HomePage = () => {
       <section className="bg-surface-container-lowest px-6 py-24 md:px-12">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
-            <h2 className="mb-4 text-4xl font-bold">Tại sao chọn Kinetic?</h2>
+            <h2 className="heading-section mb-4">Tại sao chọn Kinetic?</h2>
             <p className="text-lg text-muted-foreground">Những đặc điểm vượt trội giúp bạn di chuyển thông minh</p>
           </div>
 
@@ -272,7 +272,7 @@ const HomePage = () => {
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 flex items-end justify-between">
               <div>
-                <h2 className="mb-4 text-4xl font-bold">Khám phá bộ sưu tập</h2>
+                <h2 className="heading-section mb-4">Khám phá bộ sưu tập</h2>
                 <div className="h-1 w-20 bg-primary" />
               </div>
               <Link to="/products" className="hidden text-sm font-bold text-primary hover:text-primary/80 md:block">
@@ -342,7 +342,7 @@ const HomePage = () => {
       <section className="bg-surface-container-lowest px-6 py-24 md:px-12">
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 text-center">
-            <h2 className="mb-4 text-4xl font-bold">Khách hàng nói gì về Kinetic?</h2>
+            <h2 className="heading-section mb-4">Khách hàng nói gì về Kinetic?</h2>
             <p className="text-lg text-muted-foreground">Những bình luận thực từ những người dùng hài lòng</p>
           </div>
 
@@ -395,7 +395,7 @@ const HomePage = () => {
         </div>
 
         <div className="relative mx-auto max-w-4xl text-center text-white">
-          <h2 className="mb-6 text-4xl font-bold md:text-5xl">Sẵn sàng cho cuộc hành trình của bạn?</h2>
+          <h2 className="heading-section mb-6">Sẵn sàng cho cuộc hành trình của bạn?</h2>
           <p className="mb-10 text-lg text-white/80">
             Tham gia hàng nghìn khách hàng đã trải nghiệm tương lai của di chuyển cá nhân
           </p>
