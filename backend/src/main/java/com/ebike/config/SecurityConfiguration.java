@@ -48,6 +48,7 @@ public class SecurityConfiguration {
                     "/auth/login/**",
                     "/auth/logout",
                     "/auth/session",
+                    "/auth/email-registered",
                     "/health/**",
                     "/media/**",
                     "/error"
@@ -63,9 +64,17 @@ public class SecurityConfiguration {
                     PermissionConstants.Customer.ORDER_VIEW_OWN,
                     PermissionConstants.OrderManagement.ORDER_VIEW_ALL
                 )
+                .requestMatchers(HttpMethod.GET, "/orders/*/shipment/timeline").hasAnyAuthority(
+                    PermissionConstants.Customer.ORDER_VIEW_OWN,
+                    PermissionConstants.OrderManagement.ORDER_VIEW_ALL
+                )
                 .requestMatchers(HttpMethod.POST, "/orders").hasAuthority(PermissionConstants.Guest.ORDER_CREATE)
                 .requestMatchers(HttpMethod.POST, "/orders/*/cancellation-request").hasAuthority(PermissionConstants.Customer.ORDER_CANCEL_OWN)
                 .requestMatchers(HttpMethod.PATCH, "/orders/*/status").hasAuthority(PermissionConstants.OrderManagement.ORDER_UPDATE_STATUS)
+                .requestMatchers(HttpMethod.PATCH, "/orders/*/shipment").hasAnyAuthority(
+                    PermissionConstants.OrderManagement.ORDER_UPDATE_STATUS,
+                    PermissionConstants.OrderManagement.SHIPMENT_MANAGE
+                )
                 .requestMatchers(HttpMethod.GET, "/favorites").hasAuthority(PermissionConstants.Customer.FAVORITE_VIEW)
                 .requestMatchers(HttpMethod.POST, "/favorites").hasAuthority(PermissionConstants.Customer.FAVORITE_UPDATE)
                 .requestMatchers(HttpMethod.DELETE, "/favorites/*").hasAuthority(PermissionConstants.Customer.FAVORITE_UPDATE)
@@ -77,7 +86,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST, "/users/**").hasAuthority(PermissionConstants.Customer.PROFILE_UPDATE)
                 .requestMatchers(HttpMethod.PUT, "/users/**").hasAuthority(PermissionConstants.Customer.PROFILE_UPDATE)
                 .requestMatchers(HttpMethod.POST, "/admin/product-images").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_CREATE)
-                .requestMatchers(HttpMethod.GET, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
+                .requestMatchers(HttpMethod.GET, "/admin/product-images", "/admin/product-images/**")
+                    .hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
                 .requestMatchers(HttpMethod.PUT, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
                 .requestMatchers(HttpMethod.DELETE, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_DELETE)
                 .requestMatchers("/customer/**").hasAnyAuthority(

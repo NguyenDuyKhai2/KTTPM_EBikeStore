@@ -1,6 +1,6 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Zap } from "lucide-react";
 import { useAuth } from "@ebike/shared-code/hooks";
 
@@ -12,6 +12,8 @@ type LoginFormData = {
 
 const LoginPageApi = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as { from?: { pathname: string; state?: unknown } } | undefined)?.from;
   const { login, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -56,6 +58,11 @@ const LoginPageApi = () => {
         usernameOrEmail: formData.usernameOrEmail.trim(),
         password: formData.password
       }).unwrap();
+
+      if (returnTo?.pathname && !result.roles.includes("ADMIN") && !result.roles.includes("MANAGER")) {
+        navigate(returnTo.pathname, { state: returnTo.state, replace: true });
+        return;
+      }
 
       navigate(
         result.roles.includes("ADMIN")

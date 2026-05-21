@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -49,6 +50,11 @@ public class AuthController {
 
     public AuthController(AuthenticationService authenticationService) {
         this.authenticationService = authenticationService;
+    }
+
+    @GetMapping("/email-registered")
+    public Map<String, Boolean> isEmailRegistered(@RequestParam String email) {
+        return Map.of("registered", authenticationService.isEmailRegistered(email));
     }
 
     @PostMapping("/register")
