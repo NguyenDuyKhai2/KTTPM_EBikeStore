@@ -1,11 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Search, SlidersHorizontal } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronRight, Search } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { productAPI } from "@ebike/shared-code/api";
-import type { Product, ProductFilter } from "@ebike/shared-code/types";
+import type { Product, ProductFilter, ProductFilterOptions } from "@ebike/shared-code/types";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
 
-type SortKey = "default" | "price-asc" | "price-desc";
+type SortKey = "default" | "price-asc" | "price-desc" | "name-asc" | "name-desc" | "newest";
+
+const BATTERY_LABELS: Record<string, string> = {
+  LEAD_ACID: "Pin axit chì",
+  LITHIUM_ION: "Pin lithium"
+};
+
+const SORT_TO_API: Record<SortKey, ProductFilter["sort"] | undefined> = {
+  default: undefined,
+  "price-asc": "price_asc",
+  "price-desc": "price_desc",
+  "name-asc": "name_asc",
+  "name-desc": "name_desc",
+  newest: "newest"
+};
 
 const PAGE_SIZE = 9;
 
@@ -17,26 +31,56 @@ const PRICE_OPTIONS = [
 ] as const;
 
 const ProductsPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [allCategories, setAllCategories] = useState<Array<{ id: number; name: string }>>([]);
+  const [filterOptions, setFilterOptions] = useState<ProductFilterOptions>({ brands: [], batteryTypes: [], vehicleTypes: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [selectedPriceKey, setSelectedPriceKey] = useState<(typeof PRICE_OPTIONS)[number]["value"]>("all");
-  const [sortBy, setSortBy] = useState<SortKey>("default");
-  const [searchText, setSearchText] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchText, setSearchText] = useState(searchParams.get("q") || "");
+  const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get("q") || "");
+
+  const selectedCategoryId = searchParams.get("category") ? Number(searchParams.get("category")) : null;
+  const selectedPriceKey = (searchParams.get("price") as (typeof PRICE_OPTIONS)[number]["value"]) || "all";
+  const selectedBrand = searchParams.get("brand") || "";
+  const selectedBattery = searchParams.get("battery") || "";
+  const minRangeKm = searchParams.get("minRange") ? Number(searchParams.get("minRange")) : undefined;
+  const maxRangeKm = searchParams.get("maxRange") ? Number(searchParams.get("maxRange")) : undefined;
+  const inStockOnly = searchParams.get("inStock") === "1";
+  const sortBy = (searchParams.get("sort") as SortKey) || "default";
+  const currentPage = Math.max(1, Number(searchParams.get("page") || "1"));
+
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const next = new URLSearchParams(searchParams);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value == null || value === "") {
+          next.delete(key);
+        } else {
+          next.set(key, value);
+        }
+      });
+      if (!updates.page) {
+        next.delete("page");
+      }
+      setSearchParams(next);
+    },
+    [searchParams, setSearchParams]
+  );
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedQuery(searchText.trim()), 350);
+    const timer = window.setTimeout(() => {
+      const trimmed = searchText.trim();
+      setDebouncedQuery(trimmed);
+      updateParams({ q: trimmed || null });
+    }, 350);
     return () => window.clearTimeout(timer);
-  }, [searchText]);
+  }, [searchText, updateParams]);
 
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadMeta = async () => {
       try {
-        const items = await productAPI.list();
+        const [items, options] = await Promise.all([productAPI.list(), productAPI.filterOptions()]);
         const uniqueCategories = Array.from(
           new Map(
             items
@@ -45,11 +89,12 @@ const ProductsPage = () => {
           ).values()
         );
         setAllCategories(uniqueCategories);
+        setFilterOptions(options);
       } catch {
+        // ignore meta load errors
       }
     };
-
-    void loadCategories();
+    void loadMeta();
   }, []);
 
   useEffect(() => {
@@ -58,7 +103,13 @@ const ProductsPage = () => {
       query: debouncedQuery || undefined,
       categoryId: selectedCategoryId ?? undefined,
       minPrice: selectedPrice?.minPrice,
-      maxPrice: selectedPrice?.maxPrice
+      maxPrice: selectedPrice?.maxPrice,
+      brand: selectedBrand || undefined,
+      batteryType: selectedBattery || undefined,
+      minRangeKm,
+      maxRangeKm,
+      inStock: inStockOnly || undefined,
+      sort: SORT_TO_API[sortBy]
     };
 
     const loadProducts = async () => {
@@ -76,33 +127,25 @@ const ProductsPage = () => {
     };
 
     void loadProducts();
-  }, [debouncedQuery, selectedCategoryId, selectedPriceKey]);
+  }, [
+    debouncedQuery,
+    selectedCategoryId,
+    selectedPriceKey,
+    selectedBrand,
+    selectedBattery,
+    minRangeKm,
+    maxRangeKm,
+    inStockOnly,
+    sortBy
+  ]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedQuery, selectedCategoryId, selectedPriceKey, sortBy]);
-
-  const sortedProducts = useMemo(() => {
-    const nextProducts = [...products];
-    if (sortBy === "price-asc") {
-      nextProducts.sort((a, b) => (a.discountPrice ?? a.price) - (b.discountPrice ?? b.price));
-    }
-    if (sortBy === "price-desc") {
-      nextProducts.sort((a, b) => (b.discountPrice ?? b.price) - (a.discountPrice ?? a.price));
-    }
-    return nextProducts;
-  }, [products, sortBy]);
-
-  const totalPages = Math.max(1, Math.ceil(sortedProducts.length / PAGE_SIZE));
-
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
+  const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
 
   const paginatedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    return sortedProducts.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [currentPage, sortedProducts]);
+    const startIndex = (safePage - 1) * PAGE_SIZE;
+    return products.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [safePage, products]);
 
   const displayProducts = useMemo(
     () =>
@@ -168,7 +211,7 @@ const ProductsPage = () => {
                   <input
                     type="radio"
                     checked={selectedCategoryId === null}
-                    onChange={() => setSelectedCategoryId(null)}
+                    onChange={() => updateParams({ category: null })}
                     className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
                   />
                   <span className="text-muted-foreground">Tất cả</span>
@@ -178,7 +221,7 @@ const ProductsPage = () => {
                     <input
                       type="radio"
                       checked={selectedCategoryId === category.id}
-                      onChange={() => setSelectedCategoryId(category.id)}
+                      onChange={() => updateParams({ category: String(category.id) })}
                       className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
                     />
                     <span className="text-muted-foreground">{category.name}</span>
@@ -196,7 +239,7 @@ const ProductsPage = () => {
                       type="radio"
                       name="price-range"
                       checked={selectedPriceKey === option.value}
-                      onChange={() => setSelectedPriceKey(option.value)}
+                      onChange={() => updateParams({ price: option.value === "all" ? null : option.value })}
                       className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
                     />
                     <span className="text-muted-foreground">{option.label}</span>
@@ -204,6 +247,102 @@ const ProductsPage = () => {
                 ))}
               </div>
             </div>
+
+            {filterOptions.brands.length > 0 && (
+              <div>
+                <h3 className="mb-6 text-sm font-bold uppercase tracking-wider">Hãng</h3>
+                <div className="space-y-3">
+                  <label className="flex cursor-pointer items-center gap-3">
+                    <input
+                      type="radio"
+                      name="brand-filter"
+                      checked={selectedBrand === ""}
+                      onChange={() => updateParams({ brand: null })}
+                      className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span className="text-muted-foreground">Tất cả</span>
+                  </label>
+                  {filterOptions.brands.map((brand) => (
+                    <label key={brand} className="flex cursor-pointer items-center gap-3">
+                      <input
+                        type="radio"
+                        name="brand-filter"
+                        checked={selectedBrand === brand}
+                        onChange={() => updateParams({ brand })}
+                        className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
+                      />
+                      <span className="text-muted-foreground">{brand}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {filterOptions.batteryTypes.length > 0 && (
+              <div>
+                <h3 className="mb-6 text-sm font-bold uppercase tracking-wider">Loại pin</h3>
+                <div className="space-y-3">
+                  <label className="flex cursor-pointer items-center gap-3">
+                    <input
+                      type="radio"
+                      name="battery-filter"
+                      checked={selectedBattery === ""}
+                      onChange={() => updateParams({ battery: null })}
+                      className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span className="text-muted-foreground">Tất cả</span>
+                  </label>
+                  {filterOptions.batteryTypes.map((battery) => (
+                    <label key={battery} className="flex cursor-pointer items-center gap-3">
+                      <input
+                        type="radio"
+                        name="battery-filter"
+                        checked={selectedBattery === battery}
+                        onChange={() => updateParams({ battery })}
+                        className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
+                      />
+                      <span className="text-muted-foreground">{BATTERY_LABELS[battery] || battery}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h3 className="mb-4 text-sm font-bold uppercase tracking-wider">Quãng đường (km)</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Tối thiểu"
+                  value={minRangeKm ?? ""}
+                  onChange={(event) =>
+                    updateParams({ minRange: event.target.value ? event.target.value : null })
+                  }
+                  className="input-base"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Tối đa"
+                  value={maxRangeKm ?? ""}
+                  onChange={(event) =>
+                    updateParams({ maxRange: event.target.value ? event.target.value : null })
+                  }
+                  className="input-base"
+                />
+              </div>
+            </div>
+
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={inStockOnly}
+                onChange={(event) => updateParams({ inStock: event.target.checked ? "1" : null })}
+                className="h-5 w-5 rounded border-outline-variant text-primary focus:ring-primary"
+              />
+              <span className="text-muted-foreground">Chỉ hiện còn hàng</span>
+            </label>
           </aside>
 
           <main className="flex-grow">
@@ -211,24 +350,21 @@ const ProductsPage = () => {
               <div>
                 <h2 className="text-3xl font-bold">Tất cả sản phẩm</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Hiển thị {displayProducts.length} / {sortedProducts.length} mẫu xe
+                  Hiển thị {displayProducts.length} / {products.length} mẫu xe
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 rounded-lg border border-outline-variant px-4 py-2 text-sm font-bold text-muted-foreground">
-                  <SlidersHorizontal size={16} />
-                  Filter API
-                </div>
-                <select
-                  value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value as SortKey)}
-                  className="rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-bold focus:border-primary focus:outline-none"
-                >
-                  <option value="default">Mặc định</option>
-                  <option value="price-asc">Giá tăng dần</option>
-                  <option value="price-desc">Giá giảm dần</option>
-                </select>
-              </div>
+              <select
+                value={sortBy}
+                onChange={(event) => updateParams({ sort: event.target.value === "default" ? null : event.target.value })}
+                className="rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-bold focus:border-primary focus:outline-none"
+              >
+                <option value="default">Mặc định</option>
+                <option value="newest">Mới nhất</option>
+                <option value="price-asc">Giá tăng dần</option>
+                <option value="price-desc">Giá giảm dần</option>
+                <option value="name-asc">Tên A-Z</option>
+                <option value="name-desc">Tên Z-A</option>
+              </select>
             </div>
 
             {loading ? (
@@ -295,20 +431,20 @@ const ProductsPage = () => {
                   <button
                     key={page}
                     type="button"
-                    onClick={() => setCurrentPage(page)}
+                    onClick={() => updateParams({ page: String(page) })}
                     className={`h-10 w-10 rounded-lg font-bold transition-colors ${
-                      currentPage === page ? "bg-primary text-white" : "hover:bg-surface-container-low"
+                      safePage === page ? "bg-primary text-white" : "hover:bg-surface-container-low"
                     }`}
                     aria-label={`Go to page ${page}`}
-                    aria-current={currentPage === page ? "page" : undefined}
+                    aria-current={safePage === page ? "page" : undefined}
                   >
                     {page}
                   </button>
                 ))}
                 <button
                   type="button"
-                  onClick={() => setCurrentPage((page) => Math.min(page + 1, totalPages))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => updateParams({ page: String(Math.min(safePage + 1, totalPages)) })}
+                  disabled={safePage === totalPages}
                   className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                   aria-label="Go to next page"
                 >
