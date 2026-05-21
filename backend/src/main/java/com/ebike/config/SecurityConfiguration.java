@@ -53,6 +53,15 @@ public class SecurityConfiguration {
                     "/error"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/products/**").hasAuthority(PermissionConstants.Guest.PRODUCT_VIEW)
+                .requestMatchers(HttpMethod.POST, "/products/*/reviews").hasAuthority(PermissionConstants.Customer.REVIEW_CREATE)
+                .requestMatchers(HttpMethod.PUT, "/reviews/*").hasAnyAuthority(
+                    PermissionConstants.Customer.REVIEW_CREATE,
+                    PermissionConstants.ProductManagement.REVIEW_MODERATE
+                )
+                .requestMatchers(HttpMethod.DELETE, "/reviews/*").hasAnyAuthority(
+                    PermissionConstants.Customer.REVIEW_CREATE,
+                    PermissionConstants.ProductManagement.REVIEW_MODERATE
+                )
                 .requestMatchers(HttpMethod.GET, "/showrooms").hasAuthority(PermissionConstants.Guest.PRODUCT_VIEW)
                 .requestMatchers(HttpMethod.POST, "/chatbot/ask").hasAuthority(PermissionConstants.ChatbotManagement.CHATBOT_USE)
                 .requestMatchers(HttpMethod.POST, "/chatbot/debug").hasAuthority(PermissionConstants.ChatbotManagement.CHATBOT_CONFIGURE)

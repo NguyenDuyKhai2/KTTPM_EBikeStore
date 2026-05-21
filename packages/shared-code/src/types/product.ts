@@ -5,10 +5,23 @@ export interface Category {
 }
 
 export interface Review {
-  id: string;
+  id: number;
+  productId?: number;
+  productSlug?: string;
+  userId?: number;
+  username?: string;
   rating: number;
-  comment: string;
+  title?: string | null;
+  comment?: string | null;
   authorName: string;
+  createdAt?: string;
+  editableByCurrentUser?: boolean;
+}
+
+export interface ReviewRequest {
+  rating: number;
+  title?: string;
+  comment?: string;
 }
 
 export interface Product {

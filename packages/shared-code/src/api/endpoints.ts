@@ -7,12 +7,18 @@ export const API_ENDPOINTS = {
     session: "/auth/session",
     refresh: "/auth/refresh",
     profile: "/auth/profile",
+    password: "/auth/change-password",
     userFromToken: "/auth/user-from-token"
   },
   products: {
     list: "/products",
     detail: (id: string) => `/products/${id}`,
-    search: "/products/search"
+    search: "/products/search",
+    reviews: (slug: string) => `/products/${slug}/reviews`
+  },
+  reviews: {
+    update: (reviewId: number | string) => `/reviews/${reviewId}`,
+    remove: (reviewId: number | string) => `/reviews/${reviewId}`
   },
   favorites: {
     list: "/favorites",

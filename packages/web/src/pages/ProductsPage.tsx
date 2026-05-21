@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Search, SlidersHorizontal } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ChevronRight, Heart, Loader2, Search, SlidersHorizontal } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { productAPI } from "@ebike/shared-code/api";
+import { useAuth, useFavorites } from "@ebike/shared-code/hooks";
 import type { Product, ProductFilter } from "@ebike/shared-code/types";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
 
@@ -17,6 +18,9 @@ const PRICE_OPTIONS = [
 ] as const;
 
 const ProductsPage = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { favoriteIdSet, isPending, toggleFavorite, error: favoriteError } = useFavorites();
   const [products, setProducts] = useState<Product[]>([]);
   const [allCategories, setAllCategories] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -108,9 +112,12 @@ const ProductsPage = () => {
     () =>
       paginatedProducts.map((item, index) => ({
         id: item.slug || String(item.id),
+        productId: item.id,
         name: item.name,
+        slug: item.slug,
         type: item.category?.name || "E-BIKE",
         price: `${(item.discountPrice ?? item.price).toLocaleString("vi-VN")}đ`,
+        priceValue: item.discountPrice ?? item.price,
         image:
           item.images?.[0] ||
           "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&q=80&w=600",
@@ -120,6 +127,15 @@ const ProductsPage = () => {
       })),
     [paginatedProducts]
   );
+
+  const handleFavoriteClick = async (productId: number) => {
+    if (!isAuthenticated) {
+      navigate("/auth");
+      return;
+    }
+
+    await toggleFavorite(productId);
+  };
 
   return (
     <div className="pt-20">
@@ -238,6 +254,13 @@ const ProductsPage = () => {
             ) : displayProducts.length === 0 ? (
               <div className="py-16 text-center text-muted-foreground">Không có sản phẩm phù hợp với bộ lọc API hiện tại.</div>
             ) : (
+              <>
+                {favoriteError ? (
+                  <div className="mb-6 rounded-2xl border border-outline-variant/15 bg-surface-container-low px-4 py-3 text-sm text-muted-foreground">
+                    {favoriteError}
+                  </div>
+                ) : null}
+
               <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
                 {displayProducts.map((product) => (
                   <div
@@ -252,6 +275,34 @@ const ProductsPage = () => {
                         onError={(event) => attachImageFallback(event, product.name)}
                         referrerPolicy="no-referrer"
                       />
+                      <button
+                        type="button"
+                        onClick={() => void handleFavoriteClick(product.productId)}
+                        disabled={isPending(product.productId)}
+                        className={`absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border transition-all ${
+                          favoriteIdSet.has(product.productId)
+                            ? "border-primary bg-primary text-white shadow-lg shadow-primary/25"
+                            : "border-white/80 bg-white/90 text-foreground hover:border-primary hover:text-primary"
+                        } disabled:cursor-not-allowed disabled:opacity-70`}
+                        aria-label={
+                          favoriteIdSet.has(product.productId)
+                            ? `Bỏ yêu thích ${product.name}`
+                            : `Thêm ${product.name} vào yêu thích`
+                        }
+                        title={
+                          isAuthenticated
+                            ? favoriteIdSet.has(product.productId)
+                              ? "Bỏ yêu thích"
+                              : "Thêm vào yêu thích"
+                            : "Đăng nhập để dùng danh sách yêu thích"
+                        }
+                      >
+                        {isPending(product.productId) ? (
+                          <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                          <Heart size={18} fill={favoriteIdSet.has(product.productId) ? "currentColor" : "none"} />
+                        )}
+                      </button>
                       {product.badge ? (
                         <span className="absolute left-4 top-4 rounded-full bg-black px-3 py-1 text-[10px] font-bold tracking-widest text-white">
                           {product.badge}
@@ -287,6 +338,7 @@ const ProductsPage = () => {
                   </div>
                 ))}
               </div>
+              </>
             )}
 
             {totalPages > 1 ? (

@@ -9,11 +9,15 @@ const CustomerProfilePage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isBootstrapping, logout } = useAuth();
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
-  const [form, setForm] = useState({ firstName: "", lastName: "" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "" });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [error, setError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [success, setSuccess] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   useEffect(() => {
     if (!isBootstrapping && !isAuthenticated) {
@@ -38,7 +42,8 @@ const CustomerProfilePage = () => {
         setProfile(response);
         setForm({
           firstName: response.firstName ?? "",
-          lastName: response.lastName ?? ""
+          lastName: response.lastName ?? "",
+          email: response.email ?? ""
         });
       } catch (loadError) {
         if (mounted) {
@@ -72,7 +77,8 @@ const CustomerProfilePage = () => {
     try {
       const response = await authAPI.updateProfile({
         firstName: form.firstName.trim(),
-        lastName: form.lastName.trim()
+        lastName: form.lastName.trim(),
+        email: form.email.trim()
       });
       setProfile(response);
       setSuccess("Đã cập nhật hồ sơ.");
@@ -80,6 +86,37 @@ const CustomerProfilePage = () => {
       setError(saveError instanceof Error ? saveError.message : "Không thể cập nhật hồ sơ.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPasswordSaving(true);
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    const currentPassword = passwordForm.currentPassword.trim();
+    const newPassword = passwordForm.newPassword.trim();
+    const confirmPassword = passwordForm.confirmPassword.trim();
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("Vui lòng nhập đầy đủ thông tin mật khẩu.");
+      setPasswordSaving(false);
+      return;
+    }
+
+    try {
+      await authAPI.changePassword({
+        currentPassword,
+        newPassword,
+        confirmPassword
+      });
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordSuccess("Đã đổi mật khẩu.");
+    } catch (changeError) {
+      setPasswordError(changeError instanceof Error ? changeError.message : "Không thể đổi mật khẩu.");
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -123,6 +160,15 @@ const CustomerProfilePage = () => {
                     />
                   </label>
                 </div>
+                <label className="space-y-2 block">
+                  <span className="text-sm font-semibold text-muted-foreground">Email</span>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                    className="input-base"
+                  />
+                </label>
                 <div className="flex flex-wrap gap-3">
                   <button type="submit" disabled={saving} className="btn-primary disabled:cursor-not-allowed disabled:opacity-60">
                     {saving ? "Đang lưu..." : "Lưu thay đổi"}
@@ -141,6 +187,53 @@ const CustomerProfilePage = () => {
               </form>
             </>
           )}
+        </section>
+
+        <section className="rounded-xl border border-outline-variant/15 bg-white p-6 lg:col-span-7">
+          <div className="mb-6">
+            <h3 className="text-xl font-bold">Đổi mật khẩu</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Cập nhật mật khẩu đăng nhập để bảo vệ tài khoản của bạn.</p>
+          </div>
+
+          {passwordError ? <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{passwordError}</div> : null}
+          {passwordSuccess ? <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{passwordSuccess}</div> : null}
+
+          <form className="space-y-5" onSubmit={handlePasswordSubmit}>
+            <label className="space-y-2 block">
+              <span className="text-sm font-semibold text-muted-foreground">Mật khẩu hiện tại</span>
+              <input
+                type="password"
+                value={passwordForm.currentPassword}
+                onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))}
+                className="input-base"
+              />
+            </label>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-sm font-semibold text-muted-foreground">Mật khẩu mới</span>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))}
+                  className="input-base"
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-semibold text-muted-foreground">Xác nhận mật khẩu mới</span>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                  className="input-base"
+                />
+              </label>
+            </div>
+
+            <button type="submit" disabled={passwordSaving} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-60">
+              {passwordSaving ? "Đang đổi mật khẩu..." : "Đổi mật khẩu"}
+            </button>
+          </form>
         </section>
 
         <aside className="space-y-6 lg:col-span-5">
