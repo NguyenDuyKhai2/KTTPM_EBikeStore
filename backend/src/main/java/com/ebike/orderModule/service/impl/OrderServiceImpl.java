@@ -19,9 +19,11 @@ import com.ebike.orderModule.entity.Payment;
 import com.ebike.orderModule.entity.PaymentMethod;
 import com.ebike.orderModule.entity.PaymentStatus;
 import com.ebike.orderModule.entity.Shipment;
+import com.ebike.orderModule.entity.ShipmentStatus;
 import com.ebike.orderModule.entity.Showroom;
 import com.ebike.orderModule.repository.OrderRepository;
 import com.ebike.orderModule.repository.ShowroomRepository;
+import com.ebike.orderModule.service.GuestOrderLinkService;
 import com.ebike.orderModule.service.OrderService;
 import com.ebike.productModule.entity.Product;
 import com.ebike.productModule.repository.ProductRepository;
@@ -60,21 +62,24 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final ShowroomRepository showroomRepository;
+    private final GuestOrderLinkService guestOrderLinkService;
 
     public OrderServiceImpl(
         OrderRepository orderRepository,
         UserRepository userRepository,
         ProductRepository productRepository,
-        ShowroomRepository showroomRepository
+        ShowroomRepository showroomRepository,
+        GuestOrderLinkService guestOrderLinkService
     ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.showroomRepository = showroomRepository;
+        this.guestOrderLinkService = guestOrderLinkService;
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<OrderResponse> getOrders(
         Authentication authentication,
         Long userId,
@@ -84,6 +89,9 @@ public class OrderServiceImpl implements OrderService {
         Long showroomId
     ) {
         User currentUser = getAuthenticatedUser(authentication);
+        if (!isBackOffice(authentication)) {
+            guestOrderLinkService.linkGuestOrdersToUser(currentUser);
+        }
         Long effectiveUserId = isBackOffice(authentication) ? userId : currentUser.getId();
 
         List<Order> orders = effectiveUserId == null
@@ -101,7 +109,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public OrderResponse getOrderById(Long id, Authentication authentication) {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
@@ -189,18 +197,20 @@ public class OrderServiceImpl implements OrderService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only request cancellation for your own orders");
         }
 
-        Payment payment = order.getPayment();
-        if (payment == null || payment.getPaymentMethod() != PaymentMethod.PAY_LATER) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only PAY_LATER orders can be requested for cancellation");
-        }
-        if (payment.getPaymentStatus() != PaymentStatus.PENDING) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only unpaid PAY_LATER orders can be requested for cancellation");
-        }
         if (order.getStatus() == OrderStatus.CANCELLATION_REQUESTED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancellation request is already pending manager review");
         }
-        if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This order has already been cancelled");
+        }
+        if (order.getStatus() == OrderStatus.DELIVERED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Delivered orders cannot be cancelled");
+        }
+        if (!isCancellationEligibleStatus(order.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This order is no longer eligible for cancellation request");
+        }
+        if (isShipmentInTransitOrDelivered(order.getShipment())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Orders that are already shipping or delivered cannot be cancelled");
         }
 
         String reason = normalizeOptional(request == null ? null : request.reason());
@@ -514,6 +524,11 @@ public class OrderServiceImpl implements OrderService {
         }
         User currentUser = getAuthenticatedUser(authentication);
         if (order.getUser() == null) {
+            if (emailsMatch(currentUser.getEmail(), order.getCustomerEmail())) {
+                order.setUser(currentUser);
+                orderRepository.save(order);
+                return;
+            }
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Guest orders can only be accessed from checkout or payment return");
         }
         if (!order.getUser().getId().equals(currentUser.getId())) {
@@ -521,9 +536,32 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    private boolean emailsMatch(String accountEmail, String orderEmail) {
+        if (accountEmail == null || orderEmail == null) {
+            return false;
+        }
+        return accountEmail.trim().equalsIgnoreCase(orderEmail.trim());
+    }
+
     private boolean isBackOffice(Authentication authentication) {
         return authentication != null && authentication.getAuthorities().stream()
             .anyMatch(authority -> PermissionConstants.OrderManagement.ORDER_VIEW_ALL.equals(authority.getAuthority()));
+    }
+
+    private boolean isCancellationEligibleStatus(OrderStatus status) {
+        return status == OrderStatus.PENDING
+            || status == OrderStatus.CONFIRMED
+            || status == OrderStatus.PROCESSING;
+    }
+
+    private boolean isShipmentInTransitOrDelivered(Shipment shipment) {
+        if (shipment == null) {
+            return false;
+        }
+        ShipmentStatus shipmentStatus = shipment.getShipmentStatus();
+        return shipmentStatus == ShipmentStatus.SHIPPED
+            || shipmentStatus == ShipmentStatus.IN_TRANSIT
+            || shipmentStatus == ShipmentStatus.DELIVERED;
     }
 
     private User getAuthenticatedUserOrNull(Authentication authentication) {
