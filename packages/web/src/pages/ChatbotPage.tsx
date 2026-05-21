@@ -108,8 +108,8 @@ const ChatbotPage = () => {
   };
 
   return (
-    <div className="pt-[88px]">
-      <div className="flex h-[calc(100dvh-88px)] flex-col overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="page-offset-header">
+      <div className="flex h-[calc(100dvh-5rem)] flex-col overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 sm:h-[calc(100dvh-6rem)]">
         <div className="border-b border-slate-700 bg-slate-800/60 backdrop-blur-sm">
           <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
@@ -117,7 +117,7 @@ const ChatbotPage = () => {
                 <MessageSquare className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Cố vấn thông minh</h1>
+                <h1 className="text-xl font-bold text-white sm:text-2xl">Cố vấn thông minh</h1>
                 <p className="text-sm text-slate-400">Tư vấn xe điện Kinetic bằng AI</p>
               </div>
             </div>
@@ -130,7 +130,7 @@ const ChatbotPage = () => {
               {messages.map((message) => (
                 <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-2xl px-6 py-4 shadow-lg ${
+                    className={`max-w-[92%] px-4 py-3 shadow-lg sm:max-w-2xl sm:px-6 sm:py-4 ${
                       message.sender === "user"
                         ? "rounded-2xl rounded-br-none bg-blue-600 text-white"
                         : "rounded-2xl rounded-bl-none bg-slate-700 text-slate-100"

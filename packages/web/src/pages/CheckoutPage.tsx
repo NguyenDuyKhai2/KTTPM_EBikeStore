@@ -304,7 +304,7 @@ const CheckoutPage = () => {
     <div className="container-responsive page-offset-header mx-auto min-h-screen max-w-screen-2xl pb-24">
       <div className="mb-16">
         <span className="mono-label mb-4 block text-primary">Secure Checkout</span>
-        <h1 className="text-5xl font-bold tracking-tighter md:text-6xl">
+        <h1 className="heading-page">
           Nhận xe tại showroom <br />
           phù hợp cho bạn ở TP.HCM.
         </h1>
@@ -617,7 +617,7 @@ const CheckoutPage = () => {
                 <div className="mb-8 flex items-baseline justify-between">
                   <span className="text-lg font-bold">Tổng thanh toán</span>
                   <div className="text-right">
-                    <span className="text-3xl font-bold tracking-tighter">{total.toLocaleString("vi-VN")}đ</span>
+                    <span className="price-display">{total.toLocaleString("vi-VN")}đ</span>
                     <p className="mt-1 text-[10px] font-mono text-muted-foreground">{loadingQuote ? "ĐANG TÍNH LẠI" : "ĐÃ BAO GỒM VAT"}</p>
                   </div>
                 </div>

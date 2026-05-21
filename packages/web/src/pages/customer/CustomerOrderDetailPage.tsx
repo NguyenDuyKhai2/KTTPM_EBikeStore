@@ -112,7 +112,7 @@ const CustomerOrderDetailPage = () => {
       title={order.orderNumber}
       description="Theo dõi trạng thái giao hàng và thông tin thanh toán của đơn."
     >
-      <div className="space-y-6 px-6 py-8">
+      <div className="space-y-6">
         <Link to="/customer/orders" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900">
           <ArrowLeft className="h-4 w-4" />
           Quay lại danh sách đơn
@@ -123,7 +123,7 @@ const CustomerOrderDetailPage = () => {
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Thông tin đơn</p>
             <p className="mt-2 text-2xl font-bold">{STATUS_LABELS[order.status] || order.status}</p>
             <p className="mt-2 text-sm text-slate-500">Tạo lúc {new Date(order.createdAt).toLocaleString("vi-VN")}</p>
-            <p className="mt-4 text-3xl font-bold text-primary">{order.totalAmount.toLocaleString("vi-VN")}đ</p>
+            <p className="price-display mt-4 text-primary">{order.totalAmount.toLocaleString("vi-VN")}đ</p>
             {order.cancellationReason && (
               <p className="mt-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">
                 Lý do hủy: {order.cancellationReason}

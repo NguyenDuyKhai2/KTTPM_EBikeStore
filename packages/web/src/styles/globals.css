@@ -127,6 +127,26 @@
   .page-offset-header {
     @apply pt-20 sm:pt-24;
   }
+
+  .heading-page {
+    @apply text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold sm:text-3xl;
+  }
+
+  .price-display {
+    @apply text-xl font-bold tracking-tighter sm:text-2xl lg:text-3xl;
+  }
+
+  .table-responsive {
+    @apply -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0;
+  }
+
+  .content-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

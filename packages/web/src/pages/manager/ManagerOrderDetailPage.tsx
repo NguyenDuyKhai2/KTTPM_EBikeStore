@@ -110,7 +110,7 @@ const ManagerOrderDetailPage = () => {
         trackingNumber: trackingNumber.trim() || undefined
       });
       setTimeline(updatedTimeline);
-      setOrder(await orderAPI.getDetail(order.id));
+      setOrder(await orderAPI.getDetail(String(order.id)));
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Không thể cập nhật trạng thái giao hàng.");
     } finally {
@@ -177,7 +177,7 @@ const ManagerOrderDetailPage = () => {
             <span>Quay lại danh sách đơn</span>
           </Link>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <h2 className="text-3xl font-bold text-slate-950">{order.orderNumber}</h2>
+            <h2 className="heading-section text-slate-950">{order.orderNumber}</h2>
             <ManagerStatusBadge label={order.status} tone={orderTone(order.status)} />
           </div>
         </div>
@@ -205,7 +205,7 @@ const ManagerOrderDetailPage = () => {
         )}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.6fr,1fr]">
+      <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
         <div className="space-y-6">
           <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-6 py-5">

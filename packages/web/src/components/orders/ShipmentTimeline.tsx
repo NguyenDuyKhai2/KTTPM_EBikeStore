@@ -50,11 +50,11 @@ const ShipmentTimelineView = ({ timeline, loading, emptyMessage }: ShipmentTimel
           Mã vận đơn: <span className="font-semibold text-slate-900">{timeline.trackingNumber}</span>
         </p>
       )}
-      <ol className="relative space-y-0 border-l-2 border-slate-200 pl-6">
+      <ol className="relative ml-1 space-y-0 border-l-2 border-slate-200 pl-5 sm:pl-6">
         {timeline.steps.map((step) => (
-          <li key={step.status} className="relative pb-8 last:pb-0">
+          <li key={step.status} className="relative pb-8 pl-1 last:pb-0 sm:pl-0">
             <span
-              className={`absolute -left-[31px] flex h-4 w-4 items-center justify-center rounded-full border-2 ${
+              className={`absolute -left-[1.35rem] top-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 sm:-left-[31px] ${
                 step.completed || step.active
                   ? "border-primary bg-primary"
                   : "border-slate-300 bg-white"

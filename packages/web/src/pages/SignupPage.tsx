@@ -134,7 +134,7 @@ const SignupPage = () => {
               <User className="h-4 w-4" />
               New KINETIC Account
             </div>
-            <h2 className="font-headline text-4xl font-bold tracking-tight text-foreground">Tạo tài khoản</h2>
+            <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Tạo tài khoản</h2>
             <p className="mt-3 text-base leading-7 text-muted-foreground">
               Nhập thông tin cá nhân để bắt đầu mua sắm và theo dõi đơn hàng xe điện.
             </p>

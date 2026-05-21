@@ -94,7 +94,7 @@ const LoginPageApi = () => {
             <span className="font-headline text-2xl font-bold tracking-tight">KINETIC Electric</span>
           </div>
 
-          <h1 className="max-w-xl font-headline text-5xl font-bold leading-tight tracking-tight">
+          <h1 className="heading-section max-w-xl font-headline leading-tight tracking-tight">
             Quản lý hành trình xe điện của bạn.
           </h1>
           <p className="mt-6 max-w-md text-lg leading-8 text-white/80">
@@ -104,11 +104,11 @@ const LoginPageApi = () => {
           <div className="mt-10 flex gap-12">
             <div>
               <span className="mono-label text-white/60">SHOWROOM</span>
-              <p className="mt-2 font-headline text-3xl font-bold">TP.HCM</p>
+              <p className="stat-value mt-2 font-headline">TP.HCM</p>
             </div>
             <div>
               <span className="mono-label text-white/60">HỖ TRỢ</span>
-              <p className="mt-2 font-headline text-3xl font-bold">24/7</p>
+              <p className="stat-value mt-2 font-headline">24/7</p>
             </div>
           </div>
         </div>

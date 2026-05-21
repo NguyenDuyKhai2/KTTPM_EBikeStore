@@ -40,7 +40,7 @@ const ManagerProductsPage = () => {
       <section className="grid gap-5 xl:grid-cols-2">
         {products.map((product) => (
           <article key={product.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-            <div className="grid gap-0 md:grid-cols-[240px,1fr]">
+            <div className="grid grid-cols-1 gap-0 md:grid-cols-[minmax(0,240px),1fr]">
               <div className="h-[220px] bg-slate-100 md:h-full">
                 <img
                   src={resolveProductImage(product.images?.[0]) || createProductImageFallback(product.name)}

@@ -8,7 +8,7 @@ const customerNavItems = [
 
 const CustomerLayout = () => (
   <section className="page-offset-header flex flex-col gap-5 px-4 pb-8 sm:px-6 lg:px-14">
-    <div className="flex max-w-[920px] flex-col gap-3">
+    <div className="flex w-full max-w-[920px] flex-col gap-3">
       <span className="inline-block text-[0.74rem] uppercase tracking-[0.16em] text-[#d71920]">Customer Area</span>
       <h1 className="[font-family:Bahnschrift,'Arial_Narrow',sans-serif] text-[clamp(2rem,4vw,3.4rem)] font-extrabold leading-[0.96] text-[#111]">
         Your electric mobility account center.
