@@ -44,3 +44,7 @@ export interface ManagerPaymentConfirmationRequest {
   providerTxnId?: string;
   note?: string;
 }
+
+export interface ManagerProductStockUpdateRequest {
+  stockQuantity: number;
+}

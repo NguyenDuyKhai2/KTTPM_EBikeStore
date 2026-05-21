@@ -10,5 +10,11 @@ export const productAPI = {
   getDetail: async (id: string) => {
     const response = await apiClient.get<ProductDetail>(API_ENDPOINTS.products.detail(id));
     return response.data;
+  },
+  getRelated: async (id: string, limit = 4) => {
+    const response = await apiClient.get<Product[]>(API_ENDPOINTS.products.related(id), {
+      params: { limit }
+    });
+    return response.data;
   }
 };

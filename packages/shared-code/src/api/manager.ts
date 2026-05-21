@@ -5,8 +5,10 @@ import type {
   ManagerDashboard,
   ManagerPayment,
   ManagerPaymentConfirmationRequest,
+  ManagerProductStockUpdateRequest,
   Order,
-  OrderCancellationRequest
+  OrderCancellationRequest,
+  Product
 } from "../types";
 
 export const managerAPI = {
@@ -38,6 +40,10 @@ export const managerAPI = {
     const response = await apiClient.get<ManagerCustomer[]>(API_ENDPOINTS.manager.customers, {
       params: search ? { search } : undefined
     });
+    return response.data;
+  },
+  updateProductStock: async (productId: number | string, payload: ManagerProductStockUpdateRequest) => {
+    const response = await apiClient.patch<Product>(API_ENDPOINTS.manager.productStock(productId), payload);
     return response.data;
   }
 };
