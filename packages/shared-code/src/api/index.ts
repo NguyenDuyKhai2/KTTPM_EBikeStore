@@ -8,4 +8,5 @@ export * from "./showrooms";
 export * from "./chatbot";
 export * from "./payments";
 export * from "./manager";
+export * from "./reviews";
 export * from "./notifications";
