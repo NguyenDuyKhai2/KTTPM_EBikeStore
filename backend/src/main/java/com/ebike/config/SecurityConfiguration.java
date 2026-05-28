@@ -53,7 +53,7 @@ public class SecurityConfiguration {
                     "/error"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/products/**").hasAuthority(PermissionConstants.Guest.PRODUCT_VIEW)
-                .requestMatchers(HttpMethod.POST, "/products/*/reviews").hasAuthority(PermissionConstants.Customer.REVIEW_CREATE)
+                .requestMatchers(HttpMethod.POST, "/products/*/reviews").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/reviews/*").hasAnyAuthority(
                     PermissionConstants.Customer.REVIEW_CREATE,
                     PermissionConstants.ProductManagement.REVIEW_MODERATE

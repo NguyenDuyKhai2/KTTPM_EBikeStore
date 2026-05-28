@@ -252,18 +252,11 @@ const CustomerProfilePage = () => {
           </div>
 
           <div className="rounded-xl border border-outline-variant/15 bg-white p-6">
-            <h3 className="mb-4 text-xl font-bold">Vai trò và quyền</h3>
-            <div className="mb-5 flex flex-wrap gap-2">
+            <h3 className="mb-4 text-xl font-bold">Vai trò</h3>
+            <div className="flex flex-wrap gap-2">
               {(profile?.roles ?? []).map((role) => (
                 <span key={role} className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
                   {role}
-                </span>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(profile?.permissions ?? []).map((permission) => (
-                <span key={permission} className="rounded-lg border border-outline-variant/20 px-3 py-1 text-xs text-muted-foreground">
-                  {permission}
                 </span>
               ))}
             </div>
