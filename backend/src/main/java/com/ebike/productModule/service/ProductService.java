@@ -14,6 +14,7 @@ import com.ebike.productModule.repository.ProductRepository;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,9 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 @Transactional(readOnly = true)
 public class ProductService {
+
+    private static final int DEFAULT_RELATED_PRODUCT_LIMIT = 4;
+    private static final int MAX_RELATED_PRODUCT_LIMIT = 12;
 
     private final ProductRepository productRepository;
 
@@ -59,6 +63,27 @@ public class ProductService {
         return toDetailDto(product);
     }
 
+    public List<ProductSummaryDto> getRelatedProducts(String slug, Integer limit) {
+        Product product = productRepository.findBySlug(slug)
+            .filter(item -> Boolean.TRUE.equals(item.getActive()))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+
+        int resolvedLimit = resolveRelatedProductLimit(limit);
+
+        return productRepository.findAll(isActive()).stream()
+            .filter(candidate -> !candidate.getId().equals(product.getId()))
+            .map(candidate -> new RelatedProductCandidate(candidate, calculateRelatedScore(product, candidate)))
+            .filter(candidate -> candidate.score() > 0)
+            .sorted(
+                Comparator.comparingInt(RelatedProductCandidate::score).reversed()
+                    .thenComparing(candidate -> candidate.product().getRating(), Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(candidate -> candidate.product().getName())
+            )
+            .limit(resolvedLimit)
+            .map(candidate -> toSummaryDto(candidate.product()))
+            .toList();
+    }
+
     private Specification<Product> isActive() {
         return (root, query, criteriaBuilder) -> criteriaBuilder.isTrue(root.get("active"));
     }
@@ -83,6 +108,60 @@ public class ProductService {
                 criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), pattern)
             );
         };
+    }
+
+    private int resolveRelatedProductLimit(Integer limit) {
+        if (limit == null || limit <= 0) {
+            return DEFAULT_RELATED_PRODUCT_LIMIT;
+        }
+        return Math.min(limit, MAX_RELATED_PRODUCT_LIMIT);
+    }
+
+    private int calculateRelatedScore(Product product, Product candidate) {
+        int score = 0;
+
+        if (product.getCategory() != null && candidate.getCategory() != null
+            && product.getCategory().getId().equals(candidate.getCategory().getId())) {
+            score += 5;
+        }
+
+        ProductSpecification productSpecification = product.getSpecification();
+        ProductSpecification candidateSpecification = candidate.getSpecification();
+        if (productSpecification != null && candidateSpecification != null) {
+            if (sameText(productSpecification.getBrand(), candidateSpecification.getBrand())) {
+                score += 3;
+            }
+            if (productSpecification.getVehicleType() != null
+                && productSpecification.getVehicleType() == candidateSpecification.getVehicleType()) {
+                score += 3;
+            }
+        }
+
+        if (isPriceNear(product.getDiscountPrice() == null ? product.getPrice() : product.getDiscountPrice(),
+            candidate.getDiscountPrice() == null ? candidate.getPrice() : candidate.getDiscountPrice())) {
+            score += 2;
+        }
+
+        return score;
+    }
+
+    private boolean sameText(String first, String second) {
+        if (first == null || second == null) {
+            return false;
+        }
+        return first.trim().toLowerCase(Locale.ROOT).equals(second.trim().toLowerCase(Locale.ROOT));
+    }
+
+    private boolean isPriceNear(BigDecimal productPrice, BigDecimal candidatePrice) {
+        if (productPrice == null || candidatePrice == null || productPrice.signum() <= 0) {
+            return false;
+        }
+        BigDecimal lowerBound = productPrice.multiply(new BigDecimal("0.70"));
+        BigDecimal upperBound = productPrice.multiply(new BigDecimal("1.30"));
+        return candidatePrice.compareTo(lowerBound) >= 0 && candidatePrice.compareTo(upperBound) <= 0;
+    }
+
+    private record RelatedProductCandidate(Product product, int score) {
     }
 
     public ProductSummaryDto toSummaryDto(Product product) {

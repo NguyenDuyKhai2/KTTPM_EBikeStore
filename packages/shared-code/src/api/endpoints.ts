@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   products: {
     list: "/products",
     detail: (id: string) => `/products/${id}`,
+    related: (id: string) => `/products/${id}/related`,
     search: "/products/search",
     reviews: (slug: string) => `/products/${slug}/reviews`
   },
@@ -36,6 +37,7 @@ export const API_ENDPOINTS = {
     dashboard: "/manager/dashboard",
     payments: "/manager/payments",
     paymentConfirm: (paymentId: number | string) => `/manager/payments/${paymentId}/confirm`,
+    productStock: (productId: number | string) => `/manager/products/${productId}/stock`,
     cancellationApprove: (orderId: number | string) => `/manager/orders/${orderId}/cancellation/approve`,
     cancellationReject: (orderId: number | string) => `/manager/orders/${orderId}/cancellation/reject`,
     customers: "/manager/customers"
@@ -48,7 +50,15 @@ export const API_ENDPOINTS = {
     history: "/chat/history"
   },
   payments: {
+    history: "/payments/history",
     vnpayCreate: "/payments/vnpay/create",
     vnpayReturn: "/payments/vnpay/return"
+  }
+  ,
+  notifications: {
+    list: "/notifications",
+    unreadCount: "/notifications/unread-count",
+    markRead: (id: number | string) => `/notifications/${id}/read`,
+    markAllRead: "/notifications/read-all"
   }
 } as const;

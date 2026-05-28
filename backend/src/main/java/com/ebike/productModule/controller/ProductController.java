@@ -35,4 +35,12 @@ public class ProductController {
     public ProductDetailDto getProductBySlug(@PathVariable String slug) {
         return productService.getProductBySlug(slug);
     }
+
+    @GetMapping("/{slug}/related")
+    public List<ProductSummaryDto> getRelatedProducts(
+        @PathVariable String slug,
+        @RequestParam(defaultValue = "4") Integer limit
+    ) {
+        return productService.getRelatedProducts(slug, limit);
+    }
 }

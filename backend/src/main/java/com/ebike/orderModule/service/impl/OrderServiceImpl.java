@@ -278,6 +278,12 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal subtotal = ZERO;
         for (OrderCreateItemRequest itemRequest : items) {
             Product product = getActiveProduct(itemRequest.productId());
+            int currentStockQuantity = product.getStockQuantity() == null ? 0 : product.getStockQuantity();
+            if (currentStockQuantity < itemRequest.quantity()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is out of stock: " + product.getName());
+            }
+            product.setStockQuantity(currentStockQuantity - itemRequest.quantity());
+
             BigDecimal unitPrice = product.getDiscountPrice() != null ? product.getDiscountPrice() : product.getPrice();
             BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(itemRequest.quantity()));
 

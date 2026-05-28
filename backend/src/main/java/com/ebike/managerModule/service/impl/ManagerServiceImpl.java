@@ -4,6 +4,7 @@ import com.ebike.authModule.entity.Role;
 import com.ebike.authModule.entity.User;
 import com.ebike.authModule.repository.UserRepository;
 import com.ebike.managerModule.dto.request.ManagerPaymentConfirmationRequest;
+import com.ebike.managerModule.dto.request.ManagerProductStockUpdateRequest;
 import com.ebike.managerModule.dto.response.ManagerCustomerResponse;
 import com.ebike.managerModule.dto.response.ManagerDashboardResponse;
 import com.ebike.managerModule.dto.response.ManagerPaymentResponse;
@@ -20,6 +21,10 @@ import com.ebike.orderModule.entity.Shipment;
 import com.ebike.orderModule.entity.Showroom;
 import com.ebike.orderModule.repository.OrderRepository;
 import com.ebike.orderModule.repository.PaymentRepository;
+import com.ebike.productModule.dto.response.ProductSummaryDto;
+import com.ebike.productModule.entity.Product;
+import com.ebike.productModule.repository.ProductRepository;
+import com.ebike.productModule.service.ProductService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,15 +45,21 @@ public class ManagerServiceImpl implements ManagerService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
+    private final ProductRepository productRepository;
+    private final ProductService productService;
 
     public ManagerServiceImpl(
         OrderRepository orderRepository,
         PaymentRepository paymentRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        ProductRepository productRepository,
+        ProductService productService
     ) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.userRepository = userRepository;
+        this.productRepository = productRepository;
+        this.productService = productService;
     }
 
     @Override
@@ -182,6 +193,23 @@ public class ManagerServiceImpl implements ManagerService {
             .sorted(Comparator.comparing(User::getCreatedAt).reversed())
             .map(user -> toCustomerResponse(user, orders))
             .toList();
+    }
+
+    @Override
+    @Transactional
+    public ProductSummaryDto updateProductStock(Long productId, ManagerProductStockUpdateRequest request) {
+        if (request == null || request.stockQuantity() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "stockQuantity is required");
+        }
+        if (request.stockQuantity() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock quantity cannot be negative");
+        }
+
+        Product product = productRepository.findById(productId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+
+        product.setStockQuantity(request.stockQuantity());
+        return productService.toSummaryDto(productRepository.save(product));
     }
 
     private boolean isCustomer(User user) {

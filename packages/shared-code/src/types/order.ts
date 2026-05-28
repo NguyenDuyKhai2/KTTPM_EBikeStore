@@ -47,6 +47,22 @@ export interface VnPayReturnResponse {
   paymentStatus?: string | null;
 }
 
+export type PaymentStatus = "PENDING" | "AUTHORIZED" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED";
+
+export interface PaymentHistoryItem {
+  id: number;
+  orderId: number;
+  orderNumber: string;
+  transactionReference?: string | null;
+  amount: number;
+  currency: string;
+  paymentMethod: "PAY_LATER" | "VNPAY" | string;
+  paymentStatus: PaymentStatus | string;
+  providerTxnId?: string | null;
+  paidAt?: string | null;
+  createdAt: string;
+}
+
 export interface Showroom {
   id: number;
   name: string;
