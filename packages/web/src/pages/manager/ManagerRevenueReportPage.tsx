@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BarChart3, CheckCircle2, ShoppingCart, TrendingUp } from "lucide-react";
+import { BarChart3, CheckCircle2, ShoppingCart, TrendingDown, TrendingUp } from "lucide-react";
 import { managerAPI } from "@ebike/shared-code/api";
 import type { ManagerRevenueReport } from "@ebike/shared-code/types";
 
@@ -49,8 +49,17 @@ const emptyReport: ManagerRevenueReport = {
   successfulOrders: 0,
   totalRevenue: 0,
   breakdown: [],
-  topProducts: []
+  topProducts: [],
+  slowProducts: []
 };
+
+const normalizeReport = (data: Partial<ManagerRevenueReport>): ManagerRevenueReport => ({
+  ...emptyReport,
+  ...data,
+  breakdown: data.breakdown ?? [],
+  topProducts: data.topProducts ?? [],
+  slowProducts: data.slowProducts ?? []
+});
 
 const ManagerRevenueReportPage = () => {
   const [period, setPeriod] = useState<ReportPeriod>("day");
@@ -69,7 +78,7 @@ const ManagerRevenueReportPage = () => {
           ? { period, from: customRange.from, to: customRange.to }
           : { period };
 
-      setReport(await managerAPI.getRevenueReport(params));
+      setReport(normalizeReport(await managerAPI.getRevenueReport(params)));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Không thể tải báo cáo doanh thu.");
     } finally {
@@ -201,51 +210,58 @@ const ManagerRevenueReportPage = () => {
         ))}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.6fr,1fr]">
-        <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-[#eef4ff] p-2 text-[#003b93]">
-              <BarChart3 className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-950">Biểu đồ doanh thu</h3>
-              <p className="text-sm text-slate-500">Doanh thu và số đơn theo từng mốc thời gian.</p>
+      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="rounded-lg bg-[#eef4ff] p-2 text-[#003b93]">
+            <BarChart3 className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-950">Biểu đồ doanh thu</h3>
+            <p className="text-sm text-slate-500">Doanh thu và số đơn theo từng mốc thời gian.</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="mt-10 text-sm text-slate-500">Đang tải dữ liệu biểu đồ...</div>
+        ) : report.breakdown.length === 0 ? (
+          <div className="mt-10 text-sm text-slate-500">Chưa có dữ liệu trong khoảng thời gian này.</div>
+        ) : (
+          <div className="mt-8 overflow-x-auto pb-2">
+            <div className="flex min-w-full items-end gap-3" style={{ minWidth: `${Math.max(report.breakdown.length * 56, 320)}px` }}>
+              {report.breakdown.map((point) => {
+                const height = Math.max((point.revenue / maxRevenue) * 180, point.revenue > 0 ? 8 : 0);
+
+                return (
+                  <div key={point.label} className="flex min-w-[48px] flex-1 flex-col items-center gap-2">
+                    <p className="text-[10px] font-semibold text-slate-500">{formatCurrency(point.revenue)}</p>
+                    <div className="flex h-[180px] w-full items-end justify-center">
+                      <div
+                        className="w-full max-w-[40px] rounded-t-md bg-[#003b93] transition-all"
+                        style={{ height: `${height}px` }}
+                        title={`${point.orderCount} đơn`}
+                      />
+                    </div>
+                    <p className="text-center text-[11px] font-semibold text-slate-700">{formatDateLabel(point.label)}</p>
+                    <p className="text-center text-[10px] text-slate-400">{point.orderCount} đơn</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
+        )}
+      </section>
 
-          {loading ? (
-            <div className="mt-10 text-sm text-slate-500">Đang tải dữ liệu biểu đồ...</div>
-          ) : report.breakdown.length === 0 ? (
-            <div className="mt-10 text-sm text-slate-500">Chưa có dữ liệu trong khoảng thời gian này.</div>
-          ) : (
-            <div className="mt-8 overflow-x-auto pb-2">
-              <div className="flex min-w-full items-end gap-3" style={{ minWidth: `${Math.max(report.breakdown.length * 56, 320)}px` }}>
-                {report.breakdown.map((point) => {
-                  const height = Math.max((point.revenue / maxRevenue) * 180, point.revenue > 0 ? 8 : 0);
-
-                  return (
-                    <div key={point.label} className="flex min-w-[48px] flex-1 flex-col items-center gap-2">
-                      <p className="text-[10px] font-semibold text-slate-500">{formatCurrency(point.revenue)}</p>
-                      <div className="flex h-[180px] w-full items-end justify-center">
-                        <div
-                          className="w-full max-w-[40px] rounded-t-md bg-[#003b93] transition-all"
-                          style={{ height: `${height}px` }}
-                          title={`${point.orderCount} đơn`}
-                        />
-                      </div>
-                      <p className="text-center text-[11px] font-semibold text-slate-700">{formatDateLabel(point.label)}</p>
-                      <p className="text-center text-[10px] text-slate-400">{point.orderCount} đơn</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </article>
-
+      <section className="grid gap-6 md:grid-cols-2">
         <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-950">Sản phẩm bán chạy</h3>
-          <p className="mt-1 text-sm text-slate-500">Top 10 theo doanh thu từ đơn đã thanh toán.</p>
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-950">Sản phẩm bán chạy</h3>
+              <p className="text-sm text-slate-500">Top 10 theo doanh thu từ đơn đã thanh toán.</p>
+            </div>
+          </div>
 
           {loading ? (
             <div className="mt-8 text-sm text-slate-500">Đang tải danh sách sản phẩm...</div>
@@ -264,6 +280,42 @@ const ManagerRevenueReportPage = () => {
                     <p className="mt-1 text-xs text-slate-500">Đã bán: {product.quantitySold}</p>
                   </div>
                   <p className="shrink-0 text-sm font-bold text-[#003b93]">{formatCurrency(product.revenue)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+
+        <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-amber-50 p-2 text-amber-700">
+              <TrendingDown className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-950">Sản phẩm không bán chạy</h3>
+              <p className="text-sm text-slate-500">Top 10 ít bán nhất, gồm cả sản phẩm chưa có đơn trong kỳ.</p>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="mt-8 text-sm text-slate-500">Đang tải danh sách sản phẩm...</div>
+          ) : report.slowProducts.length === 0 ? (
+            <div className="mt-8 text-sm text-slate-500">Chưa có sản phẩm nào để thống kê.</div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              {report.slowProducts.map((product, index) => (
+                <div
+                  key={product.productId}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-amber-100 bg-amber-50/40 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-600">#{index + 1}</p>
+                    <p className="truncate text-sm font-bold text-slate-900">{product.productName}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {product.quantitySold === 0 ? "Chưa bán trong kỳ" : `Đã bán: ${product.quantitySold}`}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-sm font-bold text-amber-700">{formatCurrency(product.revenue)}</p>
                 </div>
               ))}
             </div>

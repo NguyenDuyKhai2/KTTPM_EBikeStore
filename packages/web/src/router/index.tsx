@@ -96,7 +96,6 @@ const router = createBrowserRouter([
   {
     path: "/manager",
     element: <ManagerLayout />,
-    errorElement: <NotFoundPage />,
     children: [
       { index: true, element: <ManagerDashboardPage /> },
       { path: "orders", element: <ManagerOrdersPage /> },

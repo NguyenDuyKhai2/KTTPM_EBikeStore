@@ -11,6 +11,7 @@ public record ManagerRevenueReportResponse(
     long successfulOrders,
     BigDecimal totalRevenue,
     List<ManagerRevenuePeriodPointResponse> breakdown,
-    List<ManagerTopProductResponse> topProducts
+    List<ManagerTopProductResponse> topProducts,
+    List<ManagerTopProductResponse> slowProducts
 ) {
 }

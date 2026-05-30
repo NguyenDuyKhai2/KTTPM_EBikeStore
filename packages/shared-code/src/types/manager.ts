@@ -71,4 +71,5 @@ export interface ManagerRevenueReport {
   totalRevenue: number;
   breakdown: ManagerRevenuePeriodPoint[];
   topProducts: ManagerTopProduct[];
+  slowProducts: ManagerTopProduct[];
 }

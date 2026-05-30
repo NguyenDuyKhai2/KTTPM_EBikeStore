@@ -243,9 +243,9 @@ public class ManagerServiceImpl implements ManagerService {
             .reduce(ZERO, BigDecimal::add);
 
         List<ManagerRevenuePeriodPointResponse> breakdown = buildRevenueBreakdown(orders, bucketPeriod, fromDate, toDate);
-        List<ManagerTopProductResponse> topProducts = buildTopProducts(
-            inScope.stream().filter(this::hasPaidPayment).toList()
-        );
+        List<Order> paidOrders = inScope.stream().filter(this::hasPaidPayment).toList();
+        List<ManagerTopProductResponse> topProducts = buildTopProducts(paidOrders);
+        List<ManagerTopProductResponse> slowProducts = buildSlowProducts(paidOrders);
 
         return new ManagerRevenueReportResponse(
             bucketPeriod.toUpperCase(Locale.ROOT),
@@ -255,7 +255,8 @@ public class ManagerServiceImpl implements ManagerService {
             successfulOrders,
             totalRevenue,
             breakdown,
-            topProducts
+            topProducts,
+            slowProducts
         );
     }
 
@@ -716,6 +717,47 @@ public class ManagerServiceImpl implements ManagerService {
 
         return aggregates.values().stream()
             .sorted(Comparator.comparing((TopProductAccumulator accumulator) -> accumulator.revenue).reversed())
+            .limit(10)
+            .map(accumulator -> new ManagerTopProductResponse(
+                accumulator.productId,
+                accumulator.productName,
+                accumulator.quantitySold,
+                accumulator.revenue
+            ))
+            .toList();
+    }
+
+    private List<ManagerTopProductResponse> buildSlowProducts(List<Order> paidOrders) {
+        Map<Long, TopProductAccumulator> aggregates = new HashMap<>();
+
+        for (Product product : productRepository.findAll()) {
+            if (Boolean.FALSE.equals(product.getActive())) {
+                continue;
+            }
+            aggregates.put(product.getId(), new TopProductAccumulator(product.getId(), product.getName()));
+        }
+
+        for (Order order : paidOrders) {
+            for (OrderItem item : order.getItems()) {
+                Long productId = item.getProduct().getId();
+                TopProductAccumulator accumulator = aggregates.computeIfAbsent(
+                    productId,
+                    ignored -> new TopProductAccumulator(productId, item.getProductName())
+                );
+                accumulator.quantitySold += item.getQuantity();
+                accumulator.revenue = accumulator.revenue.add(
+                    item.getLineTotal() == null ? ZERO : item.getLineTotal()
+                );
+            }
+        }
+
+        return aggregates.values().stream()
+            .sorted(
+                Comparator
+                    .comparing((TopProductAccumulator accumulator) -> accumulator.quantitySold)
+                    .thenComparing(accumulator -> accumulator.revenue)
+                    .thenComparing(accumulator -> accumulator.productName, String.CASE_INSENSITIVE_ORDER)
+            )
             .limit(10)
             .map(accumulator -> new ManagerTopProductResponse(
                 accumulator.productId,
