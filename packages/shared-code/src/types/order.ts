@@ -88,7 +88,6 @@ export interface Order {
   paymentStatus?: string | null;
   notes?: string | null;
   customerEmail?: string | null;
-  customerIdentityNumber?: string | null;
   cancellationReason?: string | null;
   cancellationReviewNote?: string | null;
   cancellationRequestedFromStatus?: OrderStatus | string | null;
@@ -106,7 +105,7 @@ export interface CreateOrderRequest {
   customerName: string;
   phoneNumber: string;
   customerEmail: string;
-  customerIdentityNumber: string;
+  emailVerificationSessionId: string;
   pickupShowroomId: number;
   detailedAddress: string;
   paymentMethod: "PAY_LATER" | "VNPAY";
@@ -137,4 +136,18 @@ export interface OrderQuote {
 export interface OrderCancellationRequest {
   reason?: string;
   reviewNote?: string;
+}
+
+export interface OrderEmailOtpSendResponse {
+  verificationSessionId: string;
+  email: string;
+  expiresAt: string;
+  resendAfterSeconds: number;
+  maxAttempts: number;
+}
+
+export interface OrderEmailOtpVerifyResponse {
+  verificationSessionId: string;
+  email: string;
+  verified: boolean;
 }

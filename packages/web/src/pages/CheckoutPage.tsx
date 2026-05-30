@@ -1,4 +1,4 @@
-import { Clock, CreditCard, Lock, MapPin, Phone, Store, Zap } from "lucide-react";
+import { Clock, CreditCard, Lock, MailCheck, MapPin, Phone, Store, Zap } from "lucide-react";
 import { orderAPI, paymentAPI, showroomAPI } from "@ebike/shared-code/api";
 import { useAppSelector } from "@ebike/shared-code/redux";
 import type { OrderQuote, Showroom } from "@ebike/shared-code/types";
@@ -32,9 +32,6 @@ const mapCheckoutErrorToFields = (message: string) => {
   if (lowerMessage.includes("email")) {
     errors.customerEmail = message;
   }
-  if (lowerMessage.includes("cmnd") || lowerMessage.includes("cccd")) {
-    errors.customerIdentityNumber = message;
-  }
   if (lowerMessage.includes("địa chỉ")) {
     errors.detailedAddress = message;
   }
@@ -64,9 +61,13 @@ const CheckoutPage = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"PAY_LATER" | "VNPAY">("PAY_LATER");
   const [registrationService, setRegistrationService] = useState<"SELF" | "SHOWROOM">("SELF");
+  const [emailOtpSessionId, setEmailOtpSessionId] = useState<string | null>(null);
+  const [emailOtpCode, setEmailOtpCode] = useState("");
+  const [emailOtpVerifiedFor, setEmailOtpVerifiedFor] = useState<string | null>(null);
+  const [emailOtpMessage, setEmailOtpMessage] = useState<string | null>(null);
+  const [emailOtpLoading, setEmailOtpLoading] = useState(false);
   const [form, setForm] = useState({
     customerName: authUser?.fullName ?? "",
-    customerIdentityNumber: "",
     phoneNumber: "",
     customerEmail: authUser?.email ?? "",
     district: "",
@@ -175,7 +176,62 @@ const CheckoutPage = () => {
       delete next[field];
       return next;
     });
+    if (field === "customerEmail") {
+      setEmailOtpSessionId(null);
+      setEmailOtpCode("");
+      setEmailOtpVerifiedFor(null);
+      setEmailOtpMessage(null);
+    }
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const sendEmailOtp = async () => {
+    setSubmitError(null);
+    setEmailOtpMessage(null);
+    const email = form.customerEmail.trim();
+    if (!email) {
+      setFieldErrors((current) => ({ ...current, customerEmail: "Vui lòng nhập email trước khi gửi OTP." }));
+      return null;
+    }
+
+    setEmailOtpLoading(true);
+    try {
+      const response = await orderAPI.sendEmailOtp(email);
+      setEmailOtpSessionId(response.verificationSessionId);
+      setEmailOtpCode("");
+      setEmailOtpVerifiedFor(null);
+      setEmailOtpMessage(`Đã gửi mã OTP tới ${response.email}. Nếu đang chạy dev, mã cũng được in trong log backend.`);
+      return response.verificationSessionId;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Không thể gửi mã OTP.";
+      setSubmitError(message);
+      return null;
+    } finally {
+      setEmailOtpLoading(false);
+    }
+  };
+
+  const verifyEmailOtp = async (sessionId: string) => {
+    const code = emailOtpCode.trim();
+    if (!code) {
+      setFieldErrors((current) => ({ ...current, emailOtpCode: "Vui lòng nhập mã OTP đã gửi qua email." }));
+      return false;
+    }
+
+    setEmailOtpLoading(true);
+    try {
+      const response = await orderAPI.verifyEmailOtp(sessionId, code);
+      setEmailOtpVerifiedFor(response.email);
+      setEmailOtpMessage("Email đã được xác thực. Đang tạo đơn hàng...");
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Mã OTP chưa hợp lệ.";
+      setFieldErrors((current) => ({ ...current, emailOtpCode: message }));
+      setSubmitError(message);
+      return false;
+    } finally {
+      setEmailOtpLoading(false);
+    }
   };
 
   const handleDistrictChange = (district: string) => {
@@ -203,7 +259,6 @@ const CheckoutPage = () => {
 
     const nextFieldErrors: Record<string, string> = {};
     if (!form.customerName.trim()) nextFieldErrors.customerName = "Vui lòng nhập họ và tên.";
-    if (!form.customerIdentityNumber.trim()) nextFieldErrors.customerIdentityNumber = "Vui lòng nhập CMND / CCCD.";
     if (!form.phoneNumber.trim()) nextFieldErrors.phoneNumber = "Vui lòng nhập số điện thoại.";
     if (!form.customerEmail.trim()) nextFieldErrors.customerEmail = "Vui lòng nhập email.";
     if (!form.district) nextFieldErrors.district = "Vui lòng chọn quận / huyện.";
@@ -216,15 +271,34 @@ const CheckoutPage = () => {
       return;
     }
 
+    let verifiedSessionId = emailOtpSessionId;
+    const normalizedEmail = form.customerEmail.trim().toLowerCase();
+    if (emailOtpVerifiedFor !== normalizedEmail) {
+      if (!verifiedSessionId) {
+        await sendEmailOtp();
+        setSubmitError("Vui lòng nhập mã OTP đã gửi tới email rồi bấm xác nhận đặt hàng lần nữa.");
+        return;
+      }
+      const verified = await verifyEmailOtp(verifiedSessionId);
+      if (!verified) {
+        return;
+      }
+    }
+
+    if (!verifiedSessionId) {
+      setSubmitError("Vui lòng xác thực email trước khi đặt hàng.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const notes = form.notes.trim();
       const createdOrder = await orderAPI.create({
         userId: authUser?.id ? Number(authUser.id) : undefined,
         customerName: form.customerName.trim(),
-        customerIdentityNumber: form.customerIdentityNumber.trim(),
         phoneNumber: form.phoneNumber.trim(),
         customerEmail: form.customerEmail.trim(),
+        emailVerificationSessionId: verifiedSessionId,
         pickupShowroomId: Number(form.pickupShowroomId),
         detailedAddress: form.detailedAddress.trim(),
         paymentMethod: selectedPaymentMethod,
@@ -352,16 +426,6 @@ const CheckoutPage = () => {
                 {fieldErrors.customerName ? <p className="text-sm text-red-600">{fieldErrors.customerName}</p> : null}
               </div>
               <div className="space-y-2">
-                <label className="mono-label text-muted-foreground">CMND / CCCD</label>
-                <input
-                  type="text"
-                  value={form.customerIdentityNumber}
-                  onChange={(event) => updateForm("customerIdentityNumber", event.target.value)}
-                  className={inputClassName(Boolean(fieldErrors.customerIdentityNumber))}
-                />
-                {fieldErrors.customerIdentityNumber ? <p className="text-sm text-red-600">{fieldErrors.customerIdentityNumber}</p> : null}
-              </div>
-              <div className="space-y-2">
                 <label className="mono-label text-muted-foreground">Số điện thoại</label>
                 <input
                   type="tel"
@@ -380,6 +444,40 @@ const CheckoutPage = () => {
                   className={inputClassName(Boolean(fieldErrors.customerEmail))}
                 />
                 {fieldErrors.customerEmail ? <p className="text-sm text-red-600">{fieldErrors.customerEmail}</p> : null}
+              </div>
+              <div className="space-y-3 md:col-span-2">
+                <div className="flex flex-col gap-3 rounded-lg border border-outline-variant/15 bg-surface-container-low p-4 md:flex-row md:items-end">
+                  <div className="flex-grow space-y-2">
+                    <label className="mono-label text-muted-foreground">Mã OTP email</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={emailOtpCode}
+                      onChange={(event) => {
+                        setFieldErrors((current) => {
+                          const next = { ...current };
+                          delete next.emailOtpCode;
+                          return next;
+                        });
+                        setEmailOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+                      }}
+                      placeholder="Nhập 6 chữ số"
+                      className={inputClassName(Boolean(fieldErrors.emailOtpCode))}
+                    />
+                    {fieldErrors.emailOtpCode ? <p className="text-sm text-red-600">{fieldErrors.emailOtpCode}</p> : null}
+                    {emailOtpMessage ? <p className="text-sm text-muted-foreground">{emailOtpMessage}</p> : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void sendEmailOtp()}
+                    disabled={emailOtpLoading || submitting}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant/20 bg-white px-4 py-3 text-sm font-bold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <MailCheck size={16} />
+                    {emailOtpSessionId ? "Gửi lại mã" : "Gửi OTP"}
+                  </button>
+                </div>
               </div>
             </div>
           </section>
@@ -588,10 +686,10 @@ const CheckoutPage = () => {
                 </div>
                 <button
                   onClick={() => void handleSubmit()}
-                  disabled={submitting || loadingQuote || !orderQuote}
+                  disabled={submitting || emailOtpLoading || loadingQuote || !orderQuote}
                   className="w-full rounded-lg bg-primary py-5 text-lg font-bold tracking-tight text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {submitting
+                  {submitting || emailOtpLoading
                     ? selectedPaymentMethod === "VNPAY"
                       ? "Đang chuyển sang VNPay..."
                       : "Đang tạo đơn hàng..."

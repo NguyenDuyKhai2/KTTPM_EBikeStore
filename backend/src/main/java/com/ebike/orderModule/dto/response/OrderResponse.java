@@ -19,7 +19,6 @@ public record OrderResponse(
     String paymentStatus,
     String notes,
     String customerEmail,
-    String customerIdentityNumber,
     String cancellationReason,
     String cancellationReviewNote,
     String cancellationRequestedFromStatus,

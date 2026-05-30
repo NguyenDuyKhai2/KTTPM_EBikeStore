@@ -65,9 +65,6 @@ public class Order {
     @Column(name = "customer_email", length = 255)
     private String customerEmail;
 
-    @Column(name = "customer_identity_number", length = 30)
-    private String customerIdentityNumber;
-
     @Column(name = "cancellation_reason", columnDefinition = "TEXT")
     private String cancellationReason;
 
@@ -209,14 +206,6 @@ public class Order {
 
     public void setCustomerEmail(String customerEmail) {
         this.customerEmail = customerEmail;
-    }
-
-    public String getCustomerIdentityNumber() {
-        return customerIdentityNumber;
-    }
-
-    public void setCustomerIdentityNumber(String customerIdentityNumber) {
-        this.customerIdentityNumber = customerIdentityNumber;
     }
 
     public String getCancellationReason() {
