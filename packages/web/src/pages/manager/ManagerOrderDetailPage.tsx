@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, CreditCard, MapPin, Package, Phone, X } from "lucide-react";
+import { ArrowLeft, CreditCard, MapPin, Package, Phone } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { managerAPI, orderAPI } from "@ebike/shared-code/api";
 import type { Order } from "@ebike/shared-code/types";
+import ShipmentTimeline from "../../components/orders/ShipmentTimeline";
 import ManagerStatusBadge, { formatManagerLabel, orderTone, paymentTone } from "../../components/manager/ManagerStatusBadge";
 
 const formatCurrency = (value: number) =>
@@ -19,28 +20,23 @@ const formatDateTime = (value?: string | null) =>
       }).format(new Date(value))
     : "-";
 
-const statusTimeline = (order?: Order | null) => {
-  if (!order) {
-    return [];
-  }
-
-  const statuses = ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"];
-  const currentIndex = statuses.indexOf(order.status);
-  return statuses.map((status, index) => ({
-    status,
-    completed: currentIndex >= index,
-    active: currentIndex === index
-  }));
-};
+const SHIPMENT_STATUS_OPTIONS = [
+  { value: "PENDING", label: "Chờ xử lý" },
+  { value: "PREPARING", label: "Đang chuẩn bị" },
+  { value: "SHIPPED", label: "Đã giao cho vận chuyển" },
+  { value: "IN_TRANSIT", label: "Đang giao" },
+  { value: "DELIVERED", label: "Đã giao" },
+  { value: "RETURNED", label: "Hoàn trả" }
+];
 
 const ManagerOrderDetailPage = () => {
   const { id } = useParams();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [reviewingCancellation, setReviewingCancellation] = useState<"approve" | "reject" | null>(null);
-  const [reviewDialogAction, setReviewDialogAction] = useState<"approve" | "reject" | null>(null);
-  const [reviewNote, setReviewNote] = useState("");
+  const [shipmentStatus, setShipmentStatus] = useState("PENDING");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [savingShipment, setSavingShipment] = useState(false);
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -52,7 +48,10 @@ const ManagerOrderDetailPage = () => {
 
       try {
         setLoading(true);
-        setOrder(await orderAPI.getDetail(id));
+        const loadedOrder = await orderAPI.getDetail(id);
+        setOrder(loadedOrder);
+        setShipmentStatus(loadedOrder.shipment?.shipmentStatus || "PENDING");
+        setTrackingNumber(loadedOrder.shipment?.trackingNumber || "");
         setError("");
       } catch (orderError) {
         setError(orderError instanceof Error ? orderError.message : "Không thể tải chi tiết đơn hàng.");
@@ -66,43 +65,25 @@ const ManagerOrderDetailPage = () => {
 
   const itemTotal = useMemo(() => order?.items.reduce((sum, item) => sum + (item.lineTotal ?? 0), 0) ?? 0, [order]);
 
-  const openReviewDialog = (action: "approve" | "reject") => {
-    setReviewDialogAction(action);
-    setReviewNote("");
-    setError("");
-  };
-
-  const closeReviewDialog = () => {
-    if (reviewingCancellation !== null) {
-      return;
-    }
-    setReviewDialogAction(null);
-    setReviewNote("");
-  };
-
-  const submitCancellationReview = async () => {
-    if (!reviewDialogAction) {
-      return;
-    }
+  const saveShipmentUpdate = async () => {
     if (!order) {
       return;
     }
 
-    const normalizedNote = reviewNote.trim();
     try {
-      setReviewingCancellation(reviewDialogAction);
-      const updatedOrder =
-        reviewDialogAction === "approve"
-          ? await managerAPI.approveCancellation(order.id, { reviewNote: normalizedNote || undefined })
-          : await managerAPI.rejectCancellation(order.id, { reviewNote: normalizedNote || undefined });
-      setOrder(updatedOrder);
-      setReviewDialogAction(null);
-      setReviewNote("");
+      setSavingShipment(true);
       setError("");
-    } catch (reviewError) {
-      setError(reviewError instanceof Error ? reviewError.message : "Không thể xử lý yêu cầu hủy đơn.");
+      const updatedOrder = await managerAPI.updateOrderShipment(order.id, {
+        shipmentStatus,
+        trackingNumber: trackingNumber.trim() || undefined
+      });
+      setOrder(updatedOrder);
+      setShipmentStatus(updatedOrder.shipment?.shipmentStatus || shipmentStatus);
+      setTrackingNumber(updatedOrder.shipment?.trackingNumber || "");
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Không thể cập nhật trạng thái giao hàng.");
     } finally {
-      setReviewingCancellation(null);
+      setSavingShipment(false);
     }
   };
 
@@ -110,12 +91,18 @@ const ManagerOrderDetailPage = () => {
     return <div className="rounded-lg border border-slate-200 bg-white px-6 py-10 text-sm text-slate-500">Đang tải chi tiết đơn hàng...</div>;
   }
 
-  if (error || !order) {
-    return <div className="rounded-lg border border-red-200 bg-red-50 px-6 py-10 text-sm text-red-700">{error || "Không tìm thấy đơn hàng."}</div>;
+  if (error && !order) {
+    return <div className="rounded-lg border border-red-200 bg-red-50 px-6 py-10 text-sm text-red-700">{error}</div>;
+  }
+
+  if (!order) {
+    return <div className="rounded-lg border border-red-200 bg-red-50 px-6 py-10 text-sm text-red-700">Không tìm thấy đơn hàng.</div>;
   }
 
   return (
     <div className="space-y-6">
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link to="/manager/orders" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900">
@@ -127,28 +114,6 @@ const ManagerOrderDetailPage = () => {
             <ManagerStatusBadge label={order.status} tone={orderTone(order.status)} />
           </div>
         </div>
-        {order.status === "CANCELLATION_REQUESTED" && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => openReviewDialog("reject")}
-              disabled={reviewingCancellation !== null}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <X className="h-4 w-4" />
-              <span>{reviewingCancellation === "reject" ? "Đang xử lý..." : "Từ chối hủy"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => openReviewDialog("approve")}
-              disabled={reviewingCancellation !== null}
-              className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Check className="h-4 w-4" />
-              <span>{reviewingCancellation === "approve" ? "Đang xử lý..." : "Duyệt hủy"}</span>
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.6fr,1fr]">
@@ -176,18 +141,6 @@ const ManagerOrderDetailPage = () => {
                 <span>Tạm tính</span>
                 <span>{formatCurrency(itemTotal || order.subtotal)}</span>
               </div>
-              <div className="flex items-center justify-between text-slate-600">
-                <span>Phí làm giấy tờ xe</span>
-                <span>{formatCurrency(order.registrationFee)}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-600">
-                <span>Dịch vụ đăng ký xe</span>
-                <span>{order.includeRegistrationService ? "Showroom hỗ trợ" : "Khách tự làm"}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-600">
-                <span>Giảm giá</span>
-                <span>-{formatCurrency(order.discountAmount)}</span>
-              </div>
               <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-base font-bold text-slate-950">
                 <span>Tổng cộng</span>
                 <span>{formatCurrency(order.totalAmount)}</span>
@@ -195,12 +148,7 @@ const ManagerOrderDetailPage = () => {
             </div>
           </section>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-950">Ghi chú đơn hàng</h3>
-            <p className="mt-4 text-sm leading-7 text-slate-600">{order.notes || "Khách hàng chưa để lại ghi chú cho đơn hàng này."}</p>
-          </section>
-
-          {(order.status === "CANCELLED" || order.cancellationReason || order.cancellationRequestedAt) && (
+          {(order.status === "CANCELLED" || order.cancellationReason) && (
             <section className="rounded-lg border border-rose-200 bg-white p-6 shadow-sm">
               <h3 className="text-lg font-bold text-slate-950">Thông tin hủy đơn</h3>
               <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
@@ -212,12 +160,6 @@ const ManagerOrderDetailPage = () => {
                   <span className="font-semibold text-slate-900">Thời điểm hủy:</span>{" "}
                   {formatDateTime(order.cancellationRequestedAt)}
                 </p>
-                {order.cancellationReviewNote && (
-                  <p>
-                    <span className="font-semibold text-slate-900">Ghi chú nội bộ:</span>{" "}
-                    {order.cancellationReviewNote}
-                  </p>
-                )}
               </div>
             </section>
           )}
@@ -243,23 +185,54 @@ const ManagerOrderDetailPage = () => {
                 <MapPin className="mt-0.5 h-4 w-4 text-slate-400" />
                 <span>{order.shipment?.detailedAddress || "-"}</span>
               </div>
-              <div className="rounded-lg bg-slate-50 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Dịch vụ đăng ký xe</p>
-                <p className="mt-2 font-semibold text-slate-950">
-                  {order.includeRegistrationService ? "Khách nhờ showroom làm giấy tờ xe" : "Khách tự làm giấy tờ xe"}
-                </p>
-              </div>
             </div>
           </section>
 
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-950">Showroom nhận xe</h3>
-            <div className="mt-5 text-sm text-slate-600">
-              <p className="font-semibold text-slate-950">{order.shipment?.pickupShowroom?.name || "-"}</p>
-              <p className="mt-2 leading-7">{order.shipment?.pickupShowroom?.address || "-"}</p>
-              <p className="mt-2 text-slate-500">{order.shipment?.pickupShowroom?.phone || ""}</p>
+            <h3 className="text-lg font-bold text-slate-950">Timeline giao hàng</h3>
+            <div className="mt-5">
+              <ShipmentTimeline order={order} compact />
             </div>
           </section>
+
+          {order.status !== "CANCELLED" && order.shipment && (
+            <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-slate-950">Cập nhật trạng thái giao hàng</h3>
+              <div className="mt-5 space-y-4">
+                <label className="block">
+                  <span className="text-sm font-semibold text-slate-700">Trạng thái</span>
+                  <select
+                    value={shipmentStatus}
+                    onChange={(event) => setShipmentStatus(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#003b93] focus:bg-white"
+                  >
+                    {SHIPMENT_STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm font-semibold text-slate-700">Mã vận đơn</span>
+                  <input
+                    value={trackingNumber}
+                    onChange={(event) => setTrackingNumber(event.target.value)}
+                    placeholder="Nhập mã vận đơn nếu có"
+                    className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#003b93] focus:bg-white"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void saveShipmentUpdate()}
+                  disabled={savingShipment}
+                  className="w-full rounded-lg bg-[#003b93] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {savingShipment ? "Đang lưu..." : "Lưu trạng thái giao hàng"}
+                </button>
+              </div>
+            </section>
+          )}
 
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-lg font-bold text-slate-950">Thanh toán</h3>
@@ -274,89 +247,8 @@ const ManagerOrderDetailPage = () => {
               </div>
             </div>
           </section>
-
-          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-950">Tiến trình đơn hàng</h3>
-            <div className="mt-6 space-y-5">
-              {statusTimeline(order).map((step) => (
-                <div key={step.status} className="flex items-start gap-3">
-                  <div
-                    className={`mt-1 h-3 w-3 rounded-full ${
-                      step.completed ? "bg-[#003b93]" : "bg-slate-200"
-                    }`}
-                  />
-                  <div>
-                    <p className={`text-sm font-semibold ${step.active ? "text-slate-950" : "text-slate-500"}`}>
-                      {formatManagerLabel(step.status)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 border-t border-slate-200 pt-4 text-xs text-slate-400">
-              Tạo lúc: {formatDateTime(order.createdAt)}
-              <br />
-              Cập nhật lúc: {formatDateTime(order.updatedAt)}
-            </div>
-          </section>
         </div>
       </div>
-
-      {reviewDialogAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
-          <div className="w-full max-w-lg rounded-lg bg-white shadow-2xl">
-            <div className="border-b border-slate-200 px-6 py-5">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Xử lý yêu cầu hủy</p>
-              <h3 className="mt-2 text-xl font-bold text-slate-950">
-                {reviewDialogAction === "approve" ? "Duyệt hủy đơn" : "Từ chối yêu cầu hủy"}
-              </h3>
-              <p className="mt-2 text-sm text-slate-500">{order.orderNumber}</p>
-            </div>
-
-            <div className="space-y-4 px-6 py-5">
-              <label className="block">
-                <span className="text-sm font-semibold text-slate-700">
-                  {reviewDialogAction === "approve" ? "Ghi chú duyệt hủy" : "Lý do từ chối"}
-                </span>
-                <textarea
-                  value={reviewNote}
-                  onChange={(event) => setReviewNote(event.target.value)}
-                  rows={5}
-                  maxLength={1000}
-                  placeholder={
-                    reviewDialogAction === "approve"
-                      ? "Ví dụ: Đơn đủ điều kiện hủy, chưa phát sinh thanh toán."
-                      : "Ví dụ: Đơn đã được xác nhận xử lý tại showroom."
-                  }
-                  className="mt-2 w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#003b93] focus:bg-white focus:ring-4 focus:ring-blue-100"
-                />
-              </label>
-              <div className="text-right text-xs text-slate-400">{reviewNote.length}/1000</div>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 px-6 py-4 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={closeReviewDialog}
-                disabled={reviewingCancellation !== null}
-                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                onClick={() => void submitCancellationReview()}
-                disabled={reviewingCancellation !== null}
-                className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                  reviewDialogAction === "approve" ? "bg-rose-600 hover:bg-rose-700" : "bg-slate-900 hover:bg-slate-800"
-                }`}
-              >
-                {reviewingCancellation === reviewDialogAction ? "Đang xử lý..." : reviewDialogAction === "approve" ? "Duyệt hủy" : "Từ chối"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

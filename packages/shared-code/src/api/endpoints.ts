@@ -12,6 +12,7 @@ export const API_ENDPOINTS = {
   },
   products: {
     list: "/products",
+    filterOptions: "/products/filter-options",
     detail: (id: string) => `/products/${id}`,
     related: (id: string) => `/products/${id}/related`,
     search: "/products/search",
@@ -42,7 +43,15 @@ export const API_ENDPOINTS = {
     productStock: (productId: number | string) => `/manager/products/${productId}/stock`,
     cancellationApprove: (orderId: number | string) => `/manager/orders/${orderId}/cancellation/approve`,
     cancellationReject: (orderId: number | string) => `/manager/orders/${orderId}/cancellation/reject`,
-    customers: "/manager/customers"
+    customers: "/manager/customers",
+    revenueReport: "/manager/revenue-report",
+    orderShipment: (orderId: number | string) => `/manager/orders/${orderId}/shipment`
+  },
+  productImages: {
+    listByProduct: (productId: number | string) => `/admin/product-images/by-product/${productId}`,
+    upload: "/admin/product-images",
+    update: (imageId: number | string) => `/admin/product-images/${imageId}`,
+    remove: (imageId: number | string) => `/admin/product-images/${imageId}`
   },
   showrooms: {
     list: "/showrooms"

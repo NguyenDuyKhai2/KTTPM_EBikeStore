@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { orderAPI } from "@ebike/shared-code/api";
 import { useAppSelector } from "@ebike/shared-code/redux";
 import type { Order } from "@ebike/shared-code/types";
 import SectionShell from "../../components/common/SectionShell";
+import ShipmentTimeline from "../../components/orders/ShipmentTimeline";
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "Chờ xác nhận",
   CONFIRMED: "Đã xác nhận",
-  CANCELLATION_REQUESTED: "Chờ duyệt hủy",
+  PROCESSING: "Đang xử lý",
   SHIPPED: "Đang giao",
   DELIVERED: "Đã giao",
   CANCELLED: "Đã hủy"
@@ -16,7 +18,7 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_CLASSES: Record<string, string> = {
   PENDING: "bg-amber-50 text-amber-700 border-amber-200",
   CONFIRMED: "bg-blue-50 text-blue-700 border-blue-200",
-  CANCELLATION_REQUESTED: "bg-rose-50 text-rose-700 border-rose-200",
+  PROCESSING: "bg-indigo-50 text-indigo-700 border-indigo-200",
   SHIPPED: "bg-violet-50 text-violet-700 border-violet-200",
   DELIVERED: "bg-emerald-50 text-emerald-700 border-emerald-200",
   CANCELLED: "bg-rose-50 text-rose-700 border-rose-200"
@@ -189,7 +191,11 @@ const CustomerOrdersSafePage = () => {
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="text-2xl font-bold">{order.orderNumber}</h2>
+                        <h2 className="text-2xl font-bold">
+                          <Link to={`/customer/orders/${order.id}`} className="transition hover:text-primary">
+                            {order.orderNumber}
+                          </Link>
+                        </h2>
                         <span
                           className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                             STATUS_CLASSES[order.status] || "border-gray-200 bg-gray-50 text-gray-700"
@@ -231,6 +237,16 @@ const CustomerOrdersSafePage = () => {
                         </button>
                       )}
                     </div>
+                  </div>
+
+                  <div className="mt-5 border-t border-outline-variant/10 pt-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-foreground">Trạng thái giao hàng</p>
+                      <Link to={`/customer/orders/${order.id}`} className="text-sm font-semibold text-primary">
+                        Xem chi tiết
+                      </Link>
+                    </div>
+                    <ShipmentTimeline order={order} compact />
                   </div>
 
                   <div className="mt-5 border-t border-outline-variant/10 pt-5">

@@ -92,4 +92,30 @@ export interface ProductFilter {
   categoryId?: number;
   minPrice?: number;
   maxPrice?: number;
+  brand?: string;
+  vehicleType?: string;
+  batteryType?: string;
+  minRangeKm?: number;
+  maxRangeKm?: number;
+  inStock?: boolean;
+  sortBy?: "price" | "name" | "newest" | string;
+  sortDir?: "asc" | "desc" | string;
+}
+
+export interface ProductFilterOptions {
+  brands: string[];
+  vehicleTypes: string[];
+  batteryTypes: string[];
+}
+
+export interface AdminProductImage {
+  id: number;
+  productId: number;
+  variantId?: number | null;
+  imageUrl: string;
+  altText?: string | null;
+  sortOrder?: number | null;
+  primaryImage?: boolean | null;
+  status?: string | null;
+  createdAt?: string | null;
 }

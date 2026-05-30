@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Heart, Loader2, Search, SlidersHorizontal } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { ChevronRight, Heart, Loader2, Search } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { productAPI } from "@ebike/shared-code/api";
 import { useAuth, useFavorites } from "@ebike/shared-code/hooks";
-import type { Product, ProductFilter } from "@ebike/shared-code/types";
+import type { Product, ProductFilter, ProductFilterOptions } from "@ebike/shared-code/types";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
 
-type SortKey = "default" | "price-asc" | "price-desc";
+type SortKey = "default" | "price-asc" | "price-desc" | "name-asc" | "newest";
 
 const PAGE_SIZE = 9;
 
@@ -17,20 +17,71 @@ const PRICE_OPTIONS = [
   { label: "Trên 50 triệu", value: "over50", minPrice: 50_000_000, maxPrice: undefined }
 ] as const;
 
+const RANGE_OPTIONS = [
+  { label: "Tất cả", value: "all", minRangeKm: undefined, maxRangeKm: undefined },
+  { label: "Dưới 50 km", value: "under50", minRangeKm: undefined, maxRangeKm: 50 },
+  { label: "50 - 100 km", value: "50-100", minRangeKm: 50, maxRangeKm: 100 },
+  { label: "Trên 100 km", value: "over100", minRangeKm: 100, maxRangeKm: undefined }
+] as const;
+
+const BATTERY_TYPE_LABELS: Record<string, string> = {
+  LEAD_ACID: "Axit-chì",
+  LITHIUM_ION: "Lithium-ion",
+  LFP: "LFP"
+};
+
+const parseSortParams = (sortKey: SortKey): Pick<ProductFilter, "sortBy" | "sortDir"> => {
+  switch (sortKey) {
+    case "price-asc":
+      return { sortBy: "price", sortDir: "asc" };
+    case "price-desc":
+      return { sortBy: "price", sortDir: "desc" };
+    case "name-asc":
+      return { sortBy: "name", sortDir: "asc" };
+    case "newest":
+      return { sortBy: "newest", sortDir: "desc" };
+    default:
+      return {};
+  }
+};
+
 const ProductsPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const { favoriteIdSet, isPending, toggleFavorite, error: favoriteError } = useFavorites();
   const [products, setProducts] = useState<Product[]>([]);
   const [allCategories, setAllCategories] = useState<Array<{ id: number; name: string }>>([]);
+  const [filterOptions, setFilterOptions] = useState<ProductFilterOptions>({ brands: [], vehicleTypes: [], batteryTypes: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [selectedPriceKey, setSelectedPriceKey] = useState<(typeof PRICE_OPTIONS)[number]["value"]>("all");
-  const [sortBy, setSortBy] = useState<SortKey>("default");
-  const [searchText, setSearchText] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchText, setSearchText] = useState(searchParams.get("q") || "");
+  const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get("q") || "");
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page") || "1"));
+
+  const categoryParam = searchParams.get("category");
+  const selectedCategoryId =
+    categoryParam && !Number.isNaN(Number(categoryParam)) ? Number(categoryParam) : null;
+  const selectedPriceKey = (searchParams.get("price") as (typeof PRICE_OPTIONS)[number]["value"]) || "all";
+  const selectedRangeKey = (searchParams.get("range") as (typeof RANGE_OPTIONS)[number]["value"]) || "all";
+  const selectedBrand = searchParams.get("brand") || "";
+  const selectedBatteryType = searchParams.get("batteryType") || "";
+  const inStockOnly = searchParams.get("inStock") === "1";
+  const sortBy = (searchParams.get("sort") as SortKey) || "default";
+
+  const updateSearchParams = (updates: Record<string, string | null>) => {
+    const nextParams = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (!value) {
+        nextParams.delete(key);
+      } else {
+        nextParams.set(key, value);
+      }
+    });
+    nextParams.delete("page");
+    setSearchParams(nextParams, { replace: true });
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(searchText.trim()), 350);
@@ -38,9 +89,24 @@ const ProductsPage = () => {
   }, [searchText]);
 
   useEffect(() => {
-    const loadCategories = async () => {
+    const nextQuery = debouncedQuery || "";
+    const currentQuery = searchParams.get("q") || "";
+    if (nextQuery !== currentQuery) {
+      const nextParams = new URLSearchParams(searchParams);
+      if (nextQuery) {
+        nextParams.set("q", nextQuery);
+      } else {
+        nextParams.delete("q");
+      }
+      nextParams.delete("page");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [debouncedQuery, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const loadMeta = async () => {
       try {
-        const items = await productAPI.list();
+        const [items, options] = await Promise.all([productAPI.list(), productAPI.getFilterOptions()]);
         const uniqueCategories = Array.from(
           new Map(
             items
@@ -49,20 +115,28 @@ const ProductsPage = () => {
           ).values()
         );
         setAllCategories(uniqueCategories);
+        setFilterOptions(options);
       } catch {
       }
     };
 
-    void loadCategories();
+    void loadMeta();
   }, []);
 
   useEffect(() => {
     const selectedPrice = PRICE_OPTIONS.find((option) => option.value === selectedPriceKey);
+    const selectedRange = RANGE_OPTIONS.find((option) => option.value === selectedRangeKey);
     const filters: ProductFilter = {
       query: debouncedQuery || undefined,
       categoryId: selectedCategoryId ?? undefined,
       minPrice: selectedPrice?.minPrice,
-      maxPrice: selectedPrice?.maxPrice
+      maxPrice: selectedPrice?.maxPrice,
+      brand: selectedBrand || undefined,
+      batteryType: selectedBatteryType || undefined,
+      minRangeKm: selectedRange?.minRangeKm,
+      maxRangeKm: selectedRange?.maxRangeKm,
+      inStock: inStockOnly ? true : undefined,
+      ...parseSortParams(sortBy)
     };
 
     const loadProducts = async () => {
@@ -80,22 +154,31 @@ const ProductsPage = () => {
     };
 
     void loadProducts();
-  }, [debouncedQuery, selectedCategoryId, selectedPriceKey]);
+  }, [
+    debouncedQuery,
+    selectedCategoryId,
+    selectedPriceKey,
+    selectedRangeKey,
+    selectedBrand,
+    selectedBatteryType,
+    inStockOnly,
+    sortBy
+  ]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedQuery, selectedCategoryId, selectedPriceKey, sortBy]);
+  }, [
+    debouncedQuery,
+    selectedCategoryId,
+    selectedPriceKey,
+    selectedRangeKey,
+    selectedBrand,
+    selectedBatteryType,
+    inStockOnly,
+    sortBy
+  ]);
 
-  const sortedProducts = useMemo(() => {
-    const nextProducts = [...products];
-    if (sortBy === "price-asc") {
-      nextProducts.sort((a, b) => (a.discountPrice ?? a.price) - (b.discountPrice ?? b.price));
-    }
-    if (sortBy === "price-desc") {
-      nextProducts.sort((a, b) => (b.discountPrice ?? b.price) - (a.discountPrice ?? a.price));
-    }
-    return nextProducts;
-  }, [products, sortBy]);
+  const sortedProducts = products;
 
   const totalPages = Math.max(1, Math.ceil(sortedProducts.length / PAGE_SIZE));
 
@@ -184,7 +267,7 @@ const ProductsPage = () => {
                   <input
                     type="radio"
                     checked={selectedCategoryId === null}
-                    onChange={() => setSelectedCategoryId(null)}
+                    onChange={() => updateSearchParams({ category: null })}
                     className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
                   />
                   <span className="text-muted-foreground">Tất cả</span>
@@ -194,7 +277,7 @@ const ProductsPage = () => {
                     <input
                       type="radio"
                       checked={selectedCategoryId === category.id}
-                      onChange={() => setSelectedCategoryId(category.id)}
+                      onChange={() => updateSearchParams({ category: String(category.id) })}
                       className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
                     />
                     <span className="text-muted-foreground">{category.name}</span>
@@ -212,13 +295,76 @@ const ProductsPage = () => {
                       type="radio"
                       name="price-range"
                       checked={selectedPriceKey === option.value}
-                      onChange={() => setSelectedPriceKey(option.value)}
+                      onChange={() => updateSearchParams({ price: option.value === "all" ? null : option.value })}
                       className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
                     />
                     <span className="text-muted-foreground">{option.label}</span>
                   </label>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <h3 className="mb-6 text-sm font-bold uppercase tracking-wider">Hãng</h3>
+              <select
+                value={selectedBrand}
+                onChange={(event) => updateSearchParams({ brand: event.target.value || null })}
+                className="input-base w-full"
+              >
+                <option value="">Tất cả hãng</option>
+                {filterOptions.brands.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <h3 className="mb-6 text-sm font-bold uppercase tracking-wider">Loại pin</h3>
+              <select
+                value={selectedBatteryType}
+                onChange={(event) => updateSearchParams({ batteryType: event.target.value || null })}
+                className="input-base w-full"
+              >
+                <option value="">Tất cả loại pin</option>
+                {filterOptions.batteryTypes.map((batteryType) => (
+                  <option key={batteryType} value={batteryType}>
+                    {BATTERY_TYPE_LABELS[batteryType] || batteryType}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <h3 className="mb-6 text-sm font-bold uppercase tracking-wider">Quãng đường</h3>
+              <div className="space-y-3">
+                {RANGE_OPTIONS.map((option) => (
+                  <label key={option.value} className="flex cursor-pointer items-center gap-3">
+                    <input
+                      type="radio"
+                      name="range-filter"
+                      checked={selectedRangeKey === option.value}
+                      onChange={() => updateSearchParams({ range: option.value === "all" ? null : option.value })}
+                      className="h-5 w-5 border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span className="text-muted-foreground">{option.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="mb-6 text-sm font-bold uppercase tracking-wider">Tồn kho</h3>
+              <label className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={inStockOnly}
+                  onChange={(event) => updateSearchParams({ inStock: event.target.checked ? "1" : null })}
+                  className="h-5 w-5 rounded border-outline-variant text-primary focus:ring-primary"
+                />
+                <span className="text-muted-foreground">Chỉ hiển thị còn hàng</span>
+              </label>
             </div>
           </aside>
 
@@ -231,18 +377,16 @@ const ProductsPage = () => {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 rounded-lg border border-outline-variant px-4 py-2 text-sm font-bold text-muted-foreground">
-                  <SlidersHorizontal size={16} />
-                  Filter API
-                </div>
                 <select
                   value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value as SortKey)}
+                  onChange={(event) => updateSearchParams({ sort: event.target.value === "default" ? null : event.target.value })}
                   className="rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-bold focus:border-primary focus:outline-none"
                 >
                   <option value="default">Mặc định</option>
                   <option value="price-asc">Giá tăng dần</option>
                   <option value="price-desc">Giá giảm dần</option>
+                  <option value="name-asc">Tên A-Z</option>
+                  <option value="newest">Mới nhất</option>
                 </select>
               </div>
             </div>

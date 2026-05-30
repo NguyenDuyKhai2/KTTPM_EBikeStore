@@ -18,6 +18,10 @@ const pageTitles: Record<string, { title: string; description: string }> = {
     title: "Khách hàng",
     description: "Tra cứu hồ sơ khách hàng và giá trị mua sắm."
   },
+  "/manager/reports": {
+    title: "Báo cáo doanh thu",
+    description: "Theo dõi doanh thu, đơn hàng và sản phẩm bán chạy theo thời gian."
+  },
   "/manager/products": {
     title: "Quản lý tồn kho",
     description: "Theo dõi số lượng, cảnh báo sắp hết hàng và cập nhật tồn kho sản phẩm."

@@ -23,6 +23,7 @@ import ProductsPage from "../pages/ProductsPage";
 import SignupPage from "../pages/SignupPage";
 import CustomerDashboardPage from "../pages/customer/CustomerDashboardRealPage";
 import CustomerOrdersPage from "../pages/customer/CustomerOrdersSafePage";
+import CustomerOrderDetailPage from "../pages/customer/CustomerOrderDetailPage";
 import CustomerNotificationsPage from "../pages/customer/CustomerNotificationsPage";
 import CustomerPaymentHistoryPage from "../pages/customer/CustomerPaymentHistoryPage";
 import CustomerProfilePage from "../pages/customer/CustomerProfilePage";
@@ -33,6 +34,7 @@ import ManagerOrderDetailPage from "../pages/manager/ManagerOrderDetailPage";
 import ManagerOrdersPage from "../pages/manager/ManagerOrdersPage";
 import ManagerPaymentsPage from "../pages/manager/ManagerPaymentsPage";
 import ManagerProductsPage from "../pages/manager/ManagerProductsPage";
+import ManagerRevenueReportPage from "../pages/manager/ManagerRevenueReportPage";
 
 const router = createBrowserRouter([
   {
@@ -66,6 +68,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <CustomerDashboardPage /> },
           { path: "orders", element: <CustomerOrdersPage /> },
+          { path: "orders/:id", element: <CustomerOrderDetailPage /> },
           { path: "payments", element: <CustomerPaymentHistoryPage /> },
           { path: "notifications", element: <CustomerNotificationsPage /> },
           { path: "profile", element: <CustomerProfilePage /> }
@@ -101,7 +104,8 @@ const router = createBrowserRouter([
       { path: "payments", element: <ManagerPaymentsPage /> },
       { path: "customers", element: <ManagerCustomersPage /> },
       { path: "inventory", element: <ManagerInventoryPage /> },
-      { path: "products", element: <ManagerProductsPage /> }
+      { path: "products", element: <ManagerProductsPage /> },
+      { path: "reports", element: <ManagerRevenueReportPage /> }
     ]
   },
   {

@@ -163,14 +163,14 @@
 
 #### Phạm vi
 
-- Manager xem doanh thu theo ngày/tháng.
+- Manager xem doanh thu theo ngày/tháng/quý/năm/chọn ngày từ ngày nào đến ngày nào
 - Hiển thị tổng đơn hàng, tổng doanh thu, số đơn thành công.
 - Có danh sách sản phẩm bán chạy.
 
 #### Tiêu chí hoàn thành
 
 - Thống kê lấy được từ dữ liệu đơn hàng.
-- Có bảng hoặc biểu đồ dễ đọc.
+- Có biểu đồ dễ đọc.
 - Có trạng thái loading/error.
 - Số liệu không tính các đơn đã hủy nếu hệ thống có trạng thái hủy.
 

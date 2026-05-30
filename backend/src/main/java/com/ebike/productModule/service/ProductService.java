@@ -2,6 +2,7 @@ package com.ebike.productModule.service;
 
 import com.ebike.productModule.dto.response.CategorySummaryDto;
 import com.ebike.productModule.dto.response.ProductDetailDto;
+import com.ebike.productModule.dto.response.ProductFilterOptionsDto;
 import com.ebike.productModule.dto.response.ProductSpecificationDto;
 import com.ebike.productModule.dto.response.ProductSummaryDto;
 import com.ebike.productModule.dto.response.ProductVariantDto;
@@ -10,11 +11,17 @@ import com.ebike.productModule.entity.ProductImage;
 import com.ebike.productModule.entity.ProductImageStatus;
 import com.ebike.productModule.entity.ProductSpecification;
 import com.ebike.productModule.entity.ProductVariant;
+import com.ebike.productModule.entity.BatteryType;
+import com.ebike.productModule.entity.VehicleType;
 import com.ebike.productModule.repository.ProductRepository;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.TreeSet;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,7 +41,20 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
-    public List<ProductSummaryDto> getProducts(String query, Integer categoryId, BigDecimal minPrice, BigDecimal maxPrice) {
+    public List<ProductSummaryDto> getProducts(
+        String query,
+        Integer categoryId,
+        BigDecimal minPrice,
+        BigDecimal maxPrice,
+        String brand,
+        String vehicleType,
+        String batteryType,
+        BigDecimal minRangeKm,
+        BigDecimal maxRangeKm,
+        Boolean inStock,
+        String sortBy,
+        String sortDir
+    ) {
         Specification<Product> specification = Specification.where(isActive());
 
         if (query != null && !query.trim().isEmpty()) {
@@ -49,10 +69,63 @@ public class ProductService {
         if (maxPrice != null) {
             specification = specification.and(hasMaxPrice(maxPrice));
         }
+        if (brand != null && !brand.trim().isEmpty()) {
+            specification = specification.and(hasBrand(brand.trim()));
+        }
+        if (vehicleType != null && !vehicleType.trim().isEmpty()) {
+            specification = specification.and(hasVehicleType(vehicleType.trim()));
+        }
+        if (batteryType != null && !batteryType.trim().isEmpty()) {
+            specification = specification.and(hasBatteryType(batteryType.trim()));
+        }
+        if (minRangeKm != null) {
+            specification = specification.and(hasMinRangeKm(minRangeKm));
+        }
+        if (maxRangeKm != null) {
+            specification = specification.and(hasMaxRangeKm(maxRangeKm));
+        }
+        if (Boolean.TRUE.equals(inStock)) {
+            specification = specification.and(hasStockAvailable());
+        }
 
-        return productRepository.findAll(specification).stream()
+        List<Product> products = new ArrayList<>(productRepository.findAll(specification));
+        Comparator<Product> comparator = resolveSortComparator(sortBy, sortDir);
+        if (comparator != null) {
+            products.sort(comparator);
+        }
+
+        return products.stream()
             .map(this::toSummaryDto)
             .toList();
+    }
+
+    public ProductFilterOptionsDto getFilterOptions() {
+        List<Product> products = productRepository.findAll(isActive());
+        TreeSet<String> brands = new TreeSet<>();
+        TreeSet<String> vehicleTypes = new TreeSet<>();
+        TreeSet<String> batteryTypes = new TreeSet<>();
+
+        for (Product product : products) {
+            ProductSpecification specification = product.getSpecification();
+            if (specification == null) {
+                continue;
+            }
+            if (specification.getBrand() != null && !specification.getBrand().isBlank()) {
+                brands.add(specification.getBrand().trim());
+            }
+            if (specification.getVehicleType() != null) {
+                vehicleTypes.add(specification.getVehicleType().name());
+            }
+            if (specification.getBatteryType() != null) {
+                batteryTypes.add(specification.getBatteryType().name());
+            }
+        }
+
+        return new ProductFilterOptionsDto(
+            new ArrayList<>(brands),
+            new ArrayList<>(vehicleTypes),
+            new ArrayList<>(batteryTypes)
+        );
     }
 
     public ProductDetailDto getProductBySlug(String slug) {
@@ -108,6 +181,93 @@ public class ProductService {
                 criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), pattern)
             );
         };
+    }
+
+    private Specification<Product> hasBrand(String brand) {
+        return (root, query, criteriaBuilder) -> {
+            Join<Product, ProductSpecification> specification = root.join("specification", JoinType.INNER);
+            return criteriaBuilder.like(
+                criteriaBuilder.lower(specification.get("brand")),
+                "%" + brand.toLowerCase(Locale.ROOT) + "%"
+            );
+        };
+    }
+
+    private Specification<Product> hasVehicleType(String vehicleType) {
+        VehicleType parsedType = parseVehicleType(vehicleType);
+        return (root, query, criteriaBuilder) -> {
+            Join<Product, ProductSpecification> specification = root.join("specification", JoinType.INNER);
+            return criteriaBuilder.equal(specification.get("vehicleType"), parsedType);
+        };
+    }
+
+    private Specification<Product> hasBatteryType(String batteryType) {
+        BatteryType parsedType = parseBatteryType(batteryType);
+        return (root, query, criteriaBuilder) -> {
+            Join<Product, ProductSpecification> specification = root.join("specification", JoinType.INNER);
+            return criteriaBuilder.equal(specification.get("batteryType"), parsedType);
+        };
+    }
+
+    private Specification<Product> hasMinRangeKm(BigDecimal minRangeKm) {
+        return (root, query, criteriaBuilder) -> {
+            Join<Product, ProductSpecification> specification = root.join("specification", JoinType.INNER);
+            return criteriaBuilder.greaterThanOrEqualTo(specification.get("maxRangeKm"), minRangeKm);
+        };
+    }
+
+    private Specification<Product> hasMaxRangeKm(BigDecimal maxRangeKm) {
+        return (root, query, criteriaBuilder) -> {
+            Join<Product, ProductSpecification> specification = root.join("specification", JoinType.INNER);
+            return criteriaBuilder.lessThanOrEqualTo(specification.get("maxRangeKm"), maxRangeKm);
+        };
+    }
+
+    private Specification<Product> hasStockAvailable() {
+        return (root, query, criteriaBuilder) -> criteriaBuilder.greaterThan(root.get("stockQuantity"), 0);
+    }
+
+    private VehicleType parseVehicleType(String rawValue) {
+        try {
+            return VehicleType.valueOf(rawValue.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid vehicleType filter");
+        }
+    }
+
+    private BatteryType parseBatteryType(String rawValue) {
+        try {
+            return BatteryType.valueOf(rawValue.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid batteryType filter");
+        }
+    }
+
+    private Comparator<Product> resolveSortComparator(String sortBy, String sortDir) {
+        if (sortBy == null || sortBy.isBlank()) {
+            return null;
+        }
+
+        boolean ascending = !"desc".equalsIgnoreCase(sortDir);
+        return switch (sortBy.trim().toLowerCase(Locale.ROOT)) {
+            case "price" -> ascending
+                ? Comparator.comparing(this::effectivePrice)
+                : Comparator.comparing(this::effectivePrice).reversed();
+            case "name" -> {
+                Comparator<Product> byName = Comparator.comparing(
+                    (Product product) -> product.getName().toLowerCase(Locale.ROOT)
+                );
+                yield ascending ? byName : byName.reversed();
+            }
+            case "newest" -> ascending
+                ? Comparator.comparing(Product::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                : Comparator.comparing(Product::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
+            default -> null;
+        };
+    }
+
+    private BigDecimal effectivePrice(Product product) {
+        return product.getDiscountPrice() == null ? product.getPrice() : product.getDiscountPrice();
     }
 
     private int resolveRelatedProductLimit(Integer limit) {

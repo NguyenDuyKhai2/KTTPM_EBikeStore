@@ -5,9 +5,13 @@ import com.ebike.authModule.entity.User;
 import com.ebike.authModule.repository.UserRepository;
 import com.ebike.managerModule.dto.request.ManagerPaymentConfirmationRequest;
 import com.ebike.managerModule.dto.request.ManagerProductStockUpdateRequest;
+import com.ebike.managerModule.dto.request.ManagerShipmentUpdateRequest;
 import com.ebike.managerModule.dto.response.ManagerCustomerResponse;
 import com.ebike.managerModule.dto.response.ManagerDashboardResponse;
 import com.ebike.managerModule.dto.response.ManagerPaymentResponse;
+import com.ebike.managerModule.dto.response.ManagerRevenuePeriodPointResponse;
+import com.ebike.managerModule.dto.response.ManagerRevenueReportResponse;
+import com.ebike.managerModule.dto.response.ManagerTopProductResponse;
 import com.ebike.managerModule.service.ManagerService;
 import com.ebike.orderModule.dto.request.OrderCancellationRequest;
 import com.ebike.orderModule.dto.response.OrderResponse;
@@ -18,6 +22,7 @@ import com.ebike.orderModule.entity.Payment;
 import com.ebike.orderModule.entity.PaymentMethod;
 import com.ebike.orderModule.entity.PaymentStatus;
 import com.ebike.orderModule.entity.Shipment;
+import com.ebike.orderModule.entity.ShipmentStatus;
 import com.ebike.orderModule.entity.Showroom;
 import com.ebike.orderModule.repository.OrderRepository;
 import com.ebike.orderModule.repository.PaymentRepository;
@@ -28,9 +33,14 @@ import com.ebike.productModule.service.ProductService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -193,6 +203,107 @@ public class ManagerServiceImpl implements ManagerService {
             .sorted(Comparator.comparing(User::getCreatedAt).reversed())
             .map(user -> toCustomerResponse(user, orders))
             .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ManagerRevenueReportResponse getRevenueReport(String rawPeriod, String rawFromDate, String rawToDate) {
+        String period = normalizePeriod(rawPeriod);
+        LocalDate today = LocalDate.now();
+        LocalDate fromDate;
+        LocalDate toDate;
+
+        if ("custom".equals(period)) {
+            fromDate = parseDate(rawFromDate, "from");
+            toDate = parseDate(rawToDate, "to");
+        } else {
+            toDate = rawToDate == null || rawToDate.isBlank() ? today : parseDate(rawToDate, "to");
+            fromDate = rawFromDate == null || rawFromDate.isBlank() ? defaultFromDate(period, toDate) : parseDate(rawFromDate, "from");
+        }
+
+        if (fromDate.isAfter(toDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "from date must be on or before to date");
+        }
+
+        String bucketPeriod = "custom".equals(period) ? resolveCustomBucketPeriod(fromDate, toDate) : period;
+        List<Order> orders = orderRepository.findAll();
+        List<Order> inScope = orders.stream()
+            .filter(this::isCountedOrder)
+            .filter(order -> isOnOrAfter(order.getCreatedAt().toLocalDate(), fromDate))
+            .filter(order -> !order.getCreatedAt().toLocalDate().isAfter(toDate))
+            .toList();
+
+        long totalOrders = inScope.size();
+        long successfulOrders = inScope.stream()
+            .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+            .count();
+        BigDecimal totalRevenue = inScope.stream()
+            .filter(this::hasPaidPayment)
+            .map(order -> order.getPayment().getAmount())
+            .reduce(ZERO, BigDecimal::add);
+
+        List<ManagerRevenuePeriodPointResponse> breakdown = buildRevenueBreakdown(orders, bucketPeriod, fromDate, toDate);
+        List<ManagerTopProductResponse> topProducts = buildTopProducts(
+            inScope.stream().filter(this::hasPaidPayment).toList()
+        );
+
+        return new ManagerRevenueReportResponse(
+            bucketPeriod.toUpperCase(Locale.ROOT),
+            fromDate.toString(),
+            toDate.toString(),
+            totalOrders,
+            successfulOrders,
+            totalRevenue,
+            breakdown,
+            topProducts
+        );
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse updateOrderShipment(Long orderId, ManagerShipmentUpdateRequest request) {
+        if (request == null || request.shipmentStatus() == null || request.shipmentStatus().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "shipmentStatus is required");
+        }
+
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot update shipment for cancelled orders");
+        }
+
+        Shipment shipment = order.getShipment();
+        if (shipment == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order has no shipment information");
+        }
+
+        ShipmentStatus nextStatus;
+        try {
+            nextStatus = ShipmentStatus.valueOf(request.shipmentStatus().trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid shipment status");
+        }
+
+        shipment.setShipmentStatus(nextStatus);
+        if (request.trackingNumber() != null) {
+            String trackingNumber = request.trackingNumber().trim();
+            shipment.setTrackingNumber(trackingNumber.isBlank() ? null : trackingNumber);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if ((nextStatus == ShipmentStatus.SHIPPED || nextStatus == ShipmentStatus.IN_TRANSIT) && shipment.getShippedAt() == null) {
+            shipment.setShippedAt(now);
+        }
+        if (nextStatus == ShipmentStatus.DELIVERED) {
+            if (shipment.getShippedAt() == null) {
+                shipment.setShippedAt(now);
+            }
+            shipment.setDeliveredAt(now);
+        }
+
+        syncOrderStatusWithShipment(order, nextStatus);
+        return toOrderResponse(orderRepository.save(order));
     }
 
     @Override
@@ -412,7 +523,221 @@ public class ManagerServiceImpl implements ManagerService {
         return value == null || value.isBlank();
     }
 
+    private void syncOrderStatusWithShipment(Order order, ShipmentStatus shipmentStatus) {
+        switch (shipmentStatus) {
+            case PREPARING -> {
+                if (order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.CONFIRMED) {
+                    order.setStatus(OrderStatus.PROCESSING);
+                }
+            }
+            case SHIPPED, IN_TRANSIT -> order.setStatus(OrderStatus.SHIPPED);
+            case DELIVERED -> order.setStatus(OrderStatus.DELIVERED);
+            default -> {
+            }
+        }
+    }
+
     private String normalizeOptional(String value) {
         return isBlank(value) ? null : value.trim();
+    }
+
+    private String normalizePeriod(String rawPeriod) {
+        String period = rawPeriod == null ? "day" : rawPeriod.trim().toLowerCase(Locale.ROOT);
+        if (!List.of("day", "month", "quarter", "year", "custom").contains(period)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "period must be day, month, quarter, year, or custom");
+        }
+        return period;
+    }
+
+    private LocalDate parseDate(String rawValue, String fieldName) {
+        if (rawValue == null || rawValue.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, fieldName + " date is required");
+        }
+        try {
+            return LocalDate.parse(rawValue.trim());
+        } catch (DateTimeParseException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid " + fieldName + " date format, expected yyyy-MM-dd");
+        }
+    }
+
+    private LocalDate defaultFromDate(String period, LocalDate toDate) {
+        return switch (period) {
+            case "month" -> toDate.minusMonths(11).withDayOfMonth(1);
+            case "quarter" -> toDate.minusMonths(21).withDayOfMonth(1);
+            case "year" -> toDate.minusYears(4).withDayOfYear(1);
+            default -> toDate.minusDays(29);
+        };
+    }
+
+    private String resolveCustomBucketPeriod(LocalDate fromDate, LocalDate toDate) {
+        long days = toDate.toEpochDay() - fromDate.toEpochDay() + 1;
+        if (days <= 62) {
+            return "day";
+        }
+        if (days <= 730) {
+            return "month";
+        }
+        return "year";
+    }
+
+    private boolean isCountedOrder(Order order) {
+        return order.getStatus() != OrderStatus.CANCELLED;
+    }
+
+    private boolean hasPaidPayment(Order order) {
+        Payment payment = order.getPayment();
+        return payment != null && payment.getPaymentStatus() == PaymentStatus.PAID;
+    }
+
+    private boolean isOnOrAfter(LocalDate value, LocalDate fromDate) {
+        return !value.isBefore(fromDate);
+    }
+
+    private List<ManagerRevenuePeriodPointResponse> buildRevenueBreakdown(
+        List<Order> orders,
+        String period,
+        LocalDate fromDate,
+        LocalDate toDate
+    ) {
+        List<BucketRange> buckets = buildBucketRanges(period, fromDate, toDate);
+        return buckets.stream()
+            .map(bucket -> {
+                long orderCount = orders.stream()
+                    .filter(this::isCountedOrder)
+                    .filter(order -> {
+                        LocalDate createdAt = order.getCreatedAt().toLocalDate();
+                        return !createdAt.isBefore(bucket.start()) && !createdAt.isAfter(bucket.end());
+                    })
+                    .count();
+
+                BigDecimal revenue = orders.stream()
+                    .filter(this::isCountedOrder)
+                    .filter(this::hasPaidPayment)
+                    .filter(order -> {
+                        LocalDate createdAt = order.getCreatedAt().toLocalDate();
+                        return !createdAt.isBefore(bucket.start()) && !createdAt.isAfter(bucket.end());
+                    })
+                    .map(order -> order.getPayment().getAmount())
+                    .reduce(ZERO, BigDecimal::add);
+
+                return new ManagerRevenuePeriodPointResponse(bucket.label(), orderCount, revenue);
+            })
+            .toList();
+    }
+
+    private List<BucketRange> buildBucketRanges(String period, LocalDate fromDate, LocalDate toDate) {
+        List<BucketRange> buckets = new ArrayList<>();
+
+        switch (period) {
+            case "month" -> {
+                YearMonth cursor = YearMonth.from(fromDate);
+                YearMonth end = YearMonth.from(toDate);
+                while (!cursor.isAfter(end)) {
+                    LocalDate start = cursor.atDay(1);
+                    LocalDate endOfMonth = cursor.atEndOfMonth();
+                    if (start.isBefore(fromDate)) {
+                        start = fromDate;
+                    }
+                    if (endOfMonth.isAfter(toDate)) {
+                        endOfMonth = toDate;
+                    }
+                    buckets.add(new BucketRange(cursor.toString(), start, endOfMonth));
+                    cursor = cursor.plusMonths(1);
+                }
+            }
+            case "quarter" -> {
+                LocalDate cursor = quarterStart(fromDate);
+                while (!cursor.isAfter(toDate)) {
+                    LocalDate quarterEnd = quarterEnd(cursor);
+                    LocalDate bucketStart = cursor.isBefore(fromDate) ? fromDate : cursor;
+                    LocalDate bucketEnd = quarterEnd.isAfter(toDate) ? toDate : quarterEnd;
+                    buckets.add(new BucketRange(quarterLabel(cursor), bucketStart, bucketEnd));
+                    cursor = quarterStart(quarterEnd.plusDays(1));
+                }
+            }
+            case "year" -> {
+                int year = fromDate.getYear();
+                int endYear = toDate.getYear();
+                while (year <= endYear) {
+                    LocalDate start = LocalDate.of(year, 1, 1);
+                    LocalDate end = LocalDate.of(year, 12, 31);
+                    if (start.isBefore(fromDate)) {
+                        start = fromDate;
+                    }
+                    if (end.isAfter(toDate)) {
+                        end = toDate;
+                    }
+                    buckets.add(new BucketRange(String.valueOf(year), start, end));
+                    year += 1;
+                }
+            }
+            default -> {
+                LocalDate cursor = fromDate;
+                while (!cursor.isAfter(toDate)) {
+                    buckets.add(new BucketRange(cursor.toString(), cursor, cursor));
+                    cursor = cursor.plusDays(1);
+                }
+            }
+        }
+
+        return buckets;
+    }
+
+    private LocalDate quarterStart(LocalDate date) {
+        int quarter = (date.getMonthValue() - 1) / 3;
+        return LocalDate.of(date.getYear(), quarter * 3 + 1, 1);
+    }
+
+    private LocalDate quarterEnd(LocalDate quarterStartDate) {
+        return quarterStartDate.plusMonths(3).minusDays(1);
+    }
+
+    private String quarterLabel(LocalDate quarterStartDate) {
+        int quarter = (quarterStartDate.getMonthValue() - 1) / 3 + 1;
+        return quarterStartDate.getYear() + "-Q" + quarter;
+    }
+
+    private List<ManagerTopProductResponse> buildTopProducts(List<Order> paidOrders) {
+        Map<Long, TopProductAccumulator> aggregates = new HashMap<>();
+
+        for (Order order : paidOrders) {
+            for (OrderItem item : order.getItems()) {
+                Long productId = item.getProduct().getId();
+                TopProductAccumulator accumulator = aggregates.computeIfAbsent(
+                    productId,
+                    ignored -> new TopProductAccumulator(productId, item.getProductName())
+                );
+                accumulator.quantitySold += item.getQuantity();
+                accumulator.revenue = accumulator.revenue.add(
+                    item.getLineTotal() == null ? ZERO : item.getLineTotal()
+                );
+            }
+        }
+
+        return aggregates.values().stream()
+            .sorted(Comparator.comparing((TopProductAccumulator accumulator) -> accumulator.revenue).reversed())
+            .limit(10)
+            .map(accumulator -> new ManagerTopProductResponse(
+                accumulator.productId,
+                accumulator.productName,
+                accumulator.quantitySold,
+                accumulator.revenue
+            ))
+            .toList();
+    }
+
+    private record BucketRange(String label, LocalDate start, LocalDate end) {
+    }
+
+    private static final class TopProductAccumulator {
+        private final Long productId;
+        private final String productName;
+        private long quantitySold;
+        private BigDecimal revenue = ZERO;
+
+        private TopProductAccumulator(Long productId, String productName) {
+            this.productId = productId;
+            this.productName = productName;
+        }
     }
 }

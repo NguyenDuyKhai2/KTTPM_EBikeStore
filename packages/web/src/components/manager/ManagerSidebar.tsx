@@ -1,4 +1,4 @@
-import { CreditCard, ExternalLink, Home, LayoutDashboard, LogOut, Package, ShoppingBag, User, Users } from "lucide-react";
+import { BarChart3, CreditCard, ExternalLink, Home, LayoutDashboard, LogOut, Package, ShoppingBag, User, Users } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@ebike/shared-code/hooks";
 
@@ -15,6 +15,7 @@ const managerNavItems = [
   { to: "/manager/orders", label: "Đơn hàng", icon: ShoppingBag },
   { to: "/manager/payments", label: "Thanh toán", icon: CreditCard },
   { to: "/manager/customers", label: "Khách hàng", icon: Users },
+  { to: "/manager/reports", label: "Báo cáo doanh thu", icon: BarChart3 },
   { to: "/manager/products", label: "Sản phẩm", icon: Package },
   { to: "/manager/inventory", label: "Quản lý tồn kho", icon: Package }
 ];

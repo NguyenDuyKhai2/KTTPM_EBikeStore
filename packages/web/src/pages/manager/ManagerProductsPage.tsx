@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { ImageIcon } from "lucide-react";
 import { managerAPI, productAPI } from "@ebike/shared-code/api";
 import type { Product } from "@ebike/shared-code/types";
+import ProductImageManager from "../../components/manager/ProductImageManager";
 import { attachImageFallback, createProductImageFallback, resolveProductImage } from "../../utils/media";
 
 const formatCurrency = (value: number) =>
@@ -22,6 +24,7 @@ const ManagerProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [imageManagerProduct, setImageManagerProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -82,11 +85,27 @@ const ManagerProductsPage = () => {
                 </div>
 
                 <p className="mt-5 line-clamp-3 text-sm leading-7 text-slate-600">{product.description}</p>
+                <button
+                  type="button"
+                  onClick={() => setImageManagerProduct(product)}
+                  className="mt-5 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Quản lý ảnh
+                </button>
               </div>
             </div>
           </article>
         ))}
       </section>
+
+      {imageManagerProduct && (
+        <ProductImageManager
+          productId={imageManagerProduct.id}
+          productName={imageManagerProduct.name}
+          onClose={() => setImageManagerProduct(null)}
+        />
+      )}
     </div>
   );
 };
