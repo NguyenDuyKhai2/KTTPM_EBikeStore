@@ -1,6 +1,14 @@
 import { apiClient } from "./client";
 import { API_ENDPOINTS } from "./endpoints";
-import type { CreateOrderRequest, Order, OrderCancellationRequest, OrderQuote, OrderQuoteRequest } from "../types";
+import type {
+  CreateOrderRequest,
+  Order,
+  OrderCancellationRequest,
+  OrderEmailOtpSendResponse,
+  OrderEmailOtpVerifyResponse,
+  OrderQuote,
+  OrderQuoteRequest
+} from "../types";
 
 export type OrderListParams = {
   userId?: number;
@@ -28,6 +36,17 @@ export const orderAPI = {
   },
   create: async (payload: CreateOrderRequest) => {
     const response = await apiClient.post<Order>(API_ENDPOINTS.orders.create, payload);
+    return response.data;
+  },
+  sendEmailOtp: async (email: string) => {
+    const response = await apiClient.post<OrderEmailOtpSendResponse>(API_ENDPOINTS.orders.emailOtpSend, { email });
+    return response.data;
+  },
+  verifyEmailOtp: async (verificationSessionId: string, code: string) => {
+    const response = await apiClient.post<OrderEmailOtpVerifyResponse>(API_ENDPOINTS.orders.emailOtpVerify, {
+      verificationSessionId,
+      code
+    });
     return response.data;
   },
   requestCancellation: async (id: string | number, payload?: OrderCancellationRequest) => {

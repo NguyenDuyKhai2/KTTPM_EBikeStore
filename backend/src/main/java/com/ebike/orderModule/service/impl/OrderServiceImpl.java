@@ -22,6 +22,7 @@ import com.ebike.orderModule.entity.Shipment;
 import com.ebike.orderModule.entity.Showroom;
 import com.ebike.orderModule.repository.OrderRepository;
 import com.ebike.orderModule.repository.ShowroomRepository;
+import com.ebike.orderModule.service.OrderEmailVerificationService;
 import com.ebike.orderModule.service.OrderService;
 import com.ebike.productModule.entity.Product;
 import com.ebike.productModule.repository.ProductRepository;
@@ -54,23 +55,24 @@ public class OrderServiceImpl implements OrderService {
     private static final int MAX_CANCELLATION_REASON_LENGTH = 1000;
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
     private static final Pattern VIETNAM_PHONE_PATTERN = Pattern.compile("^0\\d{9,10}$");
-    private static final Pattern IDENTITY_NUMBER_PATTERN = Pattern.compile("^(\\d{9}|\\d{12})$");
-
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final ShowroomRepository showroomRepository;
+    private final OrderEmailVerificationService orderEmailVerificationService;
 
     public OrderServiceImpl(
         OrderRepository orderRepository,
         UserRepository userRepository,
         ProductRepository productRepository,
-        ShowroomRepository showroomRepository
+        ShowroomRepository showroomRepository,
+        OrderEmailVerificationService orderEmailVerificationService
     ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.showroomRepository = showroomRepository;
+        this.orderEmailVerificationService = orderEmailVerificationService;
     }
 
     @Override
@@ -142,9 +144,9 @@ public class OrderServiceImpl implements OrderService {
         order.setIncludeRegistrationService(includeRegistrationService);
         order.setRegistrationFee(includeRegistrationService ? REGISTRATION_FEE_AMOUNT : ZERO);
         validateCheckoutDetails(request);
+        orderEmailVerificationService.assertVerifiedForOrder(request.emailVerificationSessionId(), request.customerEmail());
         order.setNotes(normalizeOptional(request.notes()));
         order.setCustomerEmail(normalizeEmail(request.customerEmail()));
-        order.setCustomerIdentityNumber(normalizeDigits(request.customerIdentityNumber()));
 
         Showroom showroom = showroomRepository.findById(request.pickupShowroomId())
             .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()))
@@ -223,7 +225,6 @@ public class OrderServiceImpl implements OrderService {
         String customerName = normalize(request.customerName());
         String phoneNumber = normalizeDigits(request.phoneNumber());
         String customerEmail = normalizeEmail(request.customerEmail());
-        String customerIdentityNumber = normalizeDigits(request.customerIdentityNumber());
         String detailedAddress = normalize(request.detailedAddress());
         String notes = normalizeOptional(request.notes());
 
@@ -247,12 +248,6 @@ public class OrderServiceImpl implements OrderService {
         }
         if (!EMAIL_PATTERN.matcher(customerEmail).matches()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email chưa hợp lệ. Ví dụ đúng: khachhang@example.com.");
-        }
-        if (isBlank(customerIdentityNumber)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng nhập CMND hoặc CCCD.");
-        }
-        if (!IDENTITY_NUMBER_PATTERN.matcher(customerIdentityNumber).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CMND/CCCD chưa hợp lệ. Vui lòng nhập 9 số CMND hoặc 12 số CCCD.");
         }
         if (isBlank(detailedAddress)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng nhập địa chỉ cụ thể.");
@@ -563,7 +558,6 @@ public class OrderServiceImpl implements OrderService {
             payment == null ? null : payment.getPaymentStatus().name(),
             order.getNotes(),
             order.getCustomerEmail(),
-            order.getCustomerIdentityNumber(),
             order.getCancellationReason(),
             order.getCancellationReviewNote(),
             order.getCancellationRequestedFromStatus() == null ? null : order.getCancellationRequestedFromStatus().name(),

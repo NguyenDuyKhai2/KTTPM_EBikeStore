@@ -41,6 +41,7 @@ public class SecurityConfiguration {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/orders/quote").permitAll()
+                .requestMatchers(HttpMethod.POST, "/orders/email-verification/send", "/orders/email-verification/verify").permitAll()
                 .requestMatchers("/payments/vnpay/ipn", "/payments/vnpay/return").permitAll()
                 .requestMatchers(
                     "/auth/register",

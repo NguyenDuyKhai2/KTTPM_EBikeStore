@@ -359,7 +359,6 @@ public class ManagerServiceImpl implements ManagerService {
             payment == null ? null : payment.getPaymentStatus().name(),
             order.getNotes(),
             order.getCustomerEmail(),
-            order.getCustomerIdentityNumber(),
             order.getCancellationReason(),
             order.getCancellationReviewNote(),
             order.getCancellationRequestedFromStatus() == null ? null : order.getCancellationRequestedFromStatus().name(),

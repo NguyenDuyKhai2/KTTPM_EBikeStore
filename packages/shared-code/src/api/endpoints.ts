@@ -30,6 +30,8 @@ export const API_ENDPOINTS = {
     list: "/orders",
     create: "/orders",
     quote: "/orders/quote",
+    emailOtpSend: "/orders/email-verification/send",
+    emailOtpVerify: "/orders/email-verification/verify",
     detail: (id: string | number) => `/orders/${id}`,
     cancellationRequest: (id: string | number) => `/orders/${id}/cancellation-request`
   },
