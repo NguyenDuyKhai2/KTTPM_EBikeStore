@@ -193,16 +193,16 @@
 
 #### Phạm vi
 
-- Khách hàng được hủy đơn khi đơn chưa giao hoặc chưa hoàn tất.
-- Khi hủy cần nhập lý do.
-- Manager/admin xem được lý do hủy.
+- Khách hàng được hủy đơn trực tiếp khi đơn chưa giao hoặc chưa hoàn tất (không cần manager duyệt).
+- Khi hủy bắt buộc nhập lý do.
+- Manager/admin xem được lý do hủy trên chi tiết đơn.
 
 #### Tiêu chí hoàn thành
 
-- Chỉ cho hủy ở trạng thái hợp lệ.
-- Lưu được lý do hủy.
+- Chỉ cho hủy ở trạng thái hợp lệ (ví dụ: chờ xác nhận, đã xác nhận, đang xử lý).
+- Lưu được lý do hủy và cập nhật trạng thái đơn thành `CANCELLED` ngay lập tức.
 - Giao diện cập nhật trạng thái đơn sau khi hủy.
-- Có thông báo lỗi khi không thể hủy đơn.
+- Có thông báo lỗi khi không thể hủy đơn hoặc thiếu lý do.
 
 ### Task 12: Lịch sử thanh toán
 
@@ -312,7 +312,7 @@ Nhóm chức năng đơn hàng, tìm kiếm/lọc sản phẩm, hủy đơn và 
 | --- | --- | --- |
 | Task 3 | Theo dõi trạng thái giao hàng | Hiển thị timeline trạng thái giao hàng trong chi tiết đơn hàng. |
 | Task 7 | Tìm kiếm và lọc sản phẩm nâng cao | Bổ sung bộ lọc theo giá, loại xe, hãng, pin, quãng đường hoặc trạng thái còn hàng. |
-| Task 11 | Hủy đơn hàng có lý do | Cho phép khách hàng hủy đơn ở trạng thái hợp lệ và lưu lý do hủy. |
+| Task 11 | Hủy đơn hàng có lý do | Cho phép khách hàng hủy trực tiếp đơn ở trạng thái hợp lệ, bắt buộc nhập lý do; manager/admin chỉ xem lý do. |
 | Task 15 | Quản lý hình ảnh sản phẩm | Cải thiện upload nhiều ảnh, chọn ảnh đại diện và xóa ảnh sản phẩm. |
 
 ### Thành viên D

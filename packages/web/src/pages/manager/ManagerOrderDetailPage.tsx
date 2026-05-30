@@ -200,21 +200,21 @@ const ManagerOrderDetailPage = () => {
             <p className="mt-4 text-sm leading-7 text-slate-600">{order.notes || "Khách hàng chưa để lại ghi chú cho đơn hàng này."}</p>
           </section>
 
-          {(order.cancellationRequestedAt || order.cancellationReviewNote) && (
+          {(order.status === "CANCELLED" || order.cancellationReason || order.cancellationRequestedAt) && (
             <section className="rounded-lg border border-rose-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-950">Yêu cầu hủy đơn</h3>
+              <h3 className="text-lg font-bold text-slate-950">Thông tin hủy đơn</h3>
               <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
                 <p>
                   <span className="font-semibold text-slate-900">Lý do khách hàng:</span>{" "}
                   {order.cancellationReason || "Khách hàng không nhập lý do."}
                 </p>
                 <p>
-                  <span className="font-semibold text-slate-900">Gửi lúc:</span>{" "}
+                  <span className="font-semibold text-slate-900">Thời điểm hủy:</span>{" "}
                   {formatDateTime(order.cancellationRequestedAt)}
                 </p>
                 {order.cancellationReviewNote && (
                   <p>
-                    <span className="font-semibold text-slate-900">Ghi chú manager:</span>{" "}
+                    <span className="font-semibold text-slate-900">Ghi chú nội bộ:</span>{" "}
                     {order.cancellationReviewNote}
                   </p>
                 )}

@@ -19,6 +19,7 @@ import com.ebike.orderModule.entity.Payment;
 import com.ebike.orderModule.entity.PaymentMethod;
 import com.ebike.orderModule.entity.PaymentStatus;
 import com.ebike.orderModule.entity.Shipment;
+import com.ebike.orderModule.entity.ShipmentStatus;
 import com.ebike.orderModule.entity.Showroom;
 import com.ebike.orderModule.repository.OrderRepository;
 import com.ebike.orderModule.repository.ShowroomRepository;
@@ -188,37 +189,69 @@ public class OrderServiceImpl implements OrderService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
         if (order.getUser() == null || !order.getUser().getId().equals(currentUser.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only request cancellation for your own orders");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only cancel your own orders");
         }
 
-        Payment payment = order.getPayment();
-        if (payment == null || payment.getPaymentMethod() != PaymentMethod.PAY_LATER) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only PAY_LATER orders can be requested for cancellation");
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This order has already been cancelled");
         }
-        if (payment.getPaymentStatus() != PaymentStatus.PENDING) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only unpaid PAY_LATER orders can be requested for cancellation");
+        if (order.getStatus() == OrderStatus.DELIVERED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Delivered orders cannot be cancelled");
         }
-        if (order.getStatus() == OrderStatus.CANCELLATION_REQUESTED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancellation request is already pending manager review");
+        if (order.getStatus() == OrderStatus.SHIPPED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Orders that are already shipping cannot be cancelled");
         }
-        if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This order is no longer eligible for cancellation request");
+        if (!isCancellationEligibleStatus(order.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This order is no longer eligible for cancellation");
+        }
+        if (isShipmentInTransitOrDelivered(order.getShipment())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Orders that are already shipping or delivered cannot be cancelled");
         }
 
         String reason = normalizeOptional(request == null ? null : request.reason());
-        if (reason != null && reason.length() > MAX_CANCELLATION_REASON_LENGTH) {
+        if (reason == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancellation reason is required");
+        }
+        if (reason.length() > MAX_CANCELLATION_REASON_LENGTH) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancellation reason cannot exceed " + MAX_CANCELLATION_REASON_LENGTH + " characters");
         }
 
         order.setCancellationRequestedFromStatus(order.getStatus());
-        order.setStatus(OrderStatus.CANCELLATION_REQUESTED);
+        order.setStatus(OrderStatus.CANCELLED);
         order.setCancellationReason(reason);
         order.setCancellationRequestedBy(currentUser);
         order.setCancellationRequestedAt(java.time.LocalDateTime.now());
         order.setCancellationReviewNote(null);
         order.setCancellationReviewedAt(null);
+        cancelPendingPayment(order.getPayment());
 
         return toResponse(orderRepository.save(order));
+    }
+
+    private void cancelPendingPayment(Payment payment) {
+        if (payment == null) {
+            return;
+        }
+        if (payment.getPaymentStatus() == PaymentStatus.PENDING) {
+            payment.setPaymentStatus(PaymentStatus.CANCELLED);
+            payment.setProviderResponse("Cancelled by customer");
+        }
+    }
+
+    private boolean isCancellationEligibleStatus(OrderStatus status) {
+        return status == OrderStatus.PENDING
+            || status == OrderStatus.CONFIRMED
+            || status == OrderStatus.PROCESSING;
+    }
+
+    private boolean isShipmentInTransitOrDelivered(Shipment shipment) {
+        if (shipment == null) {
+            return false;
+        }
+        ShipmentStatus shipmentStatus = shipment.getShipmentStatus();
+        return shipmentStatus == ShipmentStatus.SHIPPED
+            || shipmentStatus == ShipmentStatus.IN_TRANSIT
+            || shipmentStatus == ShipmentStatus.DELIVERED;
     }
 
     private void validateCheckoutDetails(OrderCreateRequest request) {
