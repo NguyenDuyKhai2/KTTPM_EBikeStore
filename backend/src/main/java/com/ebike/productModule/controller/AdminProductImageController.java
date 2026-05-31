@@ -2,6 +2,7 @@ package com.ebike.productModule.controller;
 
 import com.ebike.productModule.dto.response.AdminProductImageDto;
 import com.ebike.productModule.service.AdminProductImageService;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,11 @@ public class AdminProductImageController {
             primaryImage
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/by-product/{productId}")
+    public List<AdminProductImageDto> listImagesByProduct(@PathVariable Long productId) {
+        return adminProductImageService.listImagesByProduct(productId);
     }
 
     @GetMapping("/{imageId}")

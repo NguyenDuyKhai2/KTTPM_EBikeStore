@@ -49,7 +49,7 @@ COPY src/main/resources/faq-data/ /app/faq-data/
 
 # Create health check script
 RUN echo '#!/bin/sh' > /healthcheck.sh && \
-    echo 'curl -f http://localhost:8080/api/v1/health || exit 1' >> /healthcheck.sh && \
+    echo 'curl -f http://localhost:8080/api/v1/health/ready || exit 1' >> /healthcheck.sh && \
     chmod +x /healthcheck.sh
 
 # Expose ports

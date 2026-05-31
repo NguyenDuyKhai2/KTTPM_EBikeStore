@@ -1,7 +1,7 @@
-import { Clock, CreditCard, Lock, MapPin, Phone, Store, Zap } from "lucide-react";
-import { orderAPI, paymentAPI, showroomAPI } from "@ebike/shared-code/api";
+import { Clock, CreditCard, Lock, MailCheck, MapPin, Phone, Store, Zap } from "lucide-react";
+import { orderAPI, paymentAPI, showroomAPI, userAPI } from "@ebike/shared-code/api";
 import { useAppSelector } from "@ebike/shared-code/redux";
-import type { OrderQuote, Showroom } from "@ebike/shared-code/types";
+import type { OrderQuote, Showroom, UserAddressResponse } from "@ebike/shared-code/types";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
@@ -32,9 +32,6 @@ const mapCheckoutErrorToFields = (message: string) => {
   if (lowerMessage.includes("email")) {
     errors.customerEmail = message;
   }
-  if (lowerMessage.includes("cmnd") || lowerMessage.includes("cccd")) {
-    errors.customerIdentityNumber = message;
-  }
   if (lowerMessage.includes("địa chỉ")) {
     errors.detailedAddress = message;
   }
@@ -59,14 +56,25 @@ const CheckoutPage = () => {
   const [orderQuote, setOrderQuote] = useState<OrderQuote | null>(null);
   const [loadingQuote, setLoadingQuote] = useState(true);
   const [loadingShowrooms, setLoadingShowrooms] = useState(true);
+  const [loadingAddresses, setLoadingAddresses] = useState(true);
+  const [savedAddresses, setSavedAddresses] = useState<UserAddressResponse[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"PAY_LATER" | "VNPAY">("PAY_LATER");
   const [registrationService, setRegistrationService] = useState<"SELF" | "SHOWROOM">("SELF");
+  const [emailOtpSessionId, setEmailOtpSessionId] = useState<string | null>(null);
+  const [emailOtpCode, setEmailOtpCode] = useState("");
+  const [emailOtpVerifiedFor, setEmailOtpVerifiedFor] = useState<string | null>(null);
+  const [emailOtpMessage, setEmailOtpMessage] = useState<string | null>(null);
+  const [emailOtpLoading, setEmailOtpLoading] = useState(false);
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscountCode, setAppliedDiscountCode] = useState<string | null>(null);
+  const [discountCodeError, setDiscountCodeError] = useState<string | null>(null);
+  const [discountCodeMessage, setDiscountCodeMessage] = useState<string | null>(null);
   const [form, setForm] = useState({
     customerName: authUser?.fullName ?? "",
-    customerIdentityNumber: "",
     phoneNumber: "",
     customerEmail: authUser?.email ?? "",
     district: "",
@@ -105,15 +113,48 @@ const CheckoutPage = () => {
   }, []);
 
   useEffect(() => {
+    if (!authUser?.id) {
+      setLoadingAddresses(false);
+      return;
+    }
+
+    let mounted = true;
+    const loadAddresses = async () => {
+      try {
+        const response = await userAPI.listAddresses(Number(authUser.id));
+        if (!mounted) {
+          return;
+        }
+        setSavedAddresses(response);
+      } catch (error) {
+        if (mounted) {
+          setSubmitError(error instanceof Error ? error.message : "Không thể tải địa chỉ đã lưu.");
+        }
+      } finally {
+        if (mounted) {
+          setLoadingAddresses(false);
+        }
+      }
+    };
+
+    void loadAddresses();
+    return () => {
+      mounted = false;
+    };
+  }, [authUser?.id]);
+
+  useEffect(() => {
     const loadQuote = async () => {
       if (!product) {
         return;
       }
 
       setLoadingQuote(true);
+      setSubmitError(null);
       try {
         const quote = await orderAPI.quote({
           includeRegistrationService: registrationService === "SHOWROOM",
+          discountCode: appliedDiscountCode ?? undefined,
           items: [
             {
               productId: product.id,
@@ -122,20 +163,28 @@ const CheckoutPage = () => {
           ]
         });
         setOrderQuote(quote);
+        setDiscountCodeError(null);
+        setDiscountCodeMessage(appliedDiscountCode ? `Mã giảm giá ${appliedDiscountCode} đã được áp dụng.` : null);
       } catch (error) {
-        setOrderQuote(null);
-        setSubmitError(error instanceof Error ? error.message : "Không thể tính tổng thanh toán.");
+        const message = error instanceof Error ? error.message : "Không thể tính tổng thanh toán.";
+        if (appliedDiscountCode) {
+          setDiscountCodeError(message);
+          setDiscountCodeMessage(null);
+        } else {
+          setOrderQuote(null);
+          setSubmitError(message);
+        }
       } finally {
         setLoadingQuote(false);
       }
     };
 
     void loadQuote();
-  }, [product, quantity, registrationService]);
+  }, [product, quantity, registrationService, appliedDiscountCode]);
 
   const fallbackSubtotal = product ? product.price * quantity : 0;
   const subtotal = orderQuote?.subtotal ?? fallbackSubtotal;
-  const showroomIncentive = orderQuote?.discountAmount ?? 0;
+  const totalDiscount = orderQuote?.discountAmount ?? 0;
   const registrationFee = orderQuote?.registrationFee ?? 0;
   const total = orderQuote?.totalAmount ?? fallbackSubtotal;
 
@@ -150,6 +199,17 @@ const CheckoutPage = () => {
   );
 
   const selectedShowroom = filteredShowrooms.find((showroom) => String(showroom.id) === form.pickupShowroomId) ?? null;
+
+  const applySavedAddress = (address: UserAddressResponse | null) => {
+    setSelectedAddressId(address?.id ?? null);
+    if (!address) {
+      return;
+    }
+    const newDetailedAddress = [address.street, address.city, address.postalCode, address.country]
+      .filter(Boolean)
+      .join(", ");
+    setForm((current) => ({ ...current, detailedAddress: newDetailedAddress }));
+  };
 
   const inputClassName = (hasError: boolean) =>
     `w-full border-0 border-b-2 px-0 py-2 font-medium focus:ring-0 ${
@@ -175,7 +235,62 @@ const CheckoutPage = () => {
       delete next[field];
       return next;
     });
+    if (field === "customerEmail") {
+      setEmailOtpSessionId(null);
+      setEmailOtpCode("");
+      setEmailOtpVerifiedFor(null);
+      setEmailOtpMessage(null);
+    }
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const sendEmailOtp = async () => {
+    setSubmitError(null);
+    setEmailOtpMessage(null);
+    const email = form.customerEmail.trim();
+    if (!email) {
+      setFieldErrors((current) => ({ ...current, customerEmail: "Vui lòng nhập email trước khi gửi OTP." }));
+      return null;
+    }
+
+    setEmailOtpLoading(true);
+    try {
+      const response = await orderAPI.sendEmailOtp(email);
+      setEmailOtpSessionId(response.verificationSessionId);
+      setEmailOtpCode("");
+      setEmailOtpVerifiedFor(null);
+      setEmailOtpMessage(`Đã gửi mã OTP tới ${response.email}. Nếu đang chạy dev, mã cũng được in trong log backend.`);
+      return response.verificationSessionId;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Không thể gửi mã OTP.";
+      setSubmitError(message);
+      return null;
+    } finally {
+      setEmailOtpLoading(false);
+    }
+  };
+
+  const verifyEmailOtp = async (sessionId: string) => {
+    const code = emailOtpCode.trim();
+    if (!code) {
+      setFieldErrors((current) => ({ ...current, emailOtpCode: "Vui lòng nhập mã OTP đã gửi qua email." }));
+      return false;
+    }
+
+    setEmailOtpLoading(true);
+    try {
+      const response = await orderAPI.verifyEmailOtp(sessionId, code);
+      setEmailOtpVerifiedFor(response.email);
+      setEmailOtpMessage("Email đã được xác thực. Đang tạo đơn hàng...");
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Mã OTP chưa hợp lệ.";
+      setFieldErrors((current) => ({ ...current, emailOtpCode: message }));
+      setSubmitError(message);
+      return false;
+    } finally {
+      setEmailOtpLoading(false);
+    }
   };
 
   const handleDistrictChange = (district: string) => {
@@ -203,7 +318,6 @@ const CheckoutPage = () => {
 
     const nextFieldErrors: Record<string, string> = {};
     if (!form.customerName.trim()) nextFieldErrors.customerName = "Vui lòng nhập họ và tên.";
-    if (!form.customerIdentityNumber.trim()) nextFieldErrors.customerIdentityNumber = "Vui lòng nhập CMND / CCCD.";
     if (!form.phoneNumber.trim()) nextFieldErrors.phoneNumber = "Vui lòng nhập số điện thoại.";
     if (!form.customerEmail.trim()) nextFieldErrors.customerEmail = "Vui lòng nhập email.";
     if (!form.district) nextFieldErrors.district = "Vui lòng chọn quận / huyện.";
@@ -216,18 +330,48 @@ const CheckoutPage = () => {
       return;
     }
 
+    const normalizedDiscountCode = discountCode.trim().toUpperCase();
+    if (normalizedDiscountCode && normalizedDiscountCode !== appliedDiscountCode) {
+      setSubmitError("Vui lòng bấm 'Áp dụng' để kiểm tra mã giảm giá trước khi đặt hàng.");
+      return;
+    }
+    if (discountCodeError) {
+      setSubmitError("Vui lòng kiểm tra mã giảm giá trước khi đặt hàng.");
+      return;
+    }
+
+    let verifiedSessionId = emailOtpSessionId;
+    const normalizedEmail = form.customerEmail.trim().toLowerCase();
+    if (emailOtpVerifiedFor !== normalizedEmail) {
+      if (!verifiedSessionId) {
+        await sendEmailOtp();
+        setSubmitError("Vui lòng nhập mã OTP đã gửi tới email rồi bấm xác nhận đặt hàng lần nữa.");
+        return;
+      }
+      const verified = await verifyEmailOtp(verifiedSessionId);
+      if (!verified) {
+        return;
+      }
+    }
+
+    if (!verifiedSessionId) {
+      setSubmitError("Vui lòng xác thực email trước khi đặt hàng.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const notes = form.notes.trim();
       const createdOrder = await orderAPI.create({
         userId: authUser?.id ? Number(authUser.id) : undefined,
         customerName: form.customerName.trim(),
-        customerIdentityNumber: form.customerIdentityNumber.trim(),
         phoneNumber: form.phoneNumber.trim(),
         customerEmail: form.customerEmail.trim(),
+        emailVerificationSessionId: verifiedSessionId,
         pickupShowroomId: Number(form.pickupShowroomId),
         detailedAddress: form.detailedAddress.trim(),
         paymentMethod: selectedPaymentMethod,
+        discountCode: appliedDiscountCode ?? undefined,
         includeRegistrationService: registrationService === "SHOWROOM",
         notes,
         items: [
@@ -352,16 +496,6 @@ const CheckoutPage = () => {
                 {fieldErrors.customerName ? <p className="text-sm text-red-600">{fieldErrors.customerName}</p> : null}
               </div>
               <div className="space-y-2">
-                <label className="mono-label text-muted-foreground">CMND / CCCD</label>
-                <input
-                  type="text"
-                  value={form.customerIdentityNumber}
-                  onChange={(event) => updateForm("customerIdentityNumber", event.target.value)}
-                  className={inputClassName(Boolean(fieldErrors.customerIdentityNumber))}
-                />
-                {fieldErrors.customerIdentityNumber ? <p className="text-sm text-red-600">{fieldErrors.customerIdentityNumber}</p> : null}
-              </div>
-              <div className="space-y-2">
                 <label className="mono-label text-muted-foreground">Số điện thoại</label>
                 <input
                   type="tel"
@@ -381,7 +515,85 @@ const CheckoutPage = () => {
                 />
                 {fieldErrors.customerEmail ? <p className="text-sm text-red-600">{fieldErrors.customerEmail}</p> : null}
               </div>
+              <div className="space-y-3 md:col-span-2">
+                <div className="flex flex-col gap-3 rounded-lg border border-outline-variant/15 bg-surface-container-low p-4 md:flex-row md:items-end">
+                  <div className="flex-grow space-y-2">
+                    <label className="mono-label text-muted-foreground">Mã OTP email</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={emailOtpCode}
+                      onChange={(event) => {
+                        setFieldErrors((current) => {
+                          const next = { ...current };
+                          delete next.emailOtpCode;
+                          return next;
+                        });
+                        setEmailOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+                      }}
+                      placeholder="Nhập 6 chữ số"
+                      className={inputClassName(Boolean(fieldErrors.emailOtpCode))}
+                    />
+                    {fieldErrors.emailOtpCode ? <p className="text-sm text-red-600">{fieldErrors.emailOtpCode}</p> : null}
+                    {emailOtpMessage ? <p className="text-sm text-muted-foreground">{emailOtpMessage}</p> : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void sendEmailOtp()}
+                    disabled={emailOtpLoading || submitting}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant/20 bg-white px-4 py-3 text-sm font-bold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <MailCheck size={16} />
+                    {emailOtpSessionId ? "Gửi lại mã" : "Gửi OTP"}
+                  </button>
+                </div>
+              </div>
             </div>
+          </section>
+
+          <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
+            <div className="mb-6 flex items-center gap-3">
+              <MapPin className="text-primary" />
+              <div>
+                <h3 className="text-xl font-bold">Địa chỉ đã lưu</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Chọn địa chỉ đã lưu để tự động điền vào hộp địa chỉ cụ thể.</p>
+              </div>
+            </div>
+
+            {loadingAddresses ? (
+              <p className="text-sm text-muted-foreground">Đang tải địa chỉ đã lưu...</p>
+            ) : savedAddresses.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Bạn chưa có địa chỉ lưu. Vui lòng thêm trong hồ sơ khách hàng.</p>
+            ) : (
+              <div className="space-y-4">
+                {savedAddresses.map((address) => (
+                  <div
+                    key={address.id}
+                    className={`rounded-xl border p-4 ${selectedAddressId === address.id ? "border-primary bg-primary/5" : "border-outline-variant/20 bg-white"}`}
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-semibold">
+                          {address.addressType === "BILLING" ? "Hóa đơn" : "Giao hàng"}
+                          {address.isDefault ? " • Mặc định" : ""}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {address.street}, {address.city}, {address.postalCode}, {address.country}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => applySavedAddress(address)}
+                        className="inline-flex items-center justify-center rounded-full border border-outline-variant/20 bg-white px-4 py-2 text-sm font-semibold text-foreground transition hover:border-primary"
+                      >
+                        {selectedAddressId === address.id ? "Đã chọn" : "Dùng địa chỉ này"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
@@ -513,6 +725,38 @@ const CheckoutPage = () => {
           </section>
 
           <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
+            <h3 className="mb-4 text-xl font-bold">Mã giảm giá / khuyến mãi</h3>
+            <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+              <input
+                type="text"
+                value={discountCode}
+                onChange={(event) => {
+                  setDiscountCode(event.target.value);
+                  setDiscountCodeError(null);
+                  setDiscountCodeMessage(null);
+                }}
+                placeholder="Nhập mã giảm giá"
+                className={inputClassName(Boolean(discountCodeError))}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const code = discountCode.trim().toUpperCase();
+                  setDiscountCodeError(null);
+                  setDiscountCodeMessage(null);
+                  setAppliedDiscountCode(code || null);
+                }}
+                className="inline-flex items-center justify-center rounded-lg border border-outline-variant/20 bg-white px-4 py-3 text-sm font-bold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Áp dụng
+              </button>
+            </div>
+            {discountCodeError ? <p className="mt-3 text-sm text-red-600">{discountCodeError}</p> : null}
+            {discountCodeMessage ? <p className="mt-3 text-sm text-green-700">{discountCodeMessage}</p> : null}
+            <p className="mt-3 text-xs text-muted-foreground">Bạn có thể thử mã: <span className="font-mono">EBIKE100</span>, <span className="font-mono">EBIKE200</span></p>
+          </section>
+
+          <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
             <h3 className="mb-4 text-xl font-bold">Thông tin bổ sung</h3>
             <textarea
               rows={5}
@@ -561,9 +805,10 @@ const CheckoutPage = () => {
                   <span className="font-mono font-medium">{subtotal.toLocaleString("vi-VN")}đ</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Ưu đãi showroom</span>
-                  <span className="font-mono font-medium text-error">- {showroomIncentive.toLocaleString("vi-VN")}đ</span>
+                  <span className="text-muted-foreground">Tổng ưu đãi</span>
+                  <span className="font-mono font-medium text-error">- {totalDiscount.toLocaleString("vi-VN")}đ</span>
                 </div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Mã giảm giá {appliedDiscountCode ? `(${appliedDiscountCode})` : ""}</span><span className="font-mono font-medium text-error">{appliedDiscountCode === "EBIKE200" ? "- 200.000đ" : appliedDiscountCode === "EBIKE100" ? "- 100.000đ" : "0đ"}</span></div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Phí làm giấy tờ xe</span>
                   <span className="font-mono font-medium">{registrationFee.toLocaleString("vi-VN")}đ</span>
@@ -588,10 +833,10 @@ const CheckoutPage = () => {
                 </div>
                 <button
                   onClick={() => void handleSubmit()}
-                  disabled={submitting || loadingQuote || !orderQuote}
+                  disabled={submitting || emailOtpLoading || loadingQuote || !orderQuote}
                   className="w-full rounded-lg bg-primary py-5 text-lg font-bold tracking-tight text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {submitting
+                  {submitting || emailOtpLoading
                     ? selectedPaymentMethod === "VNPAY"
                       ? "Đang chuyển sang VNPay..."
                       : "Đang tạo đơn hàng..."

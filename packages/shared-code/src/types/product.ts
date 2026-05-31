@@ -5,10 +5,23 @@ export interface Category {
 }
 
 export interface Review {
-  id: string;
+  id: number;
+  productId?: number;
+  productSlug?: string;
+  userId?: number;
+  username?: string;
   rating: number;
-  comment: string;
+  title?: string | null;
+  comment?: string | null;
   authorName: string;
+  createdAt?: string;
+  editableByCurrentUser?: boolean;
+}
+
+export interface ReviewRequest {
+  rating: number;
+  title?: string;
+  comment?: string;
 }
 
 export interface Product {
@@ -79,4 +92,30 @@ export interface ProductFilter {
   categoryId?: number;
   minPrice?: number;
   maxPrice?: number;
+  brand?: string;
+  vehicleType?: string;
+  batteryType?: string;
+  minRangeKm?: number;
+  maxRangeKm?: number;
+  inStock?: boolean;
+  sortBy?: "price" | "name" | "newest" | string;
+  sortDir?: "asc" | "desc" | string;
+}
+
+export interface ProductFilterOptions {
+  brands: string[];
+  vehicleTypes: string[];
+  batteryTypes: string[];
+}
+
+export interface AdminProductImage {
+  id: number;
+  productId: number;
+  variantId?: number | null;
+  imageUrl: string;
+  altText?: string | null;
+  sortOrder?: number | null;
+  primaryImage?: boolean | null;
+  status?: string | null;
+  createdAt?: string | null;
 }

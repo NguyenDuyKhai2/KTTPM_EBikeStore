@@ -11,6 +11,10 @@ public interface UserProfileService {
 
     UserAddressResponse createAddress(Long userId, UserAddressRequest request, Authentication authentication);
 
+    UserAddressResponse updateAddress(Long userId, Long addressId, UserAddressRequest request, Authentication authentication);
+
+    void deleteAddress(Long userId, Long addressId, Authentication authentication);
+
     UserPreferenceResponse getPreferences(Long userId, Authentication authentication);
 
     UserPreferenceResponse upsertPreferences(Long userId, UserPreferenceRequest request, Authentication authentication);

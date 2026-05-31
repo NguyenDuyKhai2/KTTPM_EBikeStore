@@ -73,7 +73,55 @@ public class UserProfileServiceImpl implements UserProfileService {
         address.setCountry(request == null ? null : request.country());
         address.setDefaultAddress(request != null && Boolean.TRUE.equals(request.isDefault()));
 
+        if (Boolean.TRUE.equals(request != null ? request.isDefault() : null)) {
+            unsetDefaultAddresses(userId, null);
+        }
+
         return toAddressResponse(userAddressRepository.save(address));
+    }
+
+    @Override
+    @Transactional
+    public UserAddressResponse updateAddress(Long userId, Long addressId, UserAddressRequest request, Authentication authentication) {
+        assertCanAccessUser(userId, authentication);
+        validateUser(userId);
+        UserAddress address = userAddressRepository.findByIdAndUserId(addressId, userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Address not found"));
+
+        address.setAddressType(parseAddressType(request == null ? null : request.addressType()));
+        address.setStreet(request == null ? null : request.street());
+        address.setCity(request == null ? null : request.city());
+        address.setPostalCode(request == null ? null : request.postalCode());
+        address.setCountry(request == null ? null : request.country());
+        address.setDefaultAddress(request != null && Boolean.TRUE.equals(request.isDefault()));
+
+        if (Boolean.TRUE.equals(request != null ? request.isDefault() : null)) {
+            unsetDefaultAddresses(userId, address.getId());
+        }
+
+        return toAddressResponse(userAddressRepository.save(address));
+    }
+
+    @Override
+    @Transactional
+    public void deleteAddress(Long userId, Long addressId, Authentication authentication) {
+        assertCanAccessUser(userId, authentication);
+        validateUser(userId);
+        userAddressRepository.findByIdAndUserId(addressId, userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Address not found"));
+        userAddressRepository.deleteByIdAndUserId(addressId, userId);
+    }
+
+    private void unsetDefaultAddresses(Long userId, Long keepAddressId) {
+        List<UserAddress> existingDefaults = userAddressRepository.findByUserIdAndDefaultAddressTrue(userId);
+        for (UserAddress existing : existingDefaults) {
+            if (keepAddressId == null || !existing.getId().equals(keepAddressId)) {
+                existing.setDefaultAddress(false);
+            }
+        }
+        if (!existingDefaults.isEmpty()) {
+            userAddressRepository.saveAll(existingDefaults);
+        }
     }
 
     @Override

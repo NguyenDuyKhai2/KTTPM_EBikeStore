@@ -407,7 +407,7 @@ public class ChatbotService {
         }
 
         return """
-            Quy trình đặt hàng: khách hàng đăng nhập rồi nhập họ tên số điện thoại email CCCD showroom nhận xe địa chỉ cụ thể và ghi chú nếu có.
+            Quy trình đặt hàng: khách hàng đăng nhập rồi nhập họ tên số điện thoại email, xác thực OTP email, chọn showroom nhận xe, địa chỉ cụ thể và ghi chú nếu có. Hệ thống không yêu cầu CCCD khi đặt hàng.
             Nhận xe: hệ thống hiện ưu tiên nhận xe tại showroom đã chọn trong TP.HCM.
             Báo giá checkout: phí đăng ký %s và ưu đãi showroom %s.
             Thanh toán: hỗ trợ lưu phương thức thanh toán theo đơn và có luồng VNPay. Khi thanh toán VNPay thành công hệ thống cập nhật payment PAID và đơn hàng CONFIRMED.
@@ -430,7 +430,7 @@ public class ChatbotService {
             "uu dai",
             "tổng thanh toán",
             "tong thanh toan",
-            "cccd",
+            "otp",
             "giao dịch",
             "giao dich"
         );

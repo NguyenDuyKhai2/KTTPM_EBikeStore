@@ -2,6 +2,7 @@ package com.ebike.authModule.service;
 
 import com.ebike.authModule.dto.response.AuthResponse;
 import com.ebike.authModule.dto.response.EnhancedAuthResponse;
+import com.ebike.authModule.dto.request.ChangePasswordRequest;
 import com.ebike.authModule.dto.request.LoginRequest;
 import com.ebike.authModule.dto.request.RegisterRequest;
 import com.ebike.authModule.dto.request.UpdateProfileRequest;
@@ -26,6 +27,8 @@ public interface AuthenticationService {
     UserProfileResponse getProfile(String usernameOrEmail);
 
     UserProfileResponse updateProfile(String usernameOrEmail, UpdateProfileRequest request);
+
+    void changePassword(String usernameOrEmail, ChangePasswordRequest request);
 
     boolean validateToken(String token);
 

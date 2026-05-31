@@ -2,6 +2,7 @@ package com.ebike.authModule.service.impl;
 
 import com.ebike.authModule.dto.response.AuthResponse;
 import com.ebike.authModule.dto.response.EnhancedAuthResponse;
+import com.ebike.authModule.dto.request.ChangePasswordRequest;
 import com.ebike.authModule.dto.request.LoginRequest;
 import com.ebike.authModule.dto.request.RegisterRequest;
 import com.ebike.authModule.dto.request.UpdateProfileRequest;
@@ -194,8 +195,48 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         User user = findUser(usernameOrEmail);
         user.setFirstName(trimToNull(request.firstName()));
         user.setLastName(trimToNull(request.lastName()));
+        String requestedEmail = trimToNull(request.email());
+        if (requestedEmail != null) {
+            String normalizedEmail = requestedEmail.toLowerCase(Locale.ROOT);
+            if (!normalizedEmail.equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmail(normalizedEmail)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+            }
+            user.setEmail(normalizedEmail);
+        }
         User savedUser = userRepository.save(user);
         return toUserProfileResponse(savedUser);
+    }
+
+    @Override
+    public void changePassword(String usernameOrEmail, ChangePasswordRequest request) {
+        if (isBlank(usernameOrEmail)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "usernameOrEmail is required");
+        }
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
+        }
+
+        String currentPassword = trimToNull(request.currentPassword());
+        String newPassword = trimToNull(request.newPassword());
+        String confirmPassword = trimToNull(request.confirmPassword());
+
+        if (currentPassword == null || newPassword == null || confirmPassword == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "currentPassword, newPassword, and confirmPassword are required");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New password confirmation does not match");
+        }
+        if (newPassword.length() < 6) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New password must be at least 6 characters");
+        }
+
+        User user = findUser(usernameOrEmail);
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     @Override

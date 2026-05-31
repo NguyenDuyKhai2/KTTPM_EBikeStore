@@ -19,9 +19,11 @@ import com.ebike.orderModule.entity.Payment;
 import com.ebike.orderModule.entity.PaymentMethod;
 import com.ebike.orderModule.entity.PaymentStatus;
 import com.ebike.orderModule.entity.Shipment;
+import com.ebike.orderModule.entity.ShipmentStatus;
 import com.ebike.orderModule.entity.Showroom;
 import com.ebike.orderModule.repository.OrderRepository;
 import com.ebike.orderModule.repository.ShowroomRepository;
+import com.ebike.orderModule.service.OrderEmailVerificationService;
 import com.ebike.orderModule.service.OrderService;
 import com.ebike.productModule.entity.Product;
 import com.ebike.productModule.repository.ProductRepository;
@@ -32,6 +34,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
@@ -54,23 +57,28 @@ public class OrderServiceImpl implements OrderService {
     private static final int MAX_CANCELLATION_REASON_LENGTH = 1000;
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
     private static final Pattern VIETNAM_PHONE_PATTERN = Pattern.compile("^0\\d{9,10}$");
-    private static final Pattern IDENTITY_NUMBER_PATTERN = Pattern.compile("^(\\d{9}|\\d{12})$");
-
+    private static final Map<String, BigDecimal> PROMO_CODE_DISCOUNTS = Map.of(
+        "EBIKE100", new BigDecimal("100000"),
+        "EBIKE200", new BigDecimal("200000")
+    );
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final ShowroomRepository showroomRepository;
+    private final OrderEmailVerificationService orderEmailVerificationService;
 
     public OrderServiceImpl(
         OrderRepository orderRepository,
         UserRepository userRepository,
         ProductRepository productRepository,
-        ShowroomRepository showroomRepository
+        ShowroomRepository showroomRepository,
+        OrderEmailVerificationService orderEmailVerificationService
     ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.showroomRepository = showroomRepository;
+        this.orderEmailVerificationService = orderEmailVerificationService;
     }
 
     @Override
@@ -114,7 +122,8 @@ public class OrderServiceImpl implements OrderService {
     public OrderQuoteResponse quoteOrder(OrderQuoteRequest request) {
         return buildQuote(
             validateQuoteItems(request == null ? null : request.items()),
-            shouldIncludeRegistrationService(request == null ? null : request.includeRegistrationService())
+            shouldIncludeRegistrationService(request == null ? null : request.includeRegistrationService()),
+            request == null ? null : request.discountCode()
         );
     }
 
@@ -137,14 +146,13 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderNumber(generateOrderNumber());
         order.setStatus(OrderStatus.PENDING);
         order.setShippingFee(ZERO);
-        order.setDiscountAmount(SHOWROOM_INCENTIVE_AMOUNT);
         boolean includeRegistrationService = shouldIncludeRegistrationService(request.includeRegistrationService());
         order.setIncludeRegistrationService(includeRegistrationService);
         order.setRegistrationFee(includeRegistrationService ? REGISTRATION_FEE_AMOUNT : ZERO);
         validateCheckoutDetails(request);
+        orderEmailVerificationService.assertVerifiedForOrder(request.emailVerificationSessionId(), request.customerEmail());
         order.setNotes(normalizeOptional(request.notes()));
         order.setCustomerEmail(normalizeEmail(request.customerEmail()));
-        order.setCustomerIdentityNumber(normalizeDigits(request.customerIdentityNumber()));
 
         Showroom showroom = showroomRepository.findById(request.pickupShowroomId())
             .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()))
@@ -152,6 +160,8 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal subtotal = addItems(order, validateQuoteItems(request.items()));
         order.setSubtotal(subtotal);
+        BigDecimal promoDiscountAmount = resolvePromoDiscount(request.discountCode(), subtotal);
+        order.setDiscountAmount(SHOWROOM_INCENTIVE_AMOUNT.add(promoDiscountAmount));
         order.setTotalAmount(calculateTotalAmount(subtotal, order.getShippingFee(), order.getDiscountAmount(), order.getRegistrationFee()));
         order.setShipment(buildShipment(order, showroom, request));
         attachInitialPayment(order, request.paymentMethod());
@@ -186,44 +196,75 @@ public class OrderServiceImpl implements OrderService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
         if (order.getUser() == null || !order.getUser().getId().equals(currentUser.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only request cancellation for your own orders");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only cancel your own orders");
         }
 
-        Payment payment = order.getPayment();
-        if (payment == null || payment.getPaymentMethod() != PaymentMethod.PAY_LATER) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only PAY_LATER orders can be requested for cancellation");
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This order has already been cancelled");
         }
-        if (payment.getPaymentStatus() != PaymentStatus.PENDING) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only unpaid PAY_LATER orders can be requested for cancellation");
+        if (order.getStatus() == OrderStatus.DELIVERED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Delivered orders cannot be cancelled");
         }
-        if (order.getStatus() == OrderStatus.CANCELLATION_REQUESTED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancellation request is already pending manager review");
+        if (order.getStatus() == OrderStatus.SHIPPED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Orders that are already shipping cannot be cancelled");
         }
-        if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This order is no longer eligible for cancellation request");
+        if (!isCancellationEligibleStatus(order.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This order is no longer eligible for cancellation");
+        }
+        if (isShipmentInTransitOrDelivered(order.getShipment())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Orders that are already shipping or delivered cannot be cancelled");
         }
 
         String reason = normalizeOptional(request == null ? null : request.reason());
-        if (reason != null && reason.length() > MAX_CANCELLATION_REASON_LENGTH) {
+        if (reason == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancellation reason is required");
+        }
+        if (reason.length() > MAX_CANCELLATION_REASON_LENGTH) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancellation reason cannot exceed " + MAX_CANCELLATION_REASON_LENGTH + " characters");
         }
 
         order.setCancellationRequestedFromStatus(order.getStatus());
-        order.setStatus(OrderStatus.CANCELLATION_REQUESTED);
+        order.setStatus(OrderStatus.CANCELLED);
         order.setCancellationReason(reason);
         order.setCancellationRequestedBy(currentUser);
         order.setCancellationRequestedAt(java.time.LocalDateTime.now());
         order.setCancellationReviewNote(null);
         order.setCancellationReviewedAt(null);
+        cancelPendingPayment(order.getPayment());
 
         return toResponse(orderRepository.save(order));
+    }
+
+    private void cancelPendingPayment(Payment payment) {
+        if (payment == null) {
+            return;
+        }
+        if (payment.getPaymentStatus() == PaymentStatus.PENDING) {
+            payment.setPaymentStatus(PaymentStatus.CANCELLED);
+            payment.setProviderResponse("Cancelled by customer");
+        }
+    }
+
+    private boolean isCancellationEligibleStatus(OrderStatus status) {
+        return status == OrderStatus.PENDING
+            || status == OrderStatus.CONFIRMED
+            || status == OrderStatus.PROCESSING;
+    }
+
+    private boolean isShipmentInTransitOrDelivered(Shipment shipment) {
+        if (shipment == null) {
+            return false;
+        }
+        ShipmentStatus shipmentStatus = shipment.getShipmentStatus();
+        return shipmentStatus == ShipmentStatus.SHIPPED
+            || shipmentStatus == ShipmentStatus.IN_TRANSIT
+            || shipmentStatus == ShipmentStatus.DELIVERED;
     }
 
     private void validateCheckoutDetails(OrderCreateRequest request) {
         String customerName = normalize(request.customerName());
         String phoneNumber = normalizeDigits(request.phoneNumber());
         String customerEmail = normalizeEmail(request.customerEmail());
-        String customerIdentityNumber = normalizeDigits(request.customerIdentityNumber());
         String detailedAddress = normalize(request.detailedAddress());
         String notes = normalizeOptional(request.notes());
 
@@ -247,12 +288,6 @@ public class OrderServiceImpl implements OrderService {
         }
         if (!EMAIL_PATTERN.matcher(customerEmail).matches()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email chưa hợp lệ. Ví dụ đúng: khachhang@example.com.");
-        }
-        if (isBlank(customerIdentityNumber)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng nhập CMND hoặc CCCD.");
-        }
-        if (!IDENTITY_NUMBER_PATTERN.matcher(customerIdentityNumber).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CMND/CCCD chưa hợp lệ. Vui lòng nhập 9 số CMND hoặc 12 số CCCD.");
         }
         if (isBlank(detailedAddress)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng nhập địa chỉ cụ thể.");
@@ -278,6 +313,12 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal subtotal = ZERO;
         for (OrderCreateItemRequest itemRequest : items) {
             Product product = getActiveProduct(itemRequest.productId());
+            int currentStockQuantity = product.getStockQuantity() == null ? 0 : product.getStockQuantity();
+            if (currentStockQuantity < itemRequest.quantity()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is out of stock: " + product.getName());
+            }
+            product.setStockQuantity(currentStockQuantity - itemRequest.quantity());
+
             BigDecimal unitPrice = product.getDiscountPrice() != null ? product.getDiscountPrice() : product.getPrice();
             BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(itemRequest.quantity()));
 
@@ -353,7 +394,7 @@ public class OrderServiceImpl implements OrderService {
         return items;
     }
 
-    private OrderQuoteResponse buildQuote(List<OrderCreateItemRequest> items, boolean includeRegistrationService) {
+    private OrderQuoteResponse buildQuote(List<OrderCreateItemRequest> items, boolean includeRegistrationService, String discountCode) {
         BigDecimal subtotal = ZERO;
 
         for (OrderCreateItemRequest itemRequest : items) {
@@ -362,14 +403,16 @@ public class OrderServiceImpl implements OrderService {
             subtotal = subtotal.add(unitPrice.multiply(BigDecimal.valueOf(itemRequest.quantity())));
         }
 
+        BigDecimal promoDiscountAmount = resolvePromoDiscount(discountCode, subtotal);
         BigDecimal registrationFee = includeRegistrationService ? REGISTRATION_FEE_AMOUNT : ZERO;
+        BigDecimal totalDiscountAmount = SHOWROOM_INCENTIVE_AMOUNT.add(promoDiscountAmount);
 
         return new OrderQuoteResponse(
             subtotal,
             ZERO,
-            SHOWROOM_INCENTIVE_AMOUNT,
+            totalDiscountAmount,
             registrationFee,
-            calculateTotalAmount(subtotal, ZERO, SHOWROOM_INCENTIVE_AMOUNT, registrationFee)
+            calculateTotalAmount(subtotal, ZERO, totalDiscountAmount, registrationFee)
         );
     }
 
@@ -389,6 +432,20 @@ public class OrderServiceImpl implements OrderService {
             .subtract(defaultValue(discountAmount));
 
         return totalAmount.signum() < 0 ? ZERO : totalAmount;
+    }
+
+    private BigDecimal resolvePromoDiscount(String discountCode, BigDecimal subtotal) {
+        if (discountCode == null || discountCode.isBlank()) {
+            return ZERO;
+        }
+
+        String normalizedCode = discountCode.trim().toUpperCase(Locale.ROOT);
+        BigDecimal promoDiscount = PROMO_CODE_DISCOUNTS.get(normalizedCode);
+        if (promoDiscount == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ hoặc đã hết hạn.");
+        }
+
+        return promoDiscount.min(defaultValue(subtotal));
     }
 
     private void attachInitialPayment(Order order, String rawPaymentMethod) {
@@ -557,7 +614,6 @@ public class OrderServiceImpl implements OrderService {
             payment == null ? null : payment.getPaymentStatus().name(),
             order.getNotes(),
             order.getCustomerEmail(),
-            order.getCustomerIdentityNumber(),
             order.getCancellationReason(),
             order.getCancellationReviewNote(),
             order.getCancellationRequestedFromStatus() == null ? null : order.getCancellationRequestedFromStatus().name(),

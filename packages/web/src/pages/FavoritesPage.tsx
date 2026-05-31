@@ -1,68 +1,17 @@
 ﻿import { ArrowRight, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { favoritesAPI } from "@ebike/shared-code/api";
-import { useAuth } from "@ebike/shared-code/hooks";
-import type { Product } from "@ebike/shared-code/types";
+import { useFavorites } from "@ebike/shared-code/hooks";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
 
 const FavoritesPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isBootstrapping } = useAuth();
-  const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isBootstrapping) {
-      return;
-    }
-
-    if (!isAuthenticated) {
-      setFavoriteProducts([]);
-      setError("Vui lòng đăng nhập để xem danh sách yêu thích.");
-      setLoading(false);
-      return;
-    }
-
-    const loadFavorites = async () => {
-      setLoading(true);
-      try {
-        const data = await favoritesAPI.list();
-        setFavoriteProducts(data);
-        setError(null);
-      } catch (fetchError) {
-        const status = (fetchError as { response?: { status?: number } }).response?.status;
-        setFavoriteProducts([]);
-        setError(status === 401 ? "Vui lòng đăng nhập để xem danh sách yêu thích." : "Không thể tải danh sách yêu thích.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadFavorites();
-  }, [isAuthenticated, isBootstrapping]);
+  const { favorites: favoriteProducts, loading, error, isAuthenticated, removeFavorite } = useFavorites();
 
   const subtotal = useMemo(
     () => favoriteProducts.reduce((sum, product) => sum + (product.discountPrice ?? product.price), 0),
     [favoriteProducts]
   );
-
-  const removeFavorite = async (productId: number) => {
-    if (!isAuthenticated) {
-      setError("Vui lòng đăng nhập để cập nhật danh sách yêu thích.");
-      return;
-    }
-
-    try {
-      await favoritesAPI.remove(productId);
-      setFavoriteProducts((items) => items.filter((product) => product.id !== productId));
-      setError(null);
-    } catch (removeError) {
-      const status = (removeError as { response?: { status?: number } }).response?.status;
-      setError(status === 401 ? "Vui lòng đăng nhập để cập nhật danh sách yêu thích." : "Không thể xóa sản phẩm khỏi yêu thích.");
-    }
-  };
 
   const proceedToCheckout = () => {
     const firstProduct = favoriteProducts[0];
@@ -130,8 +79,9 @@ const FavoritesPage = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeFavorite(product.id)}
-                      className="text-muted-foreground transition-colors hover:text-error"
+                      onClick={() => void removeFavorite(product.id)}
+                      disabled={!isAuthenticated}
+                      className="text-muted-foreground transition-colors hover:text-error disabled:cursor-not-allowed disabled:opacity-50"
                       aria-label={`Xóa ${product.name} khỏi yêu thích`}
                     >
                       <Trash2 size={20} />

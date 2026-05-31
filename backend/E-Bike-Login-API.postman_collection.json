@@ -1056,7 +1056,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": {{user_id}},\n  \"customerName\": \"John Doe\",\n  \"phoneNumber\": \"0901234567\",\n  \"customerEmail\": \"john.doe@example.com\",\n  \"customerIdentityNumber\": \"012345678901\",\n  \"pickupShowroomId\": {{showroom_id}},\n  \"detailedAddress\": \"123 Test Street\",\n  \"notes\": \"Postman test order\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 1\n    }\n  ]\n}",
+              "raw": "{\n  \"userId\": {{user_id}},\n  \"customerName\": \"John Doe\",\n  \"phoneNumber\": \"0901234567\",\n  \"customerEmail\": \"john.doe@example.com\",\n  \"emailVerificationSessionId\": \"{{order_email_verification_session_id}}\",\n  \"pickupShowroomId\": {{showroom_id}},\n  \"detailedAddress\": \"123 Test Street\",\n  \"notes\": \"Postman test order\",\n  \"items\": [\n    {\n      \"productId\": {{product_id}},\n      \"quantity\": 1\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"

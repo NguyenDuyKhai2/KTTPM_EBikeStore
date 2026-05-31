@@ -1,11 +1,15 @@
 package com.ebike.managerModule.controller;
 
 import com.ebike.managerModule.dto.request.ManagerPaymentConfirmationRequest;
+import com.ebike.managerModule.dto.request.ManagerProductStockUpdateRequest;
+import com.ebike.managerModule.dto.request.ManagerShipmentUpdateRequest;
 import com.ebike.managerModule.dto.response.ManagerCustomerResponse;
 import com.ebike.managerModule.dto.response.ManagerDashboardResponse;
 import com.ebike.managerModule.dto.response.ManagerPaymentResponse;
+import com.ebike.managerModule.dto.response.ManagerRevenueReportResponse;
 import com.ebike.orderModule.dto.request.OrderCancellationRequest;
 import com.ebike.orderModule.dto.response.OrderResponse;
+import com.ebike.productModule.dto.response.ProductSummaryDto;
 import com.ebike.managerModule.service.ManagerService;
 import com.ebike.shared.constants.PermissionConstants;
 import java.util.List;
@@ -75,5 +79,33 @@ public class ManagerController {
     @PreAuthorize("hasAuthority('" + PermissionConstants.UserManagement.USER_VIEW + "')")
     public List<ManagerCustomerResponse> getCustomers(@RequestParam(required = false) String search) {
         return managerService.getCustomers(search);
+    }
+
+    @GetMapping("/revenue-report")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.Reporting.REPORT_VIEW + "')")
+    public ManagerRevenueReportResponse getRevenueReport(
+        @RequestParam(defaultValue = "day") String period,
+        @RequestParam(required = false) String from,
+        @RequestParam(required = false) String to
+    ) {
+        return managerService.getRevenueReport(period, from, to);
+    }
+
+    @PatchMapping("/orders/{orderId}/shipment")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.OrderManagement.ORDER_UPDATE_STATUS + "')")
+    public OrderResponse updateOrderShipment(
+        @PathVariable Long orderId,
+        @RequestBody ManagerShipmentUpdateRequest request
+    ) {
+        return managerService.updateOrderShipment(orderId, request);
+    }
+
+    @PatchMapping("/products/{productId}/stock")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.ProductManagement.PRODUCT_MANAGE_STOCK + "')")
+    public ProductSummaryDto updateProductStock(
+        @PathVariable Long productId,
+        @RequestBody ManagerProductStockUpdateRequest request
+    ) {
+        return managerService.updateProductStock(productId, request);
     }
 }

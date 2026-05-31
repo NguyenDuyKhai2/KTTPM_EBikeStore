@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { orderAPI } from "@ebike/shared-code/api";
 import { useAppSelector } from "@ebike/shared-code/redux";
 import type { Order } from "@ebike/shared-code/types";
 import SectionShell from "../../components/common/SectionShell";
+import ShipmentTimeline from "../../components/orders/ShipmentTimeline";
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "Chờ xác nhận",
   CONFIRMED: "Đã xác nhận",
-  CANCELLATION_REQUESTED: "Chờ duyệt hủy",
+  PROCESSING: "Đang xử lý",
   SHIPPED: "Đang giao",
   DELIVERED: "Đã giao",
   CANCELLED: "Đã hủy"
@@ -16,7 +18,7 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_CLASSES: Record<string, string> = {
   PENDING: "bg-amber-50 text-amber-700 border-amber-200",
   CONFIRMED: "bg-blue-50 text-blue-700 border-blue-200",
-  CANCELLATION_REQUESTED: "bg-rose-50 text-rose-700 border-rose-200",
+  PROCESSING: "bg-indigo-50 text-indigo-700 border-indigo-200",
   SHIPPED: "bg-violet-50 text-violet-700 border-violet-200",
   DELIVERED: "bg-emerald-50 text-emerald-700 border-emerald-200",
   CANCELLED: "bg-rose-50 text-rose-700 border-rose-200"
@@ -79,10 +81,16 @@ const CustomerOrdersSafePage = () => {
 
   const totalSpent = useMemo(() => orders.reduce((sum, order) => sum + order.totalAmount, 0), [orders]);
 
-  const canRequestCancellation = (order: Order) =>
-    order.paymentMethod === "PAY_LATER" &&
-    order.paymentStatus === "PENDING" &&
-    (order.status === "PENDING" || order.status === "CONFIRMED");
+  const canCancelOrder = (order: Order) => {
+    if (order.status === "CANCELLED" || order.status === "DELIVERED" || order.status === "SHIPPED") {
+      return false;
+    }
+    const shipmentStatus = order.shipment?.shipmentStatus;
+    if (shipmentStatus === "SHIPPED" || shipmentStatus === "IN_TRANSIT" || shipmentStatus === "DELIVERED") {
+      return false;
+    }
+    return order.status === "PENDING" || order.status === "CONFIRMED" || order.status === "PROCESSING";
+  };
 
   const openCancellationDialog = (order: Order) => {
     setCancellationOrder(order);
@@ -106,6 +114,10 @@ const CustomerOrdersSafePage = () => {
     }
 
     const reason = cancellationReason.trim();
+    if (!reason) {
+      setCancellationValidationError("Vui lòng nhập lý do hủy đơn.");
+      return;
+    }
     if (reason.length > 1000) {
       setCancellationValidationError("Lý do hủy không được vượt quá 1000 ký tự.");
       return;
@@ -115,14 +127,14 @@ const CustomerOrdersSafePage = () => {
     setCancellationValidationError("");
     setCancellingOrderId(cancellationOrder.id);
     try {
-      const updatedOrder = await orderAPI.requestCancellation(cancellationOrder.id, { reason: reason || undefined });
+      const updatedOrder = await orderAPI.requestCancellation(cancellationOrder.id, { reason });
       setOrders((currentOrders) =>
         currentOrders.map((currentOrder) => (currentOrder.id === updatedOrder.id ? updatedOrder : currentOrder))
       );
       setCancellationOrder(null);
       setCancellationReason("");
     } catch (cancelError) {
-      setCancellationError(cancelError instanceof Error ? cancelError.message : "Không thể gửi yêu cầu hủy đơn hàng.");
+      setCancellationError(cancelError instanceof Error ? cancelError.message : "Không thể hủy đơn hàng.");
     } finally {
       setCancellingOrderId(null);
     }
@@ -179,7 +191,11 @@ const CustomerOrdersSafePage = () => {
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="text-2xl font-bold">{order.orderNumber}</h2>
+                        <h2 className="text-2xl font-bold">
+                          <Link to={`/customer/orders/${order.id}`} className="transition hover:text-primary">
+                            {order.orderNumber}
+                          </Link>
+                        </h2>
                         <span
                           className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                             STATUS_CLASSES[order.status] || "border-gray-200 bg-gray-50 text-gray-700"
@@ -203,31 +219,34 @@ const CustomerOrdersSafePage = () => {
                       <p className="mt-1 text-sm font-semibold text-muted-foreground">
                         Thanh toán: {PAYMENT_STATUS_LABELS[order.paymentStatus || ""] || "Chưa khởi tạo"}
                       </p>
-                      {order.status === "CANCELLATION_REQUESTED" && (
-                        <p className="mt-2 text-sm font-semibold text-rose-700">
-                          Yêu cầu hủy đang chờ manager xem xét.
-                        </p>
-                      )}
-                      {order.cancellationReviewNote && (
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Phản hồi: {order.cancellationReviewNote}
-                        </p>
+                      {order.status === "CANCELLED" && order.cancellationReason && (
+                        <p className="mt-2 text-sm text-rose-700">Lý do hủy: {order.cancellationReason}</p>
                       )}
                     </div>
                     <div className="text-left md:text-right">
                       <p className="text-sm text-muted-foreground">Tổng thanh toán</p>
                       <p className="mt-2 text-2xl font-bold text-primary">{order.totalAmount.toLocaleString("vi-VN")}đ</p>
-                      {canRequestCancellation(order) && (
+                      {canCancelOrder(order) && (
                         <button
                           type="button"
                           onClick={() => openCancellationDialog(order)}
                           disabled={cancellingOrderId === order.id}
                           className="mt-4 rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {cancellingOrderId === order.id ? "Đang gửi..." : "Yêu cầu hủy"}
+                          {cancellingOrderId === order.id ? "Đang hủy..." : "Hủy đơn"}
                         </button>
                       )}
                     </div>
+                  </div>
+
+                  <div className="mt-5 border-t border-outline-variant/10 pt-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-foreground">Trạng thái giao hàng</p>
+                      <Link to={`/customer/orders/${order.id}`} className="text-sm font-semibold text-primary">
+                        Xem chi tiết
+                      </Link>
+                    </div>
+                    <ShipmentTimeline order={order} compact />
                   </div>
 
                   <div className="mt-5 border-t border-outline-variant/10 pt-5">
@@ -254,16 +273,16 @@ const CustomerOrdersSafePage = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
             <div className="w-full max-w-lg rounded-lg bg-white shadow-2xl">
               <div className="border-b border-slate-200 px-6 py-5">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-600">Yêu cầu hủy đơn</p>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-600">Hủy đơn hàng</p>
                 <h3 className="mt-2 text-xl font-bold text-slate-950">{cancellationOrder.orderNumber}</h3>
                 <p className="mt-2 text-sm text-slate-500">
-                  Yêu cầu sẽ được gửi đến manager để xem xét trước khi đơn được hủy.
+                  Đơn sẽ được hủy ngay sau khi bạn nhập lý do và xác nhận.
                 </p>
               </div>
 
               <div className="space-y-4 px-6 py-5">
                 <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Lý do hủy</span>
+                  <span className="text-sm font-semibold text-slate-700">Lý do hủy (bắt buộc)</span>
                   <textarea
                     value={cancellationReason}
                     onChange={(event) => setCancellationReason(event.target.value)}
@@ -294,7 +313,7 @@ const CustomerOrdersSafePage = () => {
                   disabled={cancellingOrderId === cancellationOrder.id}
                   className="rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {cancellingOrderId === cancellationOrder.id ? "Đang gửi..." : "Gửi yêu cầu"}
+                  {cancellingOrderId === cancellationOrder.id ? "Đang hủy..." : "Xác nhận hủy"}
                 </button>
               </div>
             </div>

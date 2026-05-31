@@ -1,7 +1,9 @@
 package com.ebike.orderModule.entity;
 
+import com.ebike.notificationModule.listener.PaymentNotificationJpaListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -10,12 +12,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.PostLoad;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payments", schema = "ebike_order")
+@EntityListeners(PaymentNotificationJpaListener.class)
 public class Payment {
 
     @Id
@@ -33,6 +38,9 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false, length = 30)
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+
+    @Transient
+    private PaymentStatus previousPaymentStatusForNotification;
 
     @Column(name = "transaction_reference", length = 100)
     private String transactionReference;
@@ -64,6 +72,11 @@ public class Payment {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    @PostLoad
+    void rememberNotificationSnapshot() {
+        previousPaymentStatusForNotification = paymentStatus;
+    }
+
     public Long getId() {
         return id;
     }
@@ -94,6 +107,10 @@ public class Payment {
 
     public void setPaymentStatus(PaymentStatus paymentStatus) {
         this.paymentStatus = paymentStatus;
+    }
+
+    public PaymentStatus getPreviousPaymentStatusForNotification() {
+        return previousPaymentStatusForNotification;
     }
 
     public String getTransactionReference() {

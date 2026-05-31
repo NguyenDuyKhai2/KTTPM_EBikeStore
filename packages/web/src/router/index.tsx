@@ -20,16 +20,23 @@ import OrderSuccessPage from "../pages/OrderSuccessPage";
 import PaymentReturnPage from "../pages/PaymentReturnPage";
 import ProductDetailPage from "../pages/ProductDetailPage";
 import ProductsPage from "../pages/ProductsPage";
+import CompareProductsPage from "../pages/CompareProductsPage";
 import SignupPage from "../pages/SignupPage";
+import SupportPage from "../pages/SupportPage";
 import CustomerDashboardPage from "../pages/customer/CustomerDashboardRealPage";
 import CustomerOrdersPage from "../pages/customer/CustomerOrdersSafePage";
+import CustomerOrderDetailPage from "../pages/customer/CustomerOrderDetailPage";
+import CustomerNotificationsPage from "../pages/customer/CustomerNotificationsPage";
+import CustomerPaymentHistoryPage from "../pages/customer/CustomerPaymentHistoryPage";
 import CustomerProfilePage from "../pages/customer/CustomerProfilePage";
 import ManagerCustomersPage from "../pages/manager/ManagerCustomersPage";
 import ManagerDashboardPage from "../pages/manager/ManagerDashboardPage";
+import ManagerInventoryPage from "../pages/manager/ManagerInventoryPage";
 import ManagerOrderDetailPage from "../pages/manager/ManagerOrderDetailPage";
 import ManagerOrdersPage from "../pages/manager/ManagerOrdersPage";
 import ManagerPaymentsPage from "../pages/manager/ManagerPaymentsPage";
 import ManagerProductsPage from "../pages/manager/ManagerProductsPage";
+import ManagerRevenueReportPage from "../pages/manager/ManagerRevenueReportPage";
 
 const router = createBrowserRouter([
   {
@@ -49,6 +56,8 @@ const router = createBrowserRouter([
       { path: "checkout", element: <CheckoutPage /> },
       { path: "checkout/success", element: <OrderSuccessPage /> },
       { path: "payment/return", element: <PaymentReturnPage /> },
+      { path: "support", element: <SupportPage /> },
+      { path: "compare", element: <CompareProductsPage /> },
       { path: "chatbot", element: <ChatbotPage /> }
     ]
   },
@@ -63,6 +72,9 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <CustomerDashboardPage /> },
           { path: "orders", element: <CustomerOrdersPage /> },
+          { path: "orders/:id", element: <CustomerOrderDetailPage /> },
+          { path: "payments", element: <CustomerPaymentHistoryPage /> },
+          { path: "notifications", element: <CustomerNotificationsPage /> },
           { path: "profile", element: <CustomerProfilePage /> }
         ]
       }
@@ -79,6 +91,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <AdminDashboardPage /> },
           { path: "products", element: <AdminProductsPage /> },
+          { path: "inventory", element: <ManagerInventoryPage /> },
           { path: "users", element: <AdminUsersPage /> }
         ]
       }
@@ -87,14 +100,15 @@ const router = createBrowserRouter([
   {
     path: "/manager",
     element: <ManagerLayout />,
-    errorElement: <NotFoundPage />,
     children: [
       { index: true, element: <ManagerDashboardPage /> },
       { path: "orders", element: <ManagerOrdersPage /> },
       { path: "orders/:id", element: <ManagerOrderDetailPage /> },
       { path: "payments", element: <ManagerPaymentsPage /> },
       { path: "customers", element: <ManagerCustomersPage /> },
-      { path: "products", element: <ManagerProductsPage /> }
+      { path: "inventory", element: <ManagerInventoryPage /> },
+      { path: "products", element: <ManagerProductsPage /> },
+      { path: "reports", element: <ManagerRevenueReportPage /> }
     ]
   },
   {
