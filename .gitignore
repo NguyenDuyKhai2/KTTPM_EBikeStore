@@ -39,3 +39,10 @@ coverage/
 # Local runtime files
 *.pid
 *.seed
+
+# SSH / cloud private keys
+*.pem
+*_key
+*_key.pub
+id_rsa*
+id_ed25519*
