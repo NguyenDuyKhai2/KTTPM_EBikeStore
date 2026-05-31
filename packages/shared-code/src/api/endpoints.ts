@@ -46,5 +46,11 @@ export const API_ENDPOINTS = {
   payments: {
     vnpayCreate: "/payments/vnpay/create",
     vnpayReturn: "/payments/vnpay/return"
+  },
+  notifications: {
+    list: "/notifications",
+    unreadCount: "/notifications/unread-count",
+    markRead: (id: number | string) => `/notifications/${id}/read`,
+    markAllRead: "/notifications/read-all"
   }
 } as const;

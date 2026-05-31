@@ -1,5 +1,7 @@
 package com.ebike.orderModule.service.impl;
 
+import com.ebike.notificationModule.event.OrderStatusChangedEvent;
+import com.ebike.notificationModule.event.PaymentStatusChangedEvent;
 import com.ebike.orderModule.config.VnPayProperties;
 import com.ebike.orderModule.dto.request.VnPayCreatePaymentRequest;
 import com.ebike.orderModule.dto.response.VnPayCreatePaymentResponse;
@@ -21,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,17 +39,20 @@ public class VnPayServiceImpl implements VnPayService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public VnPayServiceImpl(
         VnPayProperties properties,
         OrderRepository orderRepository,
         PaymentRepository paymentRepository,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        ApplicationEventPublisher eventPublisher
     ) {
         this.properties = properties;
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -209,6 +215,8 @@ public class VnPayServiceImpl implements VnPayService {
     }
 
     private void applyGatewayResult(Payment payment, Map<String, String> params) {
+        PaymentStatus previousPaymentStatus = payment.getPaymentStatus();
+        OrderStatus previousOrderStatus = payment.getOrder().getStatus();
         payment.setProviderTxnId(params.get("vnp_TransactionNo"));
         payment.setProviderResponse(toJson(params));
         payment.setVnpayResponseCode(params.get("vnp_ResponseCode"));
@@ -223,7 +231,9 @@ public class VnPayServiceImpl implements VnPayService {
         } else {
             payment.setPaymentStatus(PaymentStatus.FAILED);
         }
-        paymentRepository.save(payment);
+        Payment savedPayment = paymentRepository.save(payment);
+        publishPaymentStatusChanged(savedPayment, previousPaymentStatus);
+        publishOrderStatusChanged(savedPayment.getOrder(), previousOrderStatus);
     }
 
     private boolean isValidSignature(Map<String, String> params) {
@@ -290,5 +300,29 @@ public class VnPayServiceImpl implements VnPayService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private void publishOrderStatusChanged(Order order, OrderStatus previousStatus) {
+        eventPublisher.publishEvent(new OrderStatusChangedEvent(
+            order.getId(),
+            order.getUser() == null ? null : order.getUser().getId(),
+            order.getOrderNumber(),
+            previousStatus == null ? null : previousStatus.name(),
+            order.getStatus().name()
+        ));
+    }
+
+    private void publishPaymentStatusChanged(Payment payment, PaymentStatus previousStatus) {
+        Order order = payment.getOrder();
+        eventPublisher.publishEvent(new PaymentStatusChangedEvent(
+            payment.getId(),
+            order.getId(),
+            order.getUser() == null ? null : order.getUser().getId(),
+            order.getOrderNumber(),
+            payment.getPaymentMethod().name(),
+            previousStatus == null ? null : previousStatus.name(),
+            payment.getPaymentStatus().name(),
+            payment.getAmount()
+        ));
     }
 }

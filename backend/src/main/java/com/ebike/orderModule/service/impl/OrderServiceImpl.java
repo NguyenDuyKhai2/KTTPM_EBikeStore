@@ -2,6 +2,8 @@ package com.ebike.orderModule.service.impl;
 
 import com.ebike.authModule.entity.User;
 import com.ebike.authModule.repository.UserRepository;
+import com.ebike.notificationModule.event.OrderCreatedEvent;
+import com.ebike.notificationModule.event.OrderStatusChangedEvent;
 import com.ebike.orderModule.dto.request.OrderCancellationRequest;
 import com.ebike.orderModule.dto.request.OrderCreateItemRequest;
 import com.ebike.orderModule.dto.request.OrderCreateRequest;
@@ -35,6 +37,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -60,19 +63,22 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final ShowroomRepository showroomRepository;
     private final OrderEmailVerificationService orderEmailVerificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public OrderServiceImpl(
         OrderRepository orderRepository,
         UserRepository userRepository,
         ProductRepository productRepository,
         ShowroomRepository showroomRepository,
-        OrderEmailVerificationService orderEmailVerificationService
+        OrderEmailVerificationService orderEmailVerificationService,
+        ApplicationEventPublisher eventPublisher
     ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.showroomRepository = showroomRepository;
         this.orderEmailVerificationService = orderEmailVerificationService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -158,7 +164,15 @@ public class OrderServiceImpl implements OrderService {
         order.setShipment(buildShipment(order, showroom, request));
         attachInitialPayment(order, request.paymentMethod());
 
-        return toResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+        eventPublisher.publishEvent(new OrderCreatedEvent(
+            savedOrder.getId(),
+            savedOrder.getUser() == null ? null : savedOrder.getUser().getId(),
+            savedOrder.getOrderNumber(),
+            savedOrder.getCustomerEmail(),
+            savedOrder.getTotalAmount()
+        ));
+        return toResponse(savedOrder);
     }
 
     @Override
@@ -171,13 +185,16 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
+        OrderStatus previousStatus = order.getStatus();
         try {
             order.setStatus(OrderStatus.valueOf(request.status().trim().toUpperCase(Locale.ROOT)));
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid order status");
         }
 
-        return toResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+        publishOrderStatusChanged(savedOrder, previousStatus);
+        return toResponse(savedOrder);
     }
 
     @Override
@@ -218,7 +235,9 @@ public class OrderServiceImpl implements OrderService {
         order.setCancellationReviewNote(null);
         order.setCancellationReviewedAt(null);
 
-        return toResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+        publishOrderStatusChanged(savedOrder, order.getCancellationRequestedFromStatus());
+        return toResponse(savedOrder);
     }
 
     private void validateCheckoutDetails(OrderCreateRequest request) {
@@ -532,6 +551,16 @@ public class OrderServiceImpl implements OrderService {
 
     private String buildShippingAddress(Showroom showroom, String detailedAddress) {
         return showroom.getName() + " - " + showroom.getAddress() + " | Dia chi cu the: " + normalize(detailedAddress);
+    }
+
+    private void publishOrderStatusChanged(Order order, OrderStatus previousStatus) {
+        eventPublisher.publishEvent(new OrderStatusChangedEvent(
+            order.getId(),
+            order.getUser() == null ? null : order.getUser().getId(),
+            order.getOrderNumber(),
+            previousStatus == null ? null : previousStatus.name(),
+            order.getStatus().name()
+        ));
     }
 
     private OrderResponse toResponse(Order order) {

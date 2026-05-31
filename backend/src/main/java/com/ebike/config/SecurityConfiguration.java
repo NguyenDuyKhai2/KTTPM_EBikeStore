@@ -70,6 +70,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/favorites").hasAuthority(PermissionConstants.Customer.FAVORITE_VIEW)
                 .requestMatchers(HttpMethod.POST, "/favorites").hasAuthority(PermissionConstants.Customer.FAVORITE_UPDATE)
                 .requestMatchers(HttpMethod.DELETE, "/favorites/*").hasAuthority(PermissionConstants.Customer.FAVORITE_UPDATE)
+                .requestMatchers(HttpMethod.GET, "/notifications", "/notifications/unread-count").authenticated()
+                .requestMatchers(HttpMethod.PATCH, "/notifications/*/read", "/notifications/read-all").authenticated()
                 .requestMatchers(HttpMethod.POST, "/payments/vnpay/create").hasAuthority(PermissionConstants.Guest.PAYMENT_CREATE)
                 .requestMatchers(HttpMethod.GET, "/users/**").hasAnyAuthority(
                     PermissionConstants.Customer.PROFILE_VIEW,

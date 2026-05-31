@@ -8,6 +8,8 @@ import com.ebike.managerModule.dto.response.ManagerCustomerResponse;
 import com.ebike.managerModule.dto.response.ManagerDashboardResponse;
 import com.ebike.managerModule.dto.response.ManagerPaymentResponse;
 import com.ebike.managerModule.service.ManagerService;
+import com.ebike.notificationModule.event.OrderStatusChangedEvent;
+import com.ebike.notificationModule.event.PaymentStatusChangedEvent;
 import com.ebike.orderModule.dto.request.OrderCancellationRequest;
 import com.ebike.orderModule.dto.response.OrderResponse;
 import com.ebike.orderModule.entity.Order;
@@ -26,6 +28,7 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,15 +43,18 @@ public class ManagerServiceImpl implements ManagerService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ManagerServiceImpl(
         OrderRepository orderRepository,
         PaymentRepository paymentRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        ApplicationEventPublisher eventPublisher
     ) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -118,6 +124,7 @@ public class ManagerServiceImpl implements ManagerService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refunded payments cannot be confirmed again");
         }
 
+        PaymentStatus previousPaymentStatus = payment.getPaymentStatus();
         payment.setPaymentStatus(PaymentStatus.PAID);
         payment.setPaidAt(LocalDateTime.now());
         if (request != null && request.providerTxnId() != null && !request.providerTxnId().isBlank()) {
@@ -128,6 +135,7 @@ public class ManagerServiceImpl implements ManagerService {
         }
 
         Order order = payment.getOrder();
+        OrderStatus previousOrderStatus = order.getStatus();
         if (order.getStatus() == OrderStatus.CANCELLATION_REQUESTED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resolve the cancellation request before confirming this payment");
         }
@@ -135,7 +143,10 @@ public class ManagerServiceImpl implements ManagerService {
             order.setStatus(OrderStatus.CONFIRMED);
         }
 
-        return toPaymentResponse(paymentRepository.save(payment));
+        Payment savedPayment = paymentRepository.save(payment);
+        publishPaymentStatusChanged(savedPayment, previousPaymentStatus);
+        publishOrderStatusChanged(order, previousOrderStatus);
+        return toPaymentResponse(savedPayment);
     }
 
     @Override
@@ -147,13 +158,18 @@ public class ManagerServiceImpl implements ManagerService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order is no longer eligible for cancellation approval");
         }
 
+        OrderStatus previousOrderStatus = order.getStatus();
+        PaymentStatus previousPaymentStatus = payment.getPaymentStatus();
         order.setStatus(OrderStatus.CANCELLED);
         order.setCancellationReviewNote(normalizeOptional(request == null ? null : request.reviewNote()));
         order.setCancellationReviewedAt(LocalDateTime.now());
         payment.setPaymentStatus(PaymentStatus.CANCELLED);
         payment.setProviderResponse("Cancelled after manager approval");
 
-        return toOrderResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+        publishOrderStatusChanged(savedOrder, previousOrderStatus);
+        publishPaymentStatusChanged(payment, previousPaymentStatus);
+        return toOrderResponse(savedOrder);
     }
 
     @Override
@@ -164,11 +180,14 @@ public class ManagerServiceImpl implements ManagerService {
             ? OrderStatus.PENDING
             : order.getCancellationRequestedFromStatus();
 
+        OrderStatus currentStatus = order.getStatus();
         order.setStatus(previousStatus);
         order.setCancellationReviewNote(normalizeOptional(request == null ? null : request.reviewNote()));
         order.setCancellationReviewedAt(LocalDateTime.now());
 
-        return toOrderResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+        publishOrderStatusChanged(savedOrder, currentStatus);
+        return toOrderResponse(savedOrder);
     }
 
     @Override
@@ -386,5 +405,29 @@ public class ManagerServiceImpl implements ManagerService {
 
     private String normalizeOptional(String value) {
         return isBlank(value) ? null : value.trim();
+    }
+
+    private void publishOrderStatusChanged(Order order, OrderStatus previousStatus) {
+        eventPublisher.publishEvent(new OrderStatusChangedEvent(
+            order.getId(),
+            order.getUser() == null ? null : order.getUser().getId(),
+            order.getOrderNumber(),
+            previousStatus == null ? null : previousStatus.name(),
+            order.getStatus().name()
+        ));
+    }
+
+    private void publishPaymentStatusChanged(Payment payment, PaymentStatus previousStatus) {
+        Order order = payment.getOrder();
+        eventPublisher.publishEvent(new PaymentStatusChangedEvent(
+            payment.getId(),
+            order.getId(),
+            order.getUser() == null ? null : order.getUser().getId(),
+            order.getOrderNumber(),
+            payment.getPaymentMethod().name(),
+            previousStatus == null ? null : previousStatus.name(),
+            payment.getPaymentStatus().name(),
+            payment.getAmount()
+        ));
     }
 }
