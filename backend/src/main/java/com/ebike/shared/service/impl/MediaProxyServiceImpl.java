@@ -8,6 +8,7 @@ import java.net.URLConnection;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -19,7 +20,11 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class MediaProxyServiceImpl implements MediaProxyService {
 
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(6);
+
     private final HttpClient httpClient = HttpClient.newBuilder()
+        .connectTimeout(CONNECT_TIMEOUT)
         .followRedirects(HttpClient.Redirect.NORMAL)
         .build();
 
@@ -29,6 +34,7 @@ public class MediaProxyServiceImpl implements MediaProxyService {
 
         try {
             HttpRequest request = HttpRequest.newBuilder(remoteUri)
+                .timeout(REQUEST_TIMEOUT)
                 .header(HttpHeaders.USER_AGENT, "Mozilla/5.0 EBikeMediaProxy/1.0")
                 .GET()
                 .build();
@@ -43,10 +49,10 @@ public class MediaProxyServiceImpl implements MediaProxyService {
                 .cacheControl(CacheControl.noCache())
                 .body(response.body());
         } catch (IOException exception) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Unable to proxy image", exception);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Remote image is temporarily unavailable", exception);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Unable to proxy image", exception);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Remote image is temporarily unavailable", exception);
         }
     }
 
