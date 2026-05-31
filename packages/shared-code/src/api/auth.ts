@@ -1,6 +1,6 @@
 import { apiClient } from "./client";
 import { API_ENDPOINTS } from "./endpoints";
-import type { EnhancedAuthResponse, LoginRequest, RegisterRequest, UpdateProfileRequest, UserProfileResponse } from "../types";
+import type { ChangePasswordRequest, EnhancedAuthResponse, LoginRequest, RegisterRequest, UpdateProfileRequest, UserProfileResponse } from "../types";
 
 export const authAPI = {
   login: async (payload: LoginRequest) => {
@@ -29,6 +29,9 @@ export const authAPI = {
   updateProfile: async (payload: UpdateProfileRequest) => {
     const response = await apiClient.put<UserProfileResponse>(API_ENDPOINTS.auth.profile, payload);
     return response.data;
+  },
+  changePassword: async (payload: ChangePasswordRequest) => {
+    await apiClient.post(API_ENDPOINTS.auth.password, payload);
   },
   getUserFromToken: async () => {
     const response = await apiClient.get<string>(API_ENDPOINTS.auth.userFromToken);

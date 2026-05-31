@@ -44,3 +44,32 @@ export interface ManagerPaymentConfirmationRequest {
   providerTxnId?: string;
   note?: string;
 }
+
+export interface ManagerProductStockUpdateRequest {
+  stockQuantity: number;
+}
+
+export interface ManagerRevenuePeriodPoint {
+  label: string;
+  orderCount: number;
+  revenue: number;
+}
+
+export interface ManagerTopProduct {
+  productId: number;
+  productName: string;
+  quantitySold: number;
+  revenue: number;
+}
+
+export interface ManagerRevenueReport {
+  periodType: string;
+  fromDate: string;
+  toDate: string;
+  totalOrders: number;
+  successfulOrders: number;
+  totalRevenue: number;
+  breakdown: ManagerRevenuePeriodPoint[];
+  topProducts: ManagerTopProduct[];
+  slowProducts: ManagerTopProduct[];
+}

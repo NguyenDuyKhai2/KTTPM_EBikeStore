@@ -4,9 +4,10 @@ import productReducer from "./slices/productSlice";
 import chatbotReducer from "./slices/chatbotSlice";
 import orderReducer from "./slices/orderSlice";
 import uiReducer from "./slices/uiSlice";
+import { setupAuthInterceptor } from "../api/client";
 
-export const createAppStore = () =>
-  configureStore({
+export const createAppStore = () => {
+  const store = configureStore({
     reducer: {
       auth: authReducer,
       products: productReducer,
@@ -15,6 +16,15 @@ export const createAppStore = () =>
       ui: uiReducer
     }
   });
+
+  // Setup auth interceptor to inject token into requests
+  setupAuthInterceptor(() => {
+    const state = store.getState();
+    return state.auth.token;
+  });
+
+  return store;
+};
 
 export type AppStore = ReturnType<typeof createAppStore>;
 export type RootState = ReturnType<AppStore["getState"]>;

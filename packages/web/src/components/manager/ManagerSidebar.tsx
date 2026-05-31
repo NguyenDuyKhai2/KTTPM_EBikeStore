@@ -1,4 +1,4 @@
-import { CreditCard, ExternalLink, Home, LayoutDashboard, LogOut, Package, ShoppingBag, User, Users } from "lucide-react";
+import { BarChart3, CreditCard, ExternalLink, Home, LayoutDashboard, LogOut, Package, ShoppingBag, User, Users } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@ebike/shared-code/hooks";
 
@@ -7,7 +7,17 @@ const navItems = [
   { to: "/manager/orders", label: "Đơn hàng", icon: ShoppingBag },
   { to: "/manager/payments", label: "Thanh toán", icon: CreditCard },
   { to: "/manager/customers", label: "Khách hàng", icon: Users },
-  { to: "/manager/products", label: "Sản phẩm", icon: Package }
+  { to: "/manager/products", label: "Quản lý tồn kho", icon: Package }
+];
+
+const managerNavItems = [
+  { to: "/manager", label: "Tổng quan", icon: LayoutDashboard, end: true },
+  { to: "/manager/orders", label: "Đơn hàng", icon: ShoppingBag },
+  { to: "/manager/payments", label: "Thanh toán", icon: CreditCard },
+  { to: "/manager/customers", label: "Khách hàng", icon: Users },
+  { to: "/manager/reports", label: "Báo cáo doanh thu", icon: BarChart3 },
+  { to: "/manager/products", label: "Sản phẩm", icon: Package },
+  { to: "/manager/inventory", label: "Quản lý tồn kho", icon: Package }
 ];
 
 const quickAccessItems = [
@@ -36,7 +46,7 @@ const ManagerSidebar = () => {
 
       <nav className="flex-1 px-3 py-5">
         <div className="space-y-1">
-          {navItems.map((item) => (
+          {managerNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

@@ -2,6 +2,7 @@ package com.ebike.authModule.controller;
 
 import com.ebike.authModule.dto.response.AuthResponse;
 import com.ebike.authModule.dto.response.EnhancedAuthResponse;
+import com.ebike.authModule.dto.request.ChangePasswordRequest;
 import com.ebike.authModule.dto.request.LoginRequest;
 import com.ebike.authModule.dto.request.RegisterRequest;
 import com.ebike.authModule.dto.request.UpdateProfileRequest;
@@ -18,6 +19,8 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,6 +33,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private static final String ACCESS_TOKEN_COOKIE_NAME = "ebike_access_token";
     private static final String ROLE_CUSTOMER = "CUSTOMER";
@@ -170,6 +175,24 @@ public class AuthController {
             throw new org.springframework.web.server.ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
         }
         return authenticationService.updateProfile(authentication.getName(), request);
+    }
+
+    @PostMapping("/change-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(
+        Authentication authentication,
+        @RequestBody ChangePasswordRequest request
+    ) {
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
+        }
+        try {
+            logger.debug("changePassword called by {}", authentication.getName());
+            authenticationService.changePassword(authentication.getName(), request);
+        } catch (Exception e) {
+            logger.error("changePassword failed for {}", authentication != null ? authentication.getName() : "unknown", e);
+            throw e;
+        }
     }
 
     @GetMapping("/verify-token")

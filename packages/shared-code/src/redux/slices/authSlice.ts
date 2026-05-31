@@ -4,6 +4,8 @@ import type { EnhancedAuthResponse, LoginRequest, SessionUser, UserProfileRespon
 
 interface AuthState {
   user: SessionUser | null;
+  token: string | null;
+  tokenExpiresAt: string | null;
   isLoading: boolean;
   isBootstrapping: boolean;
   isAuthenticated: boolean;
@@ -32,6 +34,8 @@ const mapProfileResponseToUser = (payload: UserProfileResponse): SessionUser => 
 
 const initialState: AuthState = {
   user: null,
+  token: null,
+  tokenExpiresAt: null,
   isLoading: false,
   isBootstrapping: true,
   isAuthenticated: false,
@@ -84,6 +88,8 @@ const authSlice = createSlice({
       .addCase(loginThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = mapAuthResponseToUser(action.payload);
+        state.token = action.payload.token;
+        state.tokenExpiresAt = action.payload.expiresAt;
         state.isAuthenticated = true;
         state.isBootstrapping = false;
       })
@@ -94,17 +100,23 @@ const authSlice = createSlice({
       })
       .addCase(logoutThunk.pending, (state) => {
         state.user = null;
+        state.token = null;
+        state.tokenExpiresAt = null;
         state.isAuthenticated = false;
         state.error = null;
       })
       .addCase(logoutThunk.fulfilled, (state) => {
         state.user = null;
+        state.token = null;
+        state.tokenExpiresAt = null;
         state.isAuthenticated = false;
         state.error = null;
         state.isBootstrapping = false;
       })
       .addCase(logoutThunk.rejected, (state) => {
         state.user = null;
+        state.token = null;
+        state.tokenExpiresAt = null;
         state.isAuthenticated = false;
         state.error = null;
         state.isBootstrapping = false;

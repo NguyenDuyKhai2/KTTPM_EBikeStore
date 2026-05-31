@@ -41,6 +41,7 @@ const Footer = () => {
             <h4 className="mono-label mb-6 text-foreground/40">Công ty</h4>
             <ul className="space-y-3">
               <li><Link to="/" className="text-sm text-muted-foreground transition-colors hover:text-primary">Về Kinetic</Link></li>
+              <li><Link to="/support" className="text-sm text-muted-foreground transition-colors hover:text-primary">Hỗ trợ</Link></li>
               <li><Link to="/customer/orders" className="text-sm text-muted-foreground transition-colors hover:text-primary">Đơn hàng</Link></li>
               <li><Link to="/auth" className="text-sm text-muted-foreground transition-colors hover:text-primary">Tài khoản</Link></li>
             </ul>

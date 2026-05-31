@@ -195,6 +195,15 @@ public class AdminProductImageService {
         return toDto(findImage(imageId));
     }
 
+    public List<AdminProductImageDto> listImagesByProduct(Long productId) {
+        findProduct(productId);
+        return productImageRepository.findByProductIdOrderBySortOrderAsc(productId).stream()
+            .filter(image -> image.getStatus() == null || image.getStatus() == ProductImageStatus.ACTIVE)
+            .sorted(Comparator.comparing(ProductImage::getSortOrder).thenComparing(ProductImage::getId))
+            .map(this::toDto)
+            .toList();
+    }
+
     private Product findProduct(Long productId) {
         return productRepository.findById(productId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
