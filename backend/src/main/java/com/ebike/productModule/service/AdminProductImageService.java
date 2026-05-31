@@ -1,5 +1,6 @@
 package com.ebike.productModule.service;
 
+import com.ebike.config.RedisCacheConfiguration;
 import com.ebike.productModule.dto.response.AdminProductImageDto;
 import com.ebike.productModule.entity.Product;
 import com.ebike.productModule.entity.ProductImage;
@@ -21,6 +22,8 @@ import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +53,10 @@ public class AdminProductImageService {
         this.storageService = storageService;
     }
 
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_LIST_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_DETAIL_CACHE, allEntries = true)
+    })
     public AdminProductImageDto uploadImage(
         Long productId,
         Long variantId,
@@ -94,6 +101,10 @@ public class AdminProductImageService {
         }
     }
 
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_LIST_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_DETAIL_CACHE, allEntries = true)
+    })
     public AdminProductImageDto updateImage(
         Long imageId,
         MultipartFile file,
@@ -164,6 +175,10 @@ public class AdminProductImageService {
     }
 
     @Transactional(noRollbackFor = ResponseStatusException.class)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_LIST_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_DETAIL_CACHE, allEntries = true)
+    })
     public void deleteImage(Long imageId) {
         ProductImage image = findImage(imageId);
         image.setStatus(ProductImageStatus.PENDING_DELETE);

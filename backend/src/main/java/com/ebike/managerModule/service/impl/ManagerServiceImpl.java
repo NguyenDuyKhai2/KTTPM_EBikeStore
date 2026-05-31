@@ -3,6 +3,7 @@ package com.ebike.managerModule.service.impl;
 import com.ebike.authModule.entity.Role;
 import com.ebike.authModule.entity.User;
 import com.ebike.authModule.repository.UserRepository;
+import com.ebike.config.RedisCacheConfiguration;
 import com.ebike.managerModule.dto.request.ManagerPaymentConfirmationRequest;
 import com.ebike.managerModule.dto.request.ManagerProductStockUpdateRequest;
 import com.ebike.managerModule.dto.request.ManagerShipmentUpdateRequest;
@@ -41,6 +42,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -309,6 +312,10 @@ public class ManagerServiceImpl implements ManagerService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_LIST_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_DETAIL_CACHE, allEntries = true)
+    })
     public ProductSummaryDto updateProductStock(Long productId, ManagerProductStockUpdateRequest request) {
         if (request == null || request.stockQuantity() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "stockQuantity is required");

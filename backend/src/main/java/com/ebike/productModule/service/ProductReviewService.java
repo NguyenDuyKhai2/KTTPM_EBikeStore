@@ -2,6 +2,7 @@ package com.ebike.productModule.service;
 
 import com.ebike.authModule.entity.User;
 import com.ebike.authModule.repository.UserRepository;
+import com.ebike.config.RedisCacheConfiguration;
 import com.ebike.productModule.dto.request.ProductReviewRequest;
 import com.ebike.productModule.dto.response.ProductReviewDto;
 import com.ebike.productModule.entity.Product;
@@ -11,6 +12,8 @@ import com.ebike.productModule.repository.ReviewRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -51,6 +54,10 @@ public class ProductReviewService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_LIST_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_DETAIL_CACHE, allEntries = true)
+    })
     public ProductReviewDto createReview(String productSlug, ProductReviewRequest request, Authentication authentication) {
         User user = currentUser(authentication);
         Product product = findActiveProduct(productSlug);
@@ -72,6 +79,10 @@ public class ProductReviewService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_LIST_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_DETAIL_CACHE, allEntries = true)
+    })
     public ProductReviewDto updateReview(Long reviewId, ProductReviewRequest request, Authentication authentication) {
         User user = currentUser(authentication);
         Review review = findReview(reviewId);
@@ -89,6 +100,10 @@ public class ProductReviewService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_LIST_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = RedisCacheConfiguration.PRODUCT_DETAIL_CACHE, allEntries = true)
+    })
     public void deleteReview(Long reviewId, Authentication authentication) {
         User user = currentUser(authentication);
         Review review = findReview(reviewId);

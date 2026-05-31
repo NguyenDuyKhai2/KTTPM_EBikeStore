@@ -14,6 +14,7 @@ import com.ebike.productModule.entity.ProductVariant;
 import com.ebike.productModule.entity.BatteryType;
 import com.ebike.productModule.entity.VehicleType;
 import com.ebike.productModule.repository.ProductRepository;
+import com.ebike.config.RedisCacheConfiguration;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -22,6 +23,7 @@ import java.util.Locale;
 import java.util.TreeSet;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,7 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
+    @Cacheable(cacheNames = RedisCacheConfiguration.PRODUCT_LIST_CACHE)
     public List<ProductSummaryDto> getProducts(
         String query,
         Integer categoryId,
@@ -128,6 +131,7 @@ public class ProductService {
         );
     }
 
+    @Cacheable(cacheNames = RedisCacheConfiguration.PRODUCT_DETAIL_CACHE, key = "#slug")
     public ProductDetailDto getProductBySlug(String slug) {
         Product product = productRepository.findBySlug(slug)
             .filter(item -> Boolean.TRUE.equals(item.getActive()))
