@@ -69,6 +69,37 @@ const ProductsPage = () => {
   const inStockOnly = searchParams.get("inStock") === "1";
   const sortBy = (searchParams.get("sort") as SortKey) || "default";
 
+  const selectedCompareSlugs = useMemo(() => {
+    const compareParam = searchParams.get("compare");
+    if (!compareParam) {
+      return [];
+    }
+
+    return compareParam
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+  }, [searchParams]);
+
+  const updateCompareParams = (compareSlugs: string[]) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (compareSlugs.length > 0) {
+      nextParams.set("compare", compareSlugs.join(","));
+    } else {
+      nextParams.delete("compare");
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const toggleCompare = (productSlug: string) => {
+    const nextCompareSlugs = selectedCompareSlugs.includes(productSlug)
+      ? selectedCompareSlugs.filter((slug) => slug !== productSlug)
+      : [...selectedCompareSlugs, productSlug].slice(0, 3);
+
+    updateCompareParams(nextCompareSlugs);
+  };
+
   const updateSearchParams = (updates: Record<string, string | null>) => {
     const nextParams = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
@@ -391,6 +422,32 @@ const ProductsPage = () => {
               </div>
             </div>
 
+            {selectedCompareSlugs.length > 0 ? (
+              <div className="mb-6 rounded-3xl border border-primary/15 bg-primary/5 p-4 text-sm text-stone-700 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-bold">Đã chọn {selectedCompareSlugs.length} sản phẩm để so sánh</p>
+                  <p className="text-sm text-muted-foreground">Chọn tối đa 3 sản phẩm. Nhấn nút So sánh để xem chi tiết đối chiếu.</p>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-0">
+                  <Link
+                    to={`/compare?ids=${selectedCompareSlugs.join(",")}`}
+                    className={`rounded-full bg-primary px-4 py-2 text-sm font-bold text-white transition ${
+                      selectedCompareSlugs.length < 2 ? "opacity-50 pointer-events-none" : "hover:bg-primary/90"
+                    }`}
+                  >
+                    So sánh
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => updateCompareParams([])}
+                    className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-bold text-stone-700 transition hover:bg-stone-100"
+                  >
+                    Xóa chọn
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             {loading ? (
               <div className="py-16 text-center text-muted-foreground">Đang tải sản phẩm...</div>
             ) : error ? (
@@ -462,6 +519,21 @@ const ProductsPage = () => {
                       <p className="mb-6 text-xs uppercase tracking-wider text-muted-foreground">
                         {product.type} | {product.meta}
                       </p>
+
+                      <div className="mb-4 flex items-center justify-between rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-600">
+                        <label className="inline-flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedCompareSlugs.includes(product.slug)}
+                            onChange={() => toggleCompare(product.slug)}
+                            className="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary"
+                          />
+                          <span>So sánh</span>
+                        </label>
+                        <span className="text-xs text-muted-foreground">
+                          {selectedCompareSlugs.includes(product.slug) ? "Đã chọn" : "Chọn để so sánh"}
+                        </span>
+                      </div>
 
                       <div className="flex items-center justify-between">
                         <div className="flex gap-2">

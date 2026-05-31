@@ -6,6 +6,7 @@ import NotificationBell from "./NotificationBell";
 
 const navItems = [
   { to: "/products", label: "Mẫu xe" },
+  { to: "/support", label: "Hỗ trợ" },
   { to: "/chatbot", label: "Tư vấn" },
   { to: "/favorites", label: "Đã lưu" }
 ];

@@ -125,6 +125,7 @@ export interface CreateOrderRequest {
   pickupShowroomId: number;
   detailedAddress: string;
   paymentMethod: "PAY_LATER" | "VNPAY";
+  discountCode?: string;
   includeRegistrationService?: boolean;
   notes?: string;
   items: Array<{
@@ -135,6 +136,7 @@ export interface CreateOrderRequest {
 
 export interface OrderQuoteRequest {
   includeRegistrationService?: boolean;
+  discountCode?: string;
   items: Array<{
     productId: number;
     quantity: number;

@@ -1,7 +1,7 @@
 import { Clock, CreditCard, Lock, MailCheck, MapPin, Phone, Store, Zap } from "lucide-react";
-import { orderAPI, paymentAPI, showroomAPI } from "@ebike/shared-code/api";
+import { orderAPI, paymentAPI, showroomAPI, userAPI } from "@ebike/shared-code/api";
 import { useAppSelector } from "@ebike/shared-code/redux";
-import type { OrderQuote, Showroom } from "@ebike/shared-code/types";
+import type { OrderQuote, Showroom, UserAddressResponse } from "@ebike/shared-code/types";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { attachImageFallback, resolveProductImage } from "../utils/media";
@@ -56,6 +56,9 @@ const CheckoutPage = () => {
   const [orderQuote, setOrderQuote] = useState<OrderQuote | null>(null);
   const [loadingQuote, setLoadingQuote] = useState(true);
   const [loadingShowrooms, setLoadingShowrooms] = useState(true);
+  const [loadingAddresses, setLoadingAddresses] = useState(true);
+  const [savedAddresses, setSavedAddresses] = useState<UserAddressResponse[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -66,6 +69,10 @@ const CheckoutPage = () => {
   const [emailOtpVerifiedFor, setEmailOtpVerifiedFor] = useState<string | null>(null);
   const [emailOtpMessage, setEmailOtpMessage] = useState<string | null>(null);
   const [emailOtpLoading, setEmailOtpLoading] = useState(false);
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscountCode, setAppliedDiscountCode] = useState<string | null>(null);
+  const [discountCodeError, setDiscountCodeError] = useState<string | null>(null);
+  const [discountCodeMessage, setDiscountCodeMessage] = useState<string | null>(null);
   const [form, setForm] = useState({
     customerName: authUser?.fullName ?? "",
     phoneNumber: "",
@@ -106,15 +113,48 @@ const CheckoutPage = () => {
   }, []);
 
   useEffect(() => {
+    if (!authUser?.id) {
+      setLoadingAddresses(false);
+      return;
+    }
+
+    let mounted = true;
+    const loadAddresses = async () => {
+      try {
+        const response = await userAPI.listAddresses(Number(authUser.id));
+        if (!mounted) {
+          return;
+        }
+        setSavedAddresses(response);
+      } catch (error) {
+        if (mounted) {
+          setSubmitError(error instanceof Error ? error.message : "Không thể tải địa chỉ đã lưu.");
+        }
+      } finally {
+        if (mounted) {
+          setLoadingAddresses(false);
+        }
+      }
+    };
+
+    void loadAddresses();
+    return () => {
+      mounted = false;
+    };
+  }, [authUser?.id]);
+
+  useEffect(() => {
     const loadQuote = async () => {
       if (!product) {
         return;
       }
 
       setLoadingQuote(true);
+      setSubmitError(null);
       try {
         const quote = await orderAPI.quote({
           includeRegistrationService: registrationService === "SHOWROOM",
+          discountCode: appliedDiscountCode ?? undefined,
           items: [
             {
               productId: product.id,
@@ -123,20 +163,28 @@ const CheckoutPage = () => {
           ]
         });
         setOrderQuote(quote);
+        setDiscountCodeError(null);
+        setDiscountCodeMessage(appliedDiscountCode ? `Mã giảm giá ${appliedDiscountCode} đã được áp dụng.` : null);
       } catch (error) {
-        setOrderQuote(null);
-        setSubmitError(error instanceof Error ? error.message : "Không thể tính tổng thanh toán.");
+        const message = error instanceof Error ? error.message : "Không thể tính tổng thanh toán.";
+        if (appliedDiscountCode) {
+          setDiscountCodeError(message);
+          setDiscountCodeMessage(null);
+        } else {
+          setOrderQuote(null);
+          setSubmitError(message);
+        }
       } finally {
         setLoadingQuote(false);
       }
     };
 
     void loadQuote();
-  }, [product, quantity, registrationService]);
+  }, [product, quantity, registrationService, appliedDiscountCode]);
 
   const fallbackSubtotal = product ? product.price * quantity : 0;
   const subtotal = orderQuote?.subtotal ?? fallbackSubtotal;
-  const showroomIncentive = orderQuote?.discountAmount ?? 0;
+  const totalDiscount = orderQuote?.discountAmount ?? 0;
   const registrationFee = orderQuote?.registrationFee ?? 0;
   const total = orderQuote?.totalAmount ?? fallbackSubtotal;
 
@@ -151,6 +199,17 @@ const CheckoutPage = () => {
   );
 
   const selectedShowroom = filteredShowrooms.find((showroom) => String(showroom.id) === form.pickupShowroomId) ?? null;
+
+  const applySavedAddress = (address: UserAddressResponse | null) => {
+    setSelectedAddressId(address?.id ?? null);
+    if (!address) {
+      return;
+    }
+    const newDetailedAddress = [address.street, address.city, address.postalCode, address.country]
+      .filter(Boolean)
+      .join(", ");
+    setForm((current) => ({ ...current, detailedAddress: newDetailedAddress }));
+  };
 
   const inputClassName = (hasError: boolean) =>
     `w-full border-0 border-b-2 px-0 py-2 font-medium focus:ring-0 ${
@@ -271,6 +330,16 @@ const CheckoutPage = () => {
       return;
     }
 
+    const normalizedDiscountCode = discountCode.trim().toUpperCase();
+    if (normalizedDiscountCode && normalizedDiscountCode !== appliedDiscountCode) {
+      setSubmitError("Vui lòng bấm 'Áp dụng' để kiểm tra mã giảm giá trước khi đặt hàng.");
+      return;
+    }
+    if (discountCodeError) {
+      setSubmitError("Vui lòng kiểm tra mã giảm giá trước khi đặt hàng.");
+      return;
+    }
+
     let verifiedSessionId = emailOtpSessionId;
     const normalizedEmail = form.customerEmail.trim().toLowerCase();
     if (emailOtpVerifiedFor !== normalizedEmail) {
@@ -302,6 +371,7 @@ const CheckoutPage = () => {
         pickupShowroomId: Number(form.pickupShowroomId),
         detailedAddress: form.detailedAddress.trim(),
         paymentMethod: selectedPaymentMethod,
+        discountCode: appliedDiscountCode ?? undefined,
         includeRegistrationService: registrationService === "SHOWROOM",
         notes,
         items: [
@@ -484,6 +554,50 @@ const CheckoutPage = () => {
 
           <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
             <div className="mb-6 flex items-center gap-3">
+              <MapPin className="text-primary" />
+              <div>
+                <h3 className="text-xl font-bold">Địa chỉ đã lưu</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Chọn địa chỉ đã lưu để tự động điền vào hộp địa chỉ cụ thể.</p>
+              </div>
+            </div>
+
+            {loadingAddresses ? (
+              <p className="text-sm text-muted-foreground">Đang tải địa chỉ đã lưu...</p>
+            ) : savedAddresses.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Bạn chưa có địa chỉ lưu. Vui lòng thêm trong hồ sơ khách hàng.</p>
+            ) : (
+              <div className="space-y-4">
+                {savedAddresses.map((address) => (
+                  <div
+                    key={address.id}
+                    className={`rounded-xl border p-4 ${selectedAddressId === address.id ? "border-primary bg-primary/5" : "border-outline-variant/20 bg-white"}`}
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-semibold">
+                          {address.addressType === "BILLING" ? "Hóa đơn" : "Giao hàng"}
+                          {address.isDefault ? " • Mặc định" : ""}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {address.street}, {address.city}, {address.postalCode}, {address.country}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => applySavedAddress(address)}
+                        className="inline-flex items-center justify-center rounded-full border border-outline-variant/20 bg-white px-4 py-2 text-sm font-semibold text-foreground transition hover:border-primary"
+                      >
+                        {selectedAddressId === address.id ? "Đã chọn" : "Dùng địa chỉ này"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
+            <div className="mb-6 flex items-center gap-3">
               <Store className="text-primary" />
               <h3 className="text-xl font-bold">Showroom nhận xe</h3>
             </div>
@@ -611,6 +725,38 @@ const CheckoutPage = () => {
           </section>
 
           <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
+            <h3 className="mb-4 text-xl font-bold">Mã giảm giá / khuyến mãi</h3>
+            <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+              <input
+                type="text"
+                value={discountCode}
+                onChange={(event) => {
+                  setDiscountCode(event.target.value);
+                  setDiscountCodeError(null);
+                  setDiscountCodeMessage(null);
+                }}
+                placeholder="Nhập mã giảm giá"
+                className={inputClassName(Boolean(discountCodeError))}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const code = discountCode.trim().toUpperCase();
+                  setDiscountCodeError(null);
+                  setDiscountCodeMessage(null);
+                  setAppliedDiscountCode(code || null);
+                }}
+                className="inline-flex items-center justify-center rounded-lg border border-outline-variant/20 bg-white px-4 py-3 text-sm font-bold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Áp dụng
+              </button>
+            </div>
+            {discountCodeError ? <p className="mt-3 text-sm text-red-600">{discountCodeError}</p> : null}
+            {discountCodeMessage ? <p className="mt-3 text-sm text-green-700">{discountCodeMessage}</p> : null}
+            <p className="mt-3 text-xs text-muted-foreground">Bạn có thể thử mã: <span className="font-mono">EBIKE100</span>, <span className="font-mono">EBIKE200</span></p>
+          </section>
+
+          <section className="rounded-xl border border-outline-variant/15 bg-white p-8">
             <h3 className="mb-4 text-xl font-bold">Thông tin bổ sung</h3>
             <textarea
               rows={5}
@@ -659,9 +805,10 @@ const CheckoutPage = () => {
                   <span className="font-mono font-medium">{subtotal.toLocaleString("vi-VN")}đ</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Ưu đãi showroom</span>
-                  <span className="font-mono font-medium text-error">- {showroomIncentive.toLocaleString("vi-VN")}đ</span>
+                  <span className="text-muted-foreground">Tổng ưu đãi</span>
+                  <span className="font-mono font-medium text-error">- {totalDiscount.toLocaleString("vi-VN")}đ</span>
                 </div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Mã giảm giá {appliedDiscountCode ? `(${appliedDiscountCode})` : ""}</span><span className="font-mono font-medium text-error">{appliedDiscountCode === "EBIKE200" ? "- 200.000đ" : appliedDiscountCode === "EBIKE100" ? "- 100.000đ" : "0đ"}</span></div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Phí làm giấy tờ xe</span>
                   <span className="font-mono font-medium">{registrationFee.toLocaleString("vi-VN")}đ</span>

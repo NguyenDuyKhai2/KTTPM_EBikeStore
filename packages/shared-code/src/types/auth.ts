@@ -67,3 +67,23 @@ export interface ChangePasswordRequest {
   newPassword: string;
   confirmPassword: string;
 }
+
+export interface UserAddressRequest {
+  addressType?: string | null;
+  street: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  isDefault?: boolean | null;
+}
+
+export interface UserAddressResponse {
+  id: number;
+  userId: number;
+  addressType?: string | null;
+  street?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  isDefault?: boolean | null;
+}

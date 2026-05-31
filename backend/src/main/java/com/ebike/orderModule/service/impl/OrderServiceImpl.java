@@ -34,6 +34,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
@@ -56,6 +57,10 @@ public class OrderServiceImpl implements OrderService {
     private static final int MAX_CANCELLATION_REASON_LENGTH = 1000;
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
     private static final Pattern VIETNAM_PHONE_PATTERN = Pattern.compile("^0\\d{9,10}$");
+    private static final Map<String, BigDecimal> PROMO_CODE_DISCOUNTS = Map.of(
+        "EBIKE100", new BigDecimal("100000"),
+        "EBIKE200", new BigDecimal("200000")
+    );
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
@@ -117,7 +122,8 @@ public class OrderServiceImpl implements OrderService {
     public OrderQuoteResponse quoteOrder(OrderQuoteRequest request) {
         return buildQuote(
             validateQuoteItems(request == null ? null : request.items()),
-            shouldIncludeRegistrationService(request == null ? null : request.includeRegistrationService())
+            shouldIncludeRegistrationService(request == null ? null : request.includeRegistrationService()),
+            request == null ? null : request.discountCode()
         );
     }
 
@@ -140,7 +146,6 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderNumber(generateOrderNumber());
         order.setStatus(OrderStatus.PENDING);
         order.setShippingFee(ZERO);
-        order.setDiscountAmount(SHOWROOM_INCENTIVE_AMOUNT);
         boolean includeRegistrationService = shouldIncludeRegistrationService(request.includeRegistrationService());
         order.setIncludeRegistrationService(includeRegistrationService);
         order.setRegistrationFee(includeRegistrationService ? REGISTRATION_FEE_AMOUNT : ZERO);
@@ -155,6 +160,8 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal subtotal = addItems(order, validateQuoteItems(request.items()));
         order.setSubtotal(subtotal);
+        BigDecimal promoDiscountAmount = resolvePromoDiscount(request.discountCode(), subtotal);
+        order.setDiscountAmount(SHOWROOM_INCENTIVE_AMOUNT.add(promoDiscountAmount));
         order.setTotalAmount(calculateTotalAmount(subtotal, order.getShippingFee(), order.getDiscountAmount(), order.getRegistrationFee()));
         order.setShipment(buildShipment(order, showroom, request));
         attachInitialPayment(order, request.paymentMethod());
@@ -387,7 +394,7 @@ public class OrderServiceImpl implements OrderService {
         return items;
     }
 
-    private OrderQuoteResponse buildQuote(List<OrderCreateItemRequest> items, boolean includeRegistrationService) {
+    private OrderQuoteResponse buildQuote(List<OrderCreateItemRequest> items, boolean includeRegistrationService, String discountCode) {
         BigDecimal subtotal = ZERO;
 
         for (OrderCreateItemRequest itemRequest : items) {
@@ -396,14 +403,16 @@ public class OrderServiceImpl implements OrderService {
             subtotal = subtotal.add(unitPrice.multiply(BigDecimal.valueOf(itemRequest.quantity())));
         }
 
+        BigDecimal promoDiscountAmount = resolvePromoDiscount(discountCode, subtotal);
         BigDecimal registrationFee = includeRegistrationService ? REGISTRATION_FEE_AMOUNT : ZERO;
+        BigDecimal totalDiscountAmount = SHOWROOM_INCENTIVE_AMOUNT.add(promoDiscountAmount);
 
         return new OrderQuoteResponse(
             subtotal,
             ZERO,
-            SHOWROOM_INCENTIVE_AMOUNT,
+            totalDiscountAmount,
             registrationFee,
-            calculateTotalAmount(subtotal, ZERO, SHOWROOM_INCENTIVE_AMOUNT, registrationFee)
+            calculateTotalAmount(subtotal, ZERO, totalDiscountAmount, registrationFee)
         );
     }
 
@@ -423,6 +432,20 @@ public class OrderServiceImpl implements OrderService {
             .subtract(defaultValue(discountAmount));
 
         return totalAmount.signum() < 0 ? ZERO : totalAmount;
+    }
+
+    private BigDecimal resolvePromoDiscount(String discountCode, BigDecimal subtotal) {
+        if (discountCode == null || discountCode.isBlank()) {
+            return ZERO;
+        }
+
+        String normalizedCode = discountCode.trim().toUpperCase(Locale.ROOT);
+        BigDecimal promoDiscount = PROMO_CODE_DISCOUNTS.get(normalizedCode);
+        if (promoDiscount == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ hoặc đã hết hạn.");
+        }
+
+        return promoDiscount.min(defaultValue(subtotal));
     }
 
     private void attachInitialPayment(Order order, String rawPaymentMethod) {

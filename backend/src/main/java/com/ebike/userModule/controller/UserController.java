@@ -9,6 +9,7 @@ import com.ebike.userModule.service.UserProfileService.UserPreferenceResponse;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -48,10 +49,26 @@ public class UserController {
         return userProfileService.createAddress(userId, request, authentication);
     }
 
-    @GetMapping("/{userId}/preferences")
-    public UserPreferenceResponse getPreferences(@PathVariable Long userId, Authentication authentication) {
-        return userProfileService.getPreferences(userId, authentication);
-    }
+  @PutMapping("/{userId}/addresses/{addressId}")
+  public UserAddressResponse updateAddress(
+      @PathVariable Long userId,
+      @PathVariable Long addressId,
+      @RequestBody UserAddressRequest request,
+      Authentication authentication
+  ) {
+    return userProfileService.updateAddress(userId, addressId, request, authentication);
+  }
+
+  @org.springframework.web.bind.annotation.DeleteMapping("/{userId}/addresses/{addressId}")
+  public void deleteAddress(
+      @PathVariable Long userId,
+      @PathVariable Long addressId,
+      Authentication authentication
+  ) {
+    userProfileService.deleteAddress(userId, addressId, authentication);
+  }
+
+  @GetMapping("/{userId}/preferences")
 
     @PutMapping("/{userId}/preferences")
     public UserPreferenceResponse upsertPreferences(

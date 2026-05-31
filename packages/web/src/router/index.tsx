@@ -20,7 +20,9 @@ import OrderSuccessPage from "../pages/OrderSuccessPage";
 import PaymentReturnPage from "../pages/PaymentReturnPage";
 import ProductDetailPage from "../pages/ProductDetailPage";
 import ProductsPage from "../pages/ProductsPage";
+import CompareProductsPage from "../pages/CompareProductsPage";
 import SignupPage from "../pages/SignupPage";
+import SupportPage from "../pages/SupportPage";
 import CustomerDashboardPage from "../pages/customer/CustomerDashboardRealPage";
 import CustomerOrdersPage from "../pages/customer/CustomerOrdersSafePage";
 import CustomerOrderDetailPage from "../pages/customer/CustomerOrderDetailPage";
@@ -54,6 +56,8 @@ const router = createBrowserRouter([
       { path: "checkout", element: <CheckoutPage /> },
       { path: "checkout/success", element: <OrderSuccessPage /> },
       { path: "payment/return", element: <PaymentReturnPage /> },
+      { path: "support", element: <SupportPage /> },
+      { path: "compare", element: <CompareProductsPage /> },
       { path: "chatbot", element: <ChatbotPage /> }
     ]
   },

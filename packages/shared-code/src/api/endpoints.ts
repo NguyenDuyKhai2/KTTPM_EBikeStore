@@ -36,6 +36,10 @@ export const API_ENDPOINTS = {
     detail: (id: string | number) => `/orders/${id}`,
     cancellationRequest: (id: string | number) => `/orders/${id}/cancellation-request`
   },
+  users: {
+    addresses: (userId: string | number) => `/users/${userId}/addresses`,
+    address: (userId: string | number, addressId: string | number) => `/users/${userId}/addresses/${addressId}`
+  },
   manager: {
     dashboard: "/manager/dashboard",
     payments: "/manager/payments",

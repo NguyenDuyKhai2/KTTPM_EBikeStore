@@ -13,6 +13,7 @@ public record OrderCreateRequest(
     Long pickupShowroomId,
     String detailedAddress,
     String paymentMethod,
+    String discountCode,
     BigDecimal shippingFee,
     BigDecimal discountAmount,
     Boolean includeRegistrationService,
