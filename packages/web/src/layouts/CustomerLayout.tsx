@@ -9,25 +9,25 @@ const customerNavItems = [
 ];
 
 const CustomerLayout = () => (
-  <section className="flex flex-col gap-5 px-4 py-8 sm:px-6 lg:px-14">
-    <div className="flex max-w-[920px] flex-col gap-3">
-      <span className="inline-block text-[0.74rem] uppercase tracking-[0.16em] text-[#d71920]">Customer Area</span>
-      <h1 className="[font-family:Bahnschrift,'Arial_Narrow',sans-serif] text-[clamp(2rem,4vw,3.4rem)] font-extrabold leading-[0.96] text-[#111]">
-        Your electric mobility account center.
+  <section className="mx-auto flex w-full max-w-screen-2xl flex-col gap-6 px-4 pb-12 pt-28 sm:px-6 lg:px-12">
+    <div className="flex max-w-[760px] flex-col gap-3">
+      <span className="inline-block text-[0.72rem] font-bold uppercase tracking-[0.18em] text-primary">Customer Area</span>
+      <h1 className="[font-family:Bahnschrift,'Arial_Narrow',sans-serif] text-[clamp(2rem,3vw,2.8rem)] font-extrabold leading-tight text-[#111]">
+        Trung tâm tài khoản KINETIC.
       </h1>
-      <p className="m-0 leading-[1.7] text-[#6a6a6a]">
-        Manage orders, track profile details, and continue the shopping flow from a dedicated customer workspace.
+      <p className="m-0 max-w-2xl leading-[1.7] text-[#666]">
+        Theo dõi đơn hàng, quản lý thanh toán, thông báo và thông tin cá nhân trong một không gian gọn gàng.
       </p>
     </div>
 
-    <div className="flex flex-wrap gap-3 rounded-[20px] border border-[rgba(17,17,17,0.08)] bg-white/80 p-[14px] backdrop-blur-[10px]">
+    <div className="flex flex-wrap gap-2 rounded-lg border border-[rgba(17,17,17,0.08)] bg-white p-2 shadow-sm">
       {customerNavItems.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
           end={item.end}
           className={({ isActive }) =>
-            `rounded-full px-3.5 py-2.5 transition ${isActive ? "bg-black/5 text-[#111]" : "text-[#6a6a6a] hover:bg-black/5 hover:text-[#111]"}`
+            `rounded-md px-4 py-2.5 text-sm font-semibold transition ${isActive ? "bg-primary text-white shadow-sm" : "text-[#666] hover:bg-black/5 hover:text-[#111]"}`
           }
         >
           {item.label}

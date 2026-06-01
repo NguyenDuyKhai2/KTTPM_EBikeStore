@@ -290,8 +290,8 @@ const CustomerProfilePage = () => {
       title="Thông tin tài khoản"
       description="Quản lý thông tin cá nhân, trạng thái tài khoản và các quyền hiện đang được gán."
     >
-      <div className="grid gap-6 px-6 py-8 lg:grid-cols-12">
-        <section className="rounded-xl border border-outline-variant/15 bg-white p-6 lg:col-span-7">
+      <div className="grid gap-6 px-0 py-6 lg:grid-cols-12">
+        <section className="rounded-lg border border-outline-variant/15 bg-white p-6 shadow-sm lg:col-span-8">
           {loading ? (
             <p className="text-muted-foreground">Đang tải hồ sơ...</p>
           ) : (
@@ -353,7 +353,7 @@ const CustomerProfilePage = () => {
           )}
         </section>
 
-        <section className="rounded-xl border border-outline-variant/15 bg-white p-6 lg:col-span-7">
+        <section className="rounded-lg border border-outline-variant/15 bg-white p-6 shadow-sm lg:col-span-8">
           <div className="mb-6">
             <h3 className="text-xl font-bold">Đổi mật khẩu</h3>
             <p className="mt-2 text-sm text-muted-foreground">Cập nhật mật khẩu đăng nhập để bảo vệ tài khoản của bạn.</p>
@@ -400,7 +400,7 @@ const CustomerProfilePage = () => {
           </form>
         </section>
 
-        <section className="rounded-xl border border-outline-variant/15 bg-white p-6 lg:col-span-7">
+        <section className="rounded-lg border border-outline-variant/15 bg-white p-6 shadow-sm lg:col-span-8">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h3 className="text-xl font-bold">Địa chỉ giao hàng</h3>
@@ -539,22 +539,22 @@ const CustomerProfilePage = () => {
           </div>
         </section>
 
-        <aside className="space-y-6 lg:col-span-5">
-          <div className="rounded-xl border border-outline-variant/15 bg-white p-6">
+        <aside className="space-y-6 lg:col-span-4 lg:col-start-9 lg:row-start-1">
+          <div className="rounded-lg border border-outline-variant/15 bg-white p-6 shadow-sm">
             <h3 className="mb-4 text-xl font-bold">Trạng thái</h3>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-surface-container-low p-4">
+              <div className="rounded-md bg-surface-container-low p-4">
                 <p className="text-sm text-muted-foreground">Tài khoản</p>
                 <p className="mt-1 font-bold">{profile?.active ? "Đang hoạt động" : "Tạm khóa"}</p>
               </div>
-              <div className="rounded-lg bg-surface-container-low p-4">
+              <div className="rounded-md bg-surface-container-low p-4">
                 <p className="text-sm text-muted-foreground">Xác minh</p>
                 <p className="mt-1 font-bold">{profile?.verified ? "Đã xác minh" : "Chưa xác minh"}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-outline-variant/15 bg-white p-6">
+          <div className="rounded-lg border border-outline-variant/15 bg-white p-6 shadow-sm">
             <h3 className="mb-4 text-xl font-bold">Vai trò</h3>
             <div className="flex flex-wrap gap-2">
               {(profile?.roles ?? []).map((role) => (
