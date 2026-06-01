@@ -40,16 +40,6 @@ const compareRows = [
       product.specification?.motorPowerWatts ? `${product.specification.motorPowerWatts} W` : "-"
   },
   {
-    label: "Thời gian sạc",
-    value: (product: ProductDetail) =>
-      product.specification?.chargingTimeHours ? `${product.specification.chargingTimeHours} giờ` : "-"
-  },
-  {
-    label: "Trọng lượng",
-    value: (product: ProductDetail) =>
-      product.specification?.productWeightKg ? `${product.specification.productWeightKg} kg` : "-"
-  },
-  {
     label: "Bảo hành",
     value: (product: ProductDetail) =>
       product.specification?.warrantyMonths ? `${product.specification.warrantyMonths} tháng` : "-"
