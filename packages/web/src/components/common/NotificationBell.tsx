@@ -2,7 +2,6 @@ import { Bell } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { notificationAPI } from "@ebike/shared-code/api";
-import { API_BASE_URL } from "@ebike/shared-code/config";
 import type { UserNotification } from "@ebike/shared-code/types";
 
 type NotificationBellProps = {
@@ -85,37 +84,11 @@ const NotificationBell = ({ enabled }: NotificationBellProps) => {
     if (!enabled) {
       return;
     }
-
-    const stream = new EventSource(`${API_BASE_URL}/notifications/stream`, { withCredentials: true });
-    stream.addEventListener("unread-count", (event) => {
-      try {
-        const payload = JSON.parse((event as MessageEvent).data) as { unreadCount?: number };
-        if (typeof payload.unreadCount === "number") {
-          setUnreadCount(payload.unreadCount);
-          if (open) {
-            void loadNotifications();
-          }
-        }
-      } catch {
-        void loadNotifications();
-      }
-    });
-    stream.onerror = () => {
-      stream.close();
-    };
-
-    return () => stream.close();
-  }, [enabled, open]);
-
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
     const intervalId = window.setInterval(() => {
       void notificationAPI.unreadCount()
         .then((response) => setUnreadCount(response.unreadCount))
         .catch(() => undefined);
-    }, 3000);
+    }, 30000);
     const handleFocus = () => {
       void loadNotifications();
     };
