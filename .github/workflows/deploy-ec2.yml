@@ -66,9 +66,19 @@ jobs:
           echo "Dong bo user/password/database PostgreSQL theo backend/.env..."
           docker compose -f docker-compose.ec2.yml exec -T postgres sh -lc "
           set -e
-          ADMIN_USER=postgres
-          if ! psql -U \"\$ADMIN_USER\" -d postgres -tAc \"SELECT 1\" >/dev/null 2>&1; then
-            ADMIN_USER=\"\$POSTGRES_USER\"
+          ADMIN_USER=
+          for candidate in postgres \"\$POSTGRES_USER\" ebike_prod_user ebike_user; do
+            if psql -U \"\$candidate\" -d postgres -tAc \"SELECT 1\" >/dev/null 2>&1; then
+              ADMIN_USER=\"\$candidate\"
+              break
+            fi
+          done
+
+          if [ -z \"\$ADMIN_USER\" ]; then
+            echo \"Khong tim thay PostgreSQL admin role trong volume hien tai.\"
+            echo \"Hay SSH vao EC2 va chay: docker exec ebike-postgres psql -U <role-cu> -d postgres -c '\\du'\"
+            echo \"Neu khong can giu du lieu DB, xoa volume postgres_data roi deploy lai.\"
+            exit 1
           fi
 
           psql -U \"\$ADMIN_USER\" -d postgres -v ON_ERROR_STOP=1 \
