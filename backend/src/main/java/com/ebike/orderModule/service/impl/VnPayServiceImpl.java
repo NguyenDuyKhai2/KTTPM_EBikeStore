@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -177,6 +178,7 @@ public class VnPayServiceImpl implements VnPayService {
         if (payment.getPaymentStatus() == PaymentStatus.PENDING && payment.getPaymentMethod() == PaymentMethod.VNPAY) {
             payment.setAmount(order.getTotalAmount());
             payment.setCurrency("VND");
+            payment.setTransactionReference(generateTxnRef(order));
             return payment;
         }
         payment.setPaymentMethod(PaymentMethod.VNPAY);
@@ -206,8 +208,10 @@ public class VnPayServiceImpl implements VnPayService {
     }
 
     private String generateTxnRef(Order order) {
-        String timestamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        return "EBIKE_" + timestamp + "_" + order.getOrderNumber().replaceAll("[^A-Za-z0-9]", "");
+        String timestamp = LocalDateTime.now(VNPAY_ZONE).format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String orderNumber = order.getOrderNumber().replaceAll("[^A-Za-z0-9]", "");
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
+        return "EBIKE" + timestamp + orderNumber + suffix;
     }
 
     private void applyGatewayResult(Payment payment, Map<String, String> params) {
