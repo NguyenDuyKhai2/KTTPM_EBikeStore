@@ -3,7 +3,7 @@ import { API_BASE_URL } from "../config/api.config";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 30000,
   withCredentials: true
 });
 
@@ -24,6 +24,10 @@ type ClientRateLimitRule = {
 
 type ClientRateLimitState = {
   timestamps: number[];
+};
+
+type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _retried?: boolean;
 };
 
 class ClientRateLimitError extends Error {
@@ -100,6 +104,21 @@ const enforceClientRateLimit = (config: InternalAxiosRequestConfig) => {
   clientRateLimitState.set(rule.name, state);
 };
 
+const shouldRetryRequest = (error: AxiosError<ApiErrorBody>) => {
+  const config = error.config as RetryableRequestConfig | undefined;
+  const method = (config?.method || "GET").toUpperCase();
+  const retryableError = error.code === "ECONNABORTED" || error.message.includes("timeout") || !error.response;
+
+  return Boolean(config && method === "GET" && retryableError && !config._retried);
+};
+
+const retryRequest = async (error: AxiosError<ApiErrorBody>) => {
+  const config = error.config as RetryableRequestConfig;
+  config._retried = true;
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return apiClient.request(config);
+};
+
 // Store reference to the token getter function - will be set by setupAuthInterceptor
 let getAuthToken: (() => string | null) | null = null;
 
@@ -130,7 +149,15 @@ apiClient.interceptors.request.use(
 // Response interceptor: Handle errors
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ApiErrorBody>) => {
+  async (error: unknown) => {
+    if (!axios.isAxiosError<ApiErrorBody>(error)) {
+      return Promise.reject(error);
+    }
+
+    if (shouldRetryRequest(error)) {
+      return retryRequest(error);
+    }
+
     // Handle 401 Unauthorized - could implement token refresh here if needed
     if (error.response?.status === 401) {
       // Token expired or invalid - could trigger logout here
