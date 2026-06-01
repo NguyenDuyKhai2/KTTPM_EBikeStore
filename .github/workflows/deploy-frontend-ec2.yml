@@ -75,8 +75,12 @@ jobs:
 
           cd "\$APP_DIR"
 
+          echo "Cleaning Docker build cache..."
+          docker builder prune -af || true
+
           echo "Building frontend Docker image..."
           docker build \
+            --no-cache \
             --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
             -t "$FRONTEND_IMAGE" \
             -f Dockerfile \
