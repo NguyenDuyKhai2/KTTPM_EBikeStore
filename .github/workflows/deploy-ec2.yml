@@ -61,7 +61,12 @@ jobs:
           mv /tmp/ebike-backend.env "$APP_DIR/backend/.env"
           chmod 600 "$APP_DIR/backend/.env"
           cd "$APP_DIR/backend"
-          docker compose -f docker-compose.ec2.yml up -d --build
+          docker compose -f docker-compose.ec2.yml up -d postgres redis
+
+          echo "Dong bo password PostgreSQL theo backend/.env..."
+          docker compose -f docker-compose.ec2.yml exec -T postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -v db_user="$POSTGRES_USER" -v db_password="$POSTGRES_PASSWORD" -c "ALTER USER :\"db_user\" WITH PASSWORD :'\''db_password'\'';"'
+
+          docker compose -f docker-compose.ec2.yml up -d --build backend
           docker compose -f docker-compose.ec2.yml ps
           
           echo "Dang doi 40 giay de Spring Boot khoi dong..."
