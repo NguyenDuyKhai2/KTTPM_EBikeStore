@@ -133,7 +133,7 @@ public class ProductService {
 
     @Cacheable(cacheNames = RedisCacheConfiguration.PRODUCT_DETAIL_CACHE, key = "#slug")
     public ProductDetailDto getProductBySlug(String slug) {
-        Product product = productRepository.findBySlug(slug)
+        Product product = productRepository.findDetailBySlug(slug)
             .filter(item -> Boolean.TRUE.equals(item.getActive()))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
 
