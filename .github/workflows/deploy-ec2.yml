@@ -132,7 +132,7 @@ jobs:
           SQL
           "
 
-          docker compose -f docker-compose.ec2.yml up -d --build backend
+          docker compose -f docker-compose.ec2.yml up -d --build --force-recreate backend
           docker compose -f docker-compose.ec2.yml ps
           
           echo "Dang doi 40 giay de Spring Boot khoi dong..."
