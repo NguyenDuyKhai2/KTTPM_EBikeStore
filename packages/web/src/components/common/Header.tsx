@@ -17,6 +17,7 @@ const Header = () => {
   const { isAuthenticated, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isManager = user?.roles.includes("MANAGER");
+  const isNotificationsPage = location.pathname === "/customer/notifications";
   const visibleNavItems = [
     ...navItems.filter((item) => isAuthenticated || item.to !== "/favorites"),
     ...(isManager ? [{ to: "/manager", label: "Manager", end: false }] : [])
@@ -45,11 +46,6 @@ const Header = () => {
             >
               Trang chủ
             </NavLink>
-            {isAuthenticated ? (
-              <NavLink to="/customer/notifications" className="font-headline text-foreground/70 hover:text-primary">
-                Thông báo
-              </NavLink>
-            ) : null}
             {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -69,7 +65,7 @@ const Header = () => {
 
         <div className="flex items-center gap-4">
           <div className="hidden items-center gap-4 lg:flex">
-            <NotificationBell enabled={isAuthenticated} />
+            {isNotificationsPage ? null : <NotificationBell enabled={isAuthenticated} />}
             <button
               onClick={() => navigate(isAuthenticated ? "/customer/profile" : "/auth")}
               className="text-foreground/70 transition-colors hover:text-primary"
@@ -101,11 +97,6 @@ const Header = () => {
             >
               Trang chủ
             </NavLink>
-            {isAuthenticated ? (
-              <NavLink to="/customer/notifications" className="font-headline text-foreground/70 hover:text-primary">
-                Thông báo
-              </NavLink>
-            ) : null}
             {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
