@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -31,6 +32,7 @@ public class VnPayServiceImpl implements VnPayService {
 
     private static final String SUCCESS_CODE = "00";
     private static final BigDecimal VNPAY_AMOUNT_MULTIPLIER = new BigDecimal("100");
+    private static final ZoneId VNPAY_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private final VnPayProperties properties;
     private final OrderRepository orderRepository;
@@ -79,7 +81,7 @@ public class VnPayServiceImpl implements VnPayService {
             .map(existing -> prepareExistingPayment(existing, order))
             .orElseGet(() -> createPendingPayment(order));
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(VNPAY_ZONE);
         LocalDateTime expireTime = now.plusMinutes(15);
         Map<String, String> params = new HashMap<>();
         params.put("vnp_Version", "2.1.0");
