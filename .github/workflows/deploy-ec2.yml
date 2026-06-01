@@ -63,8 +63,48 @@ jobs:
           cd "$APP_DIR/backend"
           docker compose -f docker-compose.ec2.yml up -d postgres redis
 
-          echo "Dong bo password PostgreSQL theo backend/.env..."
-          docker compose -f docker-compose.ec2.yml exec -T postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -v db_user="$POSTGRES_USER" -v db_password="$POSTGRES_PASSWORD" -c "ALTER USER :\"db_user\" WITH PASSWORD :'\''db_password'\'';"'
+          echo "Dong bo user/password/database PostgreSQL theo backend/.env..."
+          docker compose -f docker-compose.ec2.yml exec -T postgres sh -lc "
+          set -e
+          ADMIN_USER=postgres
+          if ! psql -U \"\$ADMIN_USER\" -d postgres -tAc \"SELECT 1\" >/dev/null 2>&1; then
+            ADMIN_USER=\"\$POSTGRES_USER\"
+          fi
+
+          psql -U \"\$ADMIN_USER\" -d postgres -v ON_ERROR_STOP=1 \
+            -v db_user=\"\$POSTGRES_USER\" \
+            -v db_password=\"\$POSTGRES_PASSWORD\" \
+            -v db_name=\"\$POSTGRES_DB\" <<'SQL'
+          SELECT CASE
+            WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'db_user')
+            THEN format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'db_user', :'db_password')
+            ELSE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', :'db_user', :'db_password')
+          END
+          \gexec
+
+          SELECT format('CREATE DATABASE %I OWNER %I', :'db_name', :'db_user')
+          WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = :'db_name')
+          \gexec
+
+          SELECT format('ALTER DATABASE %I OWNER TO %I', :'db_name', :'db_user')
+          \gexec
+          SQL
+
+          psql -U \"\$ADMIN_USER\" -d \"\$POSTGRES_DB\" -v ON_ERROR_STOP=1 \
+            -v db_user=\"\$POSTGRES_USER\" <<'SQL'
+          SELECT format('ALTER SCHEMA public OWNER TO %I', :'db_user')
+          \gexec
+
+          SELECT format('GRANT ALL ON SCHEMA public TO %I', :'db_user')
+          \gexec
+
+          SELECT format('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO %I', :'db_user')
+          \gexec
+
+          SELECT format('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO %I', :'db_user')
+          \gexec
+          SQL
+          "
 
           docker compose -f docker-compose.ec2.yml up -d --build backend
           docker compose -f docker-compose.ec2.yml ps
