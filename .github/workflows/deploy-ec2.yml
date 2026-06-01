@@ -63,6 +63,22 @@ jobs:
           cd "$APP_DIR/backend"
           docker compose -f docker-compose.ec2.yml up -d postgres redis
 
+          echo "Doi PostgreSQL khoi tao xong..."
+          for i in $(seq 1 60); do
+            POSTGRES_HEALTH="$(docker inspect -f '{{.State.Health.Status}}' ebike-postgres 2>/dev/null || echo starting)"
+            if [ "$POSTGRES_HEALTH" = "healthy" ]; then
+              break
+            fi
+
+            if [ "$i" -eq 60 ]; then
+              echo "PostgreSQL chua healthy sau 120 giay. Log gan nhat:"
+              docker logs --tail 120 ebike-postgres
+              exit 1
+            fi
+
+            sleep 2
+          done
+
           echo "Dong bo user/password/database PostgreSQL theo backend/.env..."
           docker compose -f docker-compose.ec2.yml exec -T postgres sh -lc "
           set -e
