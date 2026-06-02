@@ -97,6 +97,14 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
                 .requestMatchers(HttpMethod.PUT, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
                 .requestMatchers(HttpMethod.DELETE, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_DELETE)
+                .requestMatchers(HttpMethod.GET,
+                    "/admin/overview",
+                    "/admin/pricing-rules",
+                    "/admin/promotions",
+                    "/admin/accounts",
+                    "/admin/roles",
+                    "/admin/audit-logs"
+                ).permitAll()
                 .requestMatchers("/customer/**").hasAnyAuthority(
                     PermissionConstants.Customer.PROFILE_VIEW,
                     PermissionConstants.OrderManagement.ORDER_VIEW_ALL

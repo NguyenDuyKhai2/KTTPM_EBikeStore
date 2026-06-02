@@ -30,7 +30,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/admin")
-@PreAuthorize("hasAuthority('" + PermissionConstants.AccessControl.PERMISSION_MANAGE + "')")
 public class AdminController {
 
     private final AdminService adminService;
@@ -50,6 +49,7 @@ public class AdminController {
     }
 
     @PatchMapping("/pricing-rules/{id}")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.AccessControl.PERMISSION_MANAGE + "')")
     public PricingRuleResponse updatePricingRule(
         @PathVariable Long id,
         @RequestBody PricingRuleUpdateRequest request
@@ -64,11 +64,13 @@ public class AdminController {
 
     @PostMapping("/promotions")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('" + PermissionConstants.AccessControl.PERMISSION_MANAGE + "')")
     public PromotionResponse createPromotion(@RequestBody PromotionCreateRequest request) {
         return adminService.createPromotion(request);
     }
 
     @PatchMapping("/promotions/{id}")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.AccessControl.PERMISSION_MANAGE + "')")
     public PromotionResponse updatePromotion(
         @PathVariable Long id,
         @RequestBody PromotionUpdateRequest request
@@ -83,11 +85,13 @@ public class AdminController {
 
     @PostMapping("/accounts")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('" + PermissionConstants.AccessControl.PERMISSION_MANAGE + "')")
     public AdminAccountResponse createAccount(@RequestBody AdminAccountCreateRequest request) {
         return adminService.createAccount(request);
     }
 
     @PatchMapping("/accounts/{id}/role")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.AccessControl.PERMISSION_MANAGE + "')")
     public AdminAccountResponse updateAccountRole(
         @PathVariable Long id,
         @RequestBody AdminAccountRoleUpdateRequest request
@@ -96,6 +100,7 @@ public class AdminController {
     }
 
     @PatchMapping("/accounts/{id}/status")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.AccessControl.PERMISSION_MANAGE + "')")
     public AdminAccountResponse updateAccountStatus(
         @PathVariable Long id,
         @RequestBody AdminAccountStatusUpdateRequest request
@@ -105,6 +110,7 @@ public class AdminController {
 
     @DeleteMapping("/accounts/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('" + PermissionConstants.AccessControl.PERMISSION_MANAGE + "')")
     public void deleteAccount(@PathVariable Long id) {
         adminService.deleteAccount(id);
     }

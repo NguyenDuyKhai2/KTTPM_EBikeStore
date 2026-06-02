@@ -17,11 +17,10 @@ const Header = () => {
   const { isAuthenticated, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isManager = user?.roles.includes("MANAGER");
-  const isAdmin = user?.roles?.some((role) => ["ADMIN", "SUPER_ADMIN", "OPERATOR", "SUPPORT", "MAINTENANCE"].includes(role));
   const isNotificationsPage = location.pathname === "/customer/notifications";
   const visibleNavItems = [
     ...navItems.filter((item) => isAuthenticated || item.to !== "/favorites"),
-    ...(isAdmin ? [{ to: "/admin", label: "Admin", end: false }] : []),
+    { to: "/admin", label: "Admin", end: false },
     ...(isManager ? [{ to: "/manager", label: "Manager", end: false }] : [])
   ];
 

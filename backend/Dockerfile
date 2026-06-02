@@ -16,6 +16,7 @@ COPY src src
 
 # Build application (skip tests for faster build)
 RUN mvn clean package -DskipTests -q
+RUN test -f target/classes/com/ebike/adminModule/controller/AdminController.class
 
 # =====================================================
 # Runtime Stage - Run Application
