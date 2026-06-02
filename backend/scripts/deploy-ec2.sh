@@ -119,6 +119,10 @@ for i in $(seq 1 60); do
 done
 
 docker exec ebike-backend sh -lc 'grep -a AdminController /app/app.jar >/dev/null'
-docker exec ebike-backend curl -fsS http://localhost:8080/api/v1/admin/pricing-rules >/dev/null
+ADMIN_STATUS="$(docker exec ebike-backend curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/admin/pricing-rules)"
+if [ "$ADMIN_STATUS" != "401" ] && [ "$ADMIN_STATUS" != "403" ]; then
+  echo "Expected protected admin API to return 401/403 without a token, got $ADMIN_STATUS"
+  exit 1
+fi
 
 echo "Backend deploy complete."
