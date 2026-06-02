@@ -93,18 +93,10 @@ public class SecurityConfiguration {
                 )
                 .requestMatchers(HttpMethod.POST, "/users/**").hasAuthority(PermissionConstants.Customer.PROFILE_UPDATE)
                 .requestMatchers(HttpMethod.PUT, "/users/**").hasAuthority(PermissionConstants.Customer.PROFILE_UPDATE)
+                .requestMatchers(HttpMethod.GET, "/admin/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/admin/product-images").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_CREATE)
-                .requestMatchers(HttpMethod.GET, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
                 .requestMatchers(HttpMethod.PUT, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
                 .requestMatchers(HttpMethod.DELETE, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_DELETE)
-                .requestMatchers(HttpMethod.GET,
-                    "/admin/overview",
-                    "/admin/pricing-rules",
-                    "/admin/promotions",
-                    "/admin/accounts",
-                    "/admin/roles",
-                    "/admin/audit-logs"
-                ).permitAll()
                 .requestMatchers("/customer/**").hasAnyAuthority(
                     PermissionConstants.Customer.PROFILE_VIEW,
                     PermissionConstants.OrderManagement.ORDER_VIEW_ALL
