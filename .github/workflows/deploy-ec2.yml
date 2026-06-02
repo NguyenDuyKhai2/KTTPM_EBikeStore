@@ -146,11 +146,18 @@ jobs:
           SQL
           "
 
-          docker compose -f docker-compose.ec2.yml up -d --build --force-recreate backend
+          echo "Build lai backend image khong dung cache..."
+          docker compose -f docker-compose.ec2.yml build --no-cache backend
+
+          echo "Recreate backend container tu image moi..."
+          docker compose -f docker-compose.ec2.yml up -d --force-recreate backend
           docker compose -f docker-compose.ec2.yml ps
           
           echo "Dang doi 40 giay de Spring Boot khoi dong..."
           sleep 40
+
+          echo "Kiem tra JAR da co admin API moi..."
+          docker exec ebike-backend sh -lc "grep -a 'adminModule/controller/AdminController' /app/app.jar >/dev/null"
           
           docker exec ebike-backend curl -f http://localhost:8080/api/v1/health/ready
           EOF
