@@ -14,7 +14,6 @@ import {
   UserX,
   X
 } from "lucide-react";
-import { adminAPI } from "@ebike/shared-code/api";
 
 type AccountRole = "SUPER_ADMIN" | "OPERATOR" | "SUPPORT" | "MAINTENANCE" | "CUSTOMER";
 type AccountStatus = "active" | "inactive" | "locked";
@@ -41,34 +40,6 @@ type AuditLog = {
   ip: string;
   time: string;
 };
-
-type ApiAccount = Awaited<ReturnType<typeof adminAPI.getAccounts>>[number];
-type ApiAuditLog = Awaited<ReturnType<typeof adminAPI.getAuditLogs>>[number];
-
-const mapApiRole = (role: ApiAccount["role"]): AccountRole => (role === "ADMIN" ? "SUPER_ADMIN" : role);
-const mapUiRole = (role: AccountRole) => (role === "SUPER_ADMIN" ? "ADMIN" : role);
-
-const mapApiAccount = (account: ApiAccount): Account => ({
-  id: String(account.id),
-  name: account.name,
-  email: account.email,
-  initials: getInitials(account.name),
-  role: mapApiRole(account.role),
-  type: account.accountType === "CUSTOMER" ? "customer" : "admin",
-  status: account.status.toLowerCase() as AccountStatus,
-  lastLogin: account.updatedAt ? new Date(account.updatedAt).toLocaleString("vi-VN") : "Chua co",
-  lastLoginIP: "API",
-  color: account.accountType === "CUSTOMER" ? "emerald" : account.status === "LOCKED" ? "red" : "blue"
-});
-
-const mapApiAuditLog = (log: ApiAuditLog): AuditLog => ({
-  id: String(log.id),
-  actor: log.actor,
-  action: log.action,
-  target: log.target,
-  ip: log.ipAddress ?? "system",
-  time: new Date(log.createdAt).toLocaleString("vi-VN")
-});
 
 const initialAccounts: Account[] = [
   {
@@ -217,16 +188,29 @@ const getInitials = (name: string) =>
     .slice(0, 2)
     .toUpperCase();
 
+const ACCOUNTS_STORAGE_KEY = "kinetic-admin-accounts";
+const AUDIT_STORAGE_KEY = "kinetic-admin-audit-logs";
+
+const readStoredList = <T,>(key: string, fallback: T[]) => {
+  if (typeof window === "undefined") return fallback;
+
+  try {
+    const stored = window.localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as T[]) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 const AdminAccountsAccessPage = () => {
-  const [accounts, setAccounts] = useState(initialAccounts);
-  const [auditLogs, setAuditLogs] = useState(initialAuditLogs);
+  const [accounts, setAccounts] = useState(() => readStoredList(ACCOUNTS_STORAGE_KEY, initialAccounts));
+  const [auditLogs, setAuditLogs] = useState(() => readStoredList(AUDIT_STORAGE_KEY, initialAuditLogs));
   const [activeTab, setActiveTab] = useState<"ACCOUNTS" | "ROLES" | "AUDIT">("ACCOUNTS");
   const [accountFilter, setAccountFilter] = useState<"all" | AccountType>("all");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [menuAccountId, setMenuAccountId] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState("14:02:45");
   const [isSyncing, setIsSyncing] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
   const [newAccount, setNewAccount] = useState({
     name: "",
     email: "",
@@ -236,28 +220,12 @@ const AdminAccountsAccessPage = () => {
   });
 
   useEffect(() => {
-    let cancelled = false;
+    window.localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+  }, [accounts]);
 
-    const loadAdminAccounts = async () => {
-      try {
-        const [apiAccounts, apiLogs] = await Promise.all([adminAPI.getAccounts(), adminAPI.getAuditLogs()]);
-        if (cancelled) return;
-        setAccounts(apiAccounts.map(mapApiAccount));
-        setAuditLogs(apiLogs.map(mapApiAuditLog));
-        setApiError(null);
-      } catch (error) {
-        if (!cancelled) {
-          setApiError(error instanceof Error ? error.message : "Khong the tai du lieu tai khoan tu API.");
-        }
-      }
-    };
-
-    loadAdminAccounts();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  useEffect(() => {
+    window.localStorage.setItem(AUDIT_STORAGE_KEY, JSON.stringify(auditLogs));
+  }, [auditLogs]);
 
   const metrics = useMemo(
     () => ({
@@ -321,34 +289,12 @@ const AdminAccountsAccessPage = () => {
       ...current
     ]);
     addAudit("Super Admin", "tạo tài khoản", newAccount.name.trim());
-    adminAPI
-      .createAccount({
-        name: newAccount.name.trim(),
-        email: newAccount.email.trim(),
-        role: mapUiRole(role),
-        status: newAccount.status.toUpperCase() as "ACTIVE" | "INACTIVE" | "LOCKED",
-        verified: true
-      })
-      .then(async () => {
-        const [apiAccounts, apiLogs] = await Promise.all([adminAPI.getAccounts(), adminAPI.getAuditLogs()]);
-        setAccounts(apiAccounts.map(mapApiAccount));
-        setAuditLogs(apiLogs.map(mapApiAuditLog));
-        setApiError(null);
-      })
-      .catch((error) => setApiError(error instanceof Error ? error.message : "Khong the tao tai khoan."));
     setNewAccount({ name: "", email: "", type: "admin", role: "SUPPORT", status: "active" });
     setIsAddOpen(false);
   };
 
   const handleRoleChange = (account: Account, nextRole: AccountRole) => {
     setAccounts((current) => current.map((item) => (item.id === account.id ? { ...item, role: nextRole } : item)));
-    adminAPI
-      .updateAccountRole(account.id, mapUiRole(nextRole))
-      .then((saved) => {
-        setAccounts((current) => current.map((item) => (item.id === String(saved.id) ? mapApiAccount(saved) : item)));
-        setApiError(null);
-      })
-      .catch((error) => setApiError(error instanceof Error ? error.message : "Khong the cap nhat quyen."));
     addAudit("Super Admin", "cập nhật quyền", `${account.name} thành ${roleLabel[nextRole]}`);
     setMenuAccountId(null);
   };
@@ -356,23 +302,12 @@ const AdminAccountsAccessPage = () => {
   const handleStatusToggle = (account: Account) => {
     const nextStatus: AccountStatus = account.status === "locked" || account.status === "inactive" ? "active" : "locked";
     setAccounts((current) => current.map((item) => (item.id === account.id ? { ...item, status: nextStatus } : item)));
-    adminAPI
-      .updateAccountStatus(account.id, nextStatus.toUpperCase() as "ACTIVE" | "INACTIVE" | "LOCKED")
-      .then((saved) => {
-        setAccounts((current) => current.map((item) => (item.id === String(saved.id) ? mapApiAccount(saved) : item)));
-        setApiError(null);
-      })
-      .catch((error) => setApiError(error instanceof Error ? error.message : "Khong the cap nhat trang thai."));
     addAudit("Super Admin", nextStatus === "active" ? "mở khóa tài khoản" : "khóa tài khoản", account.name);
     setMenuAccountId(null);
   };
 
   const handleDeleteAccount = (account: Account) => {
     setAccounts((current) => current.filter((item) => item.id !== account.id));
-    adminAPI
-      .deleteAccount(account.id)
-      .then(() => setApiError(null))
-      .catch((error) => setApiError(error instanceof Error ? error.message : "Khong the xoa tai khoan."));
     addAudit("Super Admin", "xóa tài khoản", account.name);
     setMenuAccountId(null);
   };
@@ -394,12 +329,6 @@ const AdminAccountsAccessPage = () => {
           Thêm tài khoản
         </button>
       </div>
-
-      {apiError && (
-        <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
-          API admin chua san sang hoac tai khoan hien tai chua co quyen: {apiError}
-        </div>
-      )}
 
       <div className="flex gap-8 border-b border-slate-200">
         {[

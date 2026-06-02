@@ -12,7 +12,6 @@ import {
   WalletCards,
   X
 } from "lucide-react";
-import { adminAPI } from "@ebike/shared-code/api";
 
 type PricingRule = {
   id: number;
@@ -132,41 +131,23 @@ const statusLabel: Record<string, string> = {
   expired: "Hết hạn"
 };
 
-const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString("vi-VN") : "Chua dat");
+const PRICING_STORAGE_KEY = "kinetic-admin-pricing-rules";
+const PROMOTIONS_STORAGE_KEY = "kinetic-admin-promotions";
 
-type ApiPricingRule = Awaited<ReturnType<typeof adminAPI.getPricingRules>>[number];
-type ApiPromotion = Awaited<ReturnType<typeof adminAPI.getPromotions>>[number];
+const readStoredList = <T,>(key: string, fallback: T[]) => {
+  if (typeof window === "undefined") return fallback;
 
-const mapApiRule = (rule: ApiPricingRule): PricingRule => ({
-  id: rule.id,
-  code: rule.code,
-  name: rule.name,
-  description: rule.description,
-  value: Number(rule.amount),
-  unit: rule.unit,
-  status: rule.status.toLowerCase() as PricingRule["status"],
-  updatedAt: formatDate(rule.updatedAt)
-});
-
-const mapApiPromotion = (promotion: ApiPromotion): Promotion => ({
-  id: promotion.id,
-  code: promotion.code,
-  campaign: promotion.campaignName,
-  discount:
-    promotion.discountType === "PERCENTAGE"
-      ? `${Number(promotion.discountValue)}%${
-          promotion.maxDiscountAmount ? ` toi da ${formatCurrency(Number(promotion.maxDiscountAmount))}` : ""
-        }`
-      : `${formatCurrency(Number(promotion.discountValue))}/chuyen`,
-  usage: promotion.usageCount,
-  limit: promotion.usageLimit,
-  status: promotion.status.toLowerCase() as Promotion["status"],
-  period: `${formatDate(promotion.startsAt)} - ${formatDate(promotion.endsAt)}`
-});
+  try {
+    const stored = window.localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as T[]) : fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 const AdminPricingPromotionsPage = () => {
-  const [pricingRules, setPricingRules] = useState(initialPricingRules);
-  const [promotions, setPromotions] = useState(initialPromotions);
+  const [pricingRules, setPricingRules] = useState(() => readStoredList(PRICING_STORAGE_KEY, initialPricingRules));
+  const [promotions, setPromotions] = useState(() => readStoredList(PROMOTIONS_STORAGE_KEY, initialPromotions));
   const [selectedRuleId, setSelectedRuleId] = useState(initialPricingRules[0].id);
   const [ruleValue, setRuleValue] = useState(String(initialPricingRules[0].value));
   const [isPromoOpen, setIsPromoOpen] = useState(false);
@@ -177,35 +158,16 @@ const AdminPricingPromotionsPage = () => {
     limit: "500",
     period: "10/06 - 30/06/2026"
   });
-  const [apiError, setApiError] = useState<string | null>(null);
 
   const selectedRule = pricingRules.find((rule) => rule.id === selectedRuleId) ?? pricingRules[0];
 
   useEffect(() => {
-    let cancelled = false;
+    window.localStorage.setItem(PRICING_STORAGE_KEY, JSON.stringify(pricingRules));
+  }, [pricingRules]);
 
-    const loadAdminPricing = async () => {
-      try {
-        const [rules, promos] = await Promise.all([adminAPI.getPricingRules(), adminAPI.getPromotions()]);
-        if (cancelled) return;
-        setPricingRules(rules.map(mapApiRule));
-        setPromotions(promos.map(mapApiPromotion));
-        setSelectedRuleId(rules[0]?.id ?? initialPricingRules[0].id);
-        setRuleValue(String(rules[0]?.amount ?? initialPricingRules[0].value));
-        setApiError(null);
-      } catch (error) {
-        if (!cancelled) {
-          setApiError(error instanceof Error ? error.message : "Khong the tai du lieu admin tu API.");
-        }
-      }
-    };
-
-    loadAdminPricing();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  useEffect(() => {
+    window.localStorage.setItem(PROMOTIONS_STORAGE_KEY, JSON.stringify(promotions));
+  }, [promotions]);
 
   const totals = useMemo(() => {
     const livePromos = promotions.filter((promo) => promo.status === "live");
@@ -245,13 +207,6 @@ const AdminPricingPromotionsPage = () => {
           : rule
       )
     );
-    adminAPI
-      .updatePricingRule(selectedRuleId, { amount: parsedValue, status: "ACTIVE" })
-      .then((saved) => {
-        setPricingRules((current) => current.map((rule) => (rule.id === saved.id ? mapApiRule(saved) : rule)));
-        setApiError(null);
-      })
-      .catch((error) => setApiError(error instanceof Error ? error.message : "Khong the luu bieu phi."));
   };
 
   const handleAddPromo = (event: FormEvent) => {
@@ -272,24 +227,6 @@ const AdminPricingPromotionsPage = () => {
       },
       ...current
     ]);
-    adminAPI
-      .createPromotion({
-        code: newPromo.code.trim().toUpperCase(),
-        campaignName: newPromo.campaign.trim(),
-        discountType: newPromo.discount.includes("%") ? "PERCENTAGE" : "FIXED_AMOUNT",
-        discountValue: Number.parseFloat(newPromo.discount.replace(/[^\d.]/g, "")) || 1,
-        maxDiscountAmount: null,
-        usageLimit: Number(newPromo.limit) || 500,
-        status: "WAITING",
-        startsAt: null,
-        endsAt: null
-      })
-      .then(async () => {
-        const promos = await adminAPI.getPromotions();
-        setPromotions(promos.map(mapApiPromotion));
-        setApiError(null);
-      })
-      .catch((error) => setApiError(error instanceof Error ? error.message : "Khong the tao campaign."));
     setNewPromo({ code: "", campaign: "", discount: "", limit: "500", period: "10/06 - 30/06/2026" });
     setIsPromoOpen(false);
   };
@@ -311,12 +248,6 @@ const AdminPricingPromotionsPage = () => {
           Thêm campaign
         </button>
       </div>
-
-      {apiError && (
-        <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
-          API admin chua san sang hoac tai khoan hien tai chua co quyen: {apiError}
-        </div>
-      )}
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <div className="rounded-xl border border-slate-100 bg-white p-5 shadow-[0_4px_12px_rgba(15,23,42,0.02)]">
