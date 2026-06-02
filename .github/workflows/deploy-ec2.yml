@@ -1,6 +1,12 @@
 name: Deploy Backend to EC2
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-ec2.yml"
   workflow_dispatch:
 
 jobs:

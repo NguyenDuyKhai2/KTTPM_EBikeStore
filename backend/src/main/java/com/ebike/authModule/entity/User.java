@@ -51,6 +51,9 @@ public class User {
     @Column(name = "is_verified", nullable = false)
     private Boolean verified = false;
 
+    @Column(name = "account_status", nullable = false, length = 30)
+    private String accountStatus = "ACTIVE";
+
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 
@@ -155,6 +158,14 @@ public class User {
 
     public void setVerified(Boolean verified) {
         this.verified = verified;
+    }
+
+    public String getAccountStatus() {
+        return accountStatus;
+    }
+
+    public void setAccountStatus(String accountStatus) {
+        this.accountStatus = accountStatus;
     }
 
     public LocalDateTime getEmailVerifiedAt() {

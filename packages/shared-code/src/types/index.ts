@@ -6,3 +6,4 @@ export * from "./chat";
 export * from "./api";
 export * from "./common";
 export * from "./notification";
+export * from "./admin";

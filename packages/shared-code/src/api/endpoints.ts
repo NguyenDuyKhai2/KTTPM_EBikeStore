@@ -57,6 +57,19 @@ export const API_ENDPOINTS = {
     update: (imageId: number | string) => `/admin/product-images/${imageId}`,
     remove: (imageId: number | string) => `/admin/product-images/${imageId}`
   },
+  admin: {
+    overview: "/admin/overview",
+    pricingRules: "/admin/pricing-rules",
+    pricingRule: (id: number | string) => `/admin/pricing-rules/${id}`,
+    promotions: "/admin/promotions",
+    promotion: (id: number | string) => `/admin/promotions/${id}`,
+    accounts: "/admin/accounts",
+    account: (id: number | string) => `/admin/accounts/${id}`,
+    accountRole: (id: number | string) => `/admin/accounts/${id}/role`,
+    accountStatus: (id: number | string) => `/admin/accounts/${id}/status`,
+    roles: "/admin/roles",
+    auditLogs: "/admin/audit-logs"
+  },
   showrooms: {
     list: "/showrooms"
   },

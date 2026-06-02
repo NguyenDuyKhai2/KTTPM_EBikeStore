@@ -8,6 +8,8 @@ import Layout from "../components/common/Layout";
 
 // Pages
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
+import AdminAccountsAccessPage from "../pages/admin/AdminAccountsAccessPage";
+import AdminPricingPromotionsPage from "../pages/admin/AdminPricingPromotionsPage";
 import AdminProductsPage from "../pages/admin/AdminProductsPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
 import ChatbotPage from "../pages/ChatbotPage";
@@ -82,19 +84,15 @@ const router = createBrowserRouter([
   },
   {
     path: "/admin",
-    element: <Layout />,
     errorElement: <NotFoundPage />,
+    element: <AdminLayout />,
     children: [
-      {
-        path: "",
-        element: <AdminLayout />,
-        children: [
-          { index: true, element: <AdminDashboardPage /> },
-          { path: "products", element: <AdminProductsPage /> },
-          { path: "inventory", element: <ManagerInventoryPage /> },
-          { path: "users", element: <AdminUsersPage /> }
-        ]
-      }
+      { index: true, element: <AdminDashboardPage /> },
+      { path: "pricing", element: <AdminPricingPromotionsPage /> },
+      { path: "accounts", element: <AdminAccountsAccessPage /> },
+      { path: "products", element: <AdminProductsPage /> },
+      { path: "inventory", element: <ManagerInventoryPage /> },
+      { path: "users", element: <AdminUsersPage /> }
     ]
   },
   {
