@@ -11,16 +11,19 @@ const navItems = [
   { to: "/favorites", label: "Đã lưu" }
 ];
 
+const adminRoles = new Set(["ADMIN", "OPERATOR", "SUPPORT", "MAINTENANCE"]);
+
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isManager = user?.roles.includes("MANAGER");
+  const canAccessAdmin = user?.roles.some((role) => adminRoles.has(role));
   const isNotificationsPage = location.pathname === "/customer/notifications";
   const visibleNavItems = [
     ...navItems.filter((item) => isAuthenticated || item.to !== "/favorites"),
-    { to: "/admin", label: "Admin", end: false },
+    ...(canAccessAdmin ? [{ to: "/admin", label: "Admin", end: false }] : []),
     ...(isManager ? [{ to: "/manager", label: "Manager", end: false }] : [])
   ];
 

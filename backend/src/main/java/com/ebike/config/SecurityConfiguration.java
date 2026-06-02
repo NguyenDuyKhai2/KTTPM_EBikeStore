@@ -17,6 +17,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfiguration {
 
+    private static final String[] ADMIN_CONSOLE_ROLES = {"ADMIN", "OPERATOR", "SUPPORT", "MAINTENANCE"};
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     public SecurityConfiguration(JwtAuthenticationFilter jwtAuthenticationFilter) {
@@ -93,15 +95,23 @@ public class SecurityConfiguration {
                 )
                 .requestMatchers(HttpMethod.POST, "/users/**").hasAuthority(PermissionConstants.Customer.PROFILE_UPDATE)
                 .requestMatchers(HttpMethod.PUT, "/users/**").hasAuthority(PermissionConstants.Customer.PROFILE_UPDATE)
-                .requestMatchers(HttpMethod.GET, "/admin/**").permitAll()
-                .requestMatchers(HttpMethod.PATCH, "/admin/pricing-rules/*").permitAll()
-                .requestMatchers(HttpMethod.POST, "/admin/promotions").permitAll()
-                .requestMatchers(HttpMethod.PATCH, "/admin/promotions/*").permitAll()
-                .requestMatchers(HttpMethod.POST, "/admin/accounts").permitAll()
-                .requestMatchers(HttpMethod.PATCH, "/admin/accounts/*/role").permitAll()
-                .requestMatchers(HttpMethod.PATCH, "/admin/accounts/*/status").permitAll()
-                .requestMatchers(HttpMethod.DELETE, "/admin/accounts/*").permitAll()
+                .requestMatchers(HttpMethod.GET,
+                    "/admin/overview",
+                    "/admin/pricing-rules",
+                    "/admin/promotions",
+                    "/admin/accounts",
+                    "/admin/roles",
+                    "/admin/audit-logs"
+                ).hasAnyRole(ADMIN_CONSOLE_ROLES)
+                .requestMatchers(HttpMethod.PATCH, "/admin/pricing-rules/*").hasAnyRole(ADMIN_CONSOLE_ROLES)
+                .requestMatchers(HttpMethod.POST, "/admin/promotions").hasAnyRole(ADMIN_CONSOLE_ROLES)
+                .requestMatchers(HttpMethod.PATCH, "/admin/promotions/*").hasAnyRole(ADMIN_CONSOLE_ROLES)
+                .requestMatchers(HttpMethod.POST, "/admin/accounts").hasAnyRole(ADMIN_CONSOLE_ROLES)
+                .requestMatchers(HttpMethod.PATCH, "/admin/accounts/*/role").hasAnyRole(ADMIN_CONSOLE_ROLES)
+                .requestMatchers(HttpMethod.PATCH, "/admin/accounts/*/status").hasAnyRole(ADMIN_CONSOLE_ROLES)
+                .requestMatchers(HttpMethod.DELETE, "/admin/accounts/*").hasAnyRole(ADMIN_CONSOLE_ROLES)
                 .requestMatchers(HttpMethod.POST, "/admin/product-images").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_CREATE)
+                .requestMatchers(HttpMethod.GET, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
                 .requestMatchers(HttpMethod.PUT, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_UPDATE)
                 .requestMatchers(HttpMethod.DELETE, "/admin/product-images/**").hasAuthority(PermissionConstants.ProductManagement.PRODUCT_DELETE)
                 .requestMatchers("/customer/**").hasAnyAuthority(

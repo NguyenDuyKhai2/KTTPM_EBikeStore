@@ -1,7 +1,9 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Navigate, NavLink, Outlet } from "react-router-dom";
+import { useAuth } from "@ebike/shared-code/hooks";
 import {
   BadgePercent,
   Bell,
+  Home,
   LayoutDashboard,
   Search,
   ShieldCheck,
@@ -15,12 +17,41 @@ const adminNavItems = [
   { to: "/admin/accounts", label: "Tài khoản", icon: Users }
 ];
 
-const AdminLayout = () => (
+const adminRoles = new Set(["ADMIN", "OPERATOR", "SUPPORT", "MAINTENANCE"]);
+
+const AdminLayout = () => {
+  const { isBootstrapping, isAuthenticated, user } = useAuth();
+  const canAccessAdmin = user?.roles.some((role) => adminRoles.has(role));
+
+  if (isBootstrapping) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#faf8ff] text-sm font-semibold text-slate-500">
+        Dang tai phien lam viec...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!canAccessAdmin) {
+    return <Navigate to="/customer/profile" replace />;
+  }
+
+  return (
   <section className="min-h-screen bg-[#faf8ff] text-slate-950">
     <aside className="fixed left-0 top-0 z-40 hidden h-full w-[260px] flex-col border-r border-slate-100 bg-white py-8 shadow-[0_4px_18px_rgba(15,23,42,0.04)] lg:flex">
       <div className="px-8">
         <h1 className="font-display text-2xl font-bold tracking-tight text-[#0051c3]">Kinetic Admin</h1>
         <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">E-bike console</p>
+        <NavLink
+          to="/"
+          className="mt-5 flex items-center gap-3 rounded-lg border border-slate-100 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-[#0051c3]/20 hover:bg-blue-50/50 hover:text-[#0051c3]"
+        >
+          <Home className="h-4 w-4" />
+          <span>Trang chu</span>
+        </NavLink>
       </div>
 
       <nav className="mt-10 flex-1 space-y-1 px-4">
@@ -75,6 +106,14 @@ const AdminLayout = () => (
         </div>
 
         <div className="ml-4 flex items-center gap-3">
+          <NavLink
+            to="/"
+            className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-[#0051c3] sm:flex"
+            title="Ve trang chu"
+          >
+            <Home className="h-4 w-4" />
+            <span>Trang chu</span>
+          </NavLink>
           <button className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-50 hover:text-[#0051c3]" title="Bộ lọc nhanh">
             <SlidersHorizontal className="h-5 w-5" />
           </button>
@@ -91,6 +130,12 @@ const AdminLayout = () => (
 
       <div className="border-b border-slate-100 bg-white px-4 py-3 lg:hidden">
         <nav className="flex gap-2 overflow-x-auto">
+          <NavLink
+            to="/"
+            className="whitespace-nowrap rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600"
+          >
+            Trang chu
+          </NavLink>
           {adminNavItems.map((item) => (
             <NavLink
               key={item.to}
@@ -113,6 +158,7 @@ const AdminLayout = () => (
       </main>
     </div>
   </section>
-);
+  );
+};
 
 export default AdminLayout;
