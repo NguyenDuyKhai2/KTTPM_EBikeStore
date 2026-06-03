@@ -335,7 +335,7 @@ public class ChatbotService {
             .append(formatCurrency(product.getPrice()))
             .append(".");
 
-        if (product.getDescription() != null && !product.getDescription().isBlank()) {
+        if (hasVietnameseMarks(product.getDescription())) {
             answer.append("\n- Mô tả: ").append(product.getDescription().trim());
         }
 
@@ -368,6 +368,10 @@ public class ChatbotService {
 
         answer.append("\nBạn muốn mình so sánh mẫu này với xe giá tương đương hay xem thêm màu/biến thể không?");
         return answer.toString();
+    }
+
+    private boolean hasVietnameseMarks(String text) {
+        return text != null && text.matches(".*[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ].*");
     }
 
     private ScoredProduct scoreProduct(Product product, String message) {
