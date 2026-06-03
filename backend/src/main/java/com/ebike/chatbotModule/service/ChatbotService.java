@@ -378,6 +378,23 @@ public class ChatbotService {
         int score = 0;
         List<String> reasons = new ArrayList<>();
         ProductSpecification specification = product.getSpecification();
+        String normalizedSearch = normalizeFallbackText(message);
+
+        if (containsAny(normalizedSearch, "di lam", "hang ngay", "di hang ngay", "di chuyen", "commute", "daily", "do thi")
+            && specification != null) {
+            if (specification.getMaxRangeKm() != null && specification.getMaxRangeKm().compareTo(BigDecimal.valueOf(50)) >= 0) {
+                score += 3;
+                reasons.add("phù hợp đi làm hằng ngày");
+            }
+            if (specification.getMaxSpeedKmh() != null && specification.getMaxSpeedKmh().compareTo(BigDecimal.valueOf(35)) >= 0) {
+                score += 1;
+                reasons.add("tốc độ đủ dùng trong đô thị");
+            }
+            if (product.getPrice() != null && product.getPrice().compareTo(BigDecimal.valueOf(30_000_000L)) <= 0) {
+                score += 1;
+                reasons.add("chi phí hợp lý cho nhu cầu sử dụng thường xuyên");
+            }
+        }
 
         if (containsAny(message, "cheap", "budget", "student", "gia re", "giá rẻ", "duoi 20", "dưới 20", "under 20", "sinh viên")) {
             BigDecimal threshold = BigDecimal.valueOf(20_000_000L);
