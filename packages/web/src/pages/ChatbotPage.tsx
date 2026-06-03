@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Loader, MessageSquare, Send } from "lucide-react";
+import { Loader, MessageSquare, Send, Trash2 } from "lucide-react";
 import { chatbotAPI } from "@ebike/shared-code/api";
 
 type Sender = "bot" | "user";
@@ -20,6 +20,68 @@ const initialMessage: ChatMessage = {
     "Xin chào! Mình là cố vấn thông minh của Kinetic. Mình có thể tư vấn mẫu xe phù hợp theo nhu cầu, ngân sách, quãng đường đi hằng ngày, pin, bảo hành hoặc showroom nhận xe.\n\nBạn có thể bắt đầu bằng cách mô tả nhu cầu như: đi học, đi làm, muốn xe giá tốt, ưu tiên quãng đường xa hoặc cần tư vấn thanh toán.",
   timestamp: new Date()
 };
+
+type StoredChatMessage = Omit<ChatMessage, "timestamp"> & {
+  timestamp: string;
+};
+
+type StoredChatSession = {
+  chatId: string;
+  messages: StoredChatMessage[];
+  conversationStage?: ConversationStage;
+};
+
+const CHATBOT_STORAGE_KEY = "kinetic-chatbot-session-v1";
+const MAX_STORED_MESSAGES = 80;
+
+const serializeMessage = (message: ChatMessage): StoredChatMessage => ({
+  ...message,
+  timestamp: message.timestamp.toISOString()
+});
+
+const createInitialMessage = (): ChatMessage => ({
+  ...initialMessage,
+  id: crypto.randomUUID(),
+  timestamp: new Date()
+});
+
+const createEmptySession = (): StoredChatSession => ({
+  chatId: crypto.randomUUID(),
+  messages: [serializeMessage(createInitialMessage())],
+  conversationStage: "initial"
+});
+
+const parseStoredSession = (): StoredChatSession => {
+  if (typeof window === "undefined") {
+    return createEmptySession();
+  }
+
+  try {
+    const rawSession = window.localStorage.getItem(CHATBOT_STORAGE_KEY);
+    if (!rawSession) {
+      return createEmptySession();
+    }
+
+    const session = JSON.parse(rawSession) as StoredChatSession;
+    if (!session.chatId || !Array.isArray(session.messages) || !session.messages.length) {
+      return createEmptySession();
+    }
+
+    return {
+      chatId: session.chatId,
+      messages: session.messages.slice(-MAX_STORED_MESSAGES),
+      conversationStage: session.conversationStage || (session.messages.length > 1 ? "understanding" : "initial")
+    };
+  } catch {
+    return createEmptySession();
+  }
+};
+
+const parseMessages = (messages: StoredChatMessage[]): ChatMessage[] =>
+  messages.map((message) => ({
+    ...message,
+    timestamp: new Date(message.timestamp)
+  }));
 
 const quickQuestions = [
   "Tôi cần xe điện để đi làm hằng ngày",
@@ -48,13 +110,33 @@ const formatRecommendationText = (
 };
 
 const ChatbotPage = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
+  const initialSessionRef = useRef<StoredChatSession | null>(null);
+  if (!initialSessionRef.current) {
+    initialSessionRef.current = parseStoredSession();
+  }
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => parseMessages(initialSessionRef.current!.messages));
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [conversationStage, setConversationStage] = useState<ConversationStage>("initial");
+  const [conversationStage, setConversationStage] = useState<ConversationStage>(
+    initialSessionRef.current!.conversationStage || "initial"
+  );
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const chatIdRef = useRef<string>(crypto.randomUUID());
+  const chatIdRef = useRef<string>(initialSessionRef.current!.chatId);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const session: StoredChatSession = {
+      chatId: chatIdRef.current,
+      messages: messages.slice(-MAX_STORED_MESSAGES).map(serializeMessage),
+      conversationStage
+    };
+    window.localStorage.setItem(CHATBOT_STORAGE_KEY, JSON.stringify(session));
+  }, [messages, conversationStage]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -107,19 +189,42 @@ const ChatbotPage = () => {
     }
   };
 
+  const handleClearConversation = () => {
+    const freshMessage = createInitialMessage();
+    chatIdRef.current = crypto.randomUUID();
+    setMessages([freshMessage]);
+    setConversationStage("initial");
+    setInput("");
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(CHATBOT_STORAGE_KEY);
+    }
+    inputRef.current?.focus();
+  };
+
   return (
     <div className="pt-[88px]">
       <div className="flex h-[calc(100dvh-88px)] flex-col overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="border-b border-slate-700 bg-slate-800/60 backdrop-blur-sm">
           <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600">
-                <MessageSquare className="h-6 w-6 text-white" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600">
+                  <MessageSquare className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-white">Cố vấn thông minh</h1>
+                  <p className="text-sm text-slate-400">Tư vấn xe điện Kinetic bằng AI</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">Cố vấn thông minh</h1>
-                <p className="text-sm text-slate-400">Tư vấn xe điện Kinetic bằng AI</p>
-              </div>
+              <button
+                type="button"
+                onClick={handleClearConversation}
+                title="Xóa hội thoại"
+                aria-label="Xóa hội thoại"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-600 text-slate-300 transition hover:border-red-400 hover:bg-red-500/10 hover:text-red-200"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
