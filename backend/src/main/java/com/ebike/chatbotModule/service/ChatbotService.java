@@ -16,10 +16,13 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -32,6 +35,7 @@ public class ChatbotService {
 
     private static final BigDecimal REGISTRATION_FEE_AMOUNT = new BigDecimal("2500000");
     private static final BigDecimal SHOWROOM_INCENTIVE_AMOUNT = new BigDecimal("1200000");
+    private static final Pattern SENTENCE_BOUNDARY = Pattern.compile("(?<=[.!?])\\s+|\\s+-\\s+");
 
     private final ProductRepository productRepository;
     private final ShowroomRepository showroomRepository;
@@ -517,16 +521,89 @@ public class ChatbotService {
     }
 
     private ChatbotResponse buildPdfFallbackResponse(ChatbotAnalysis analysis) {
-        StringBuilder answer = new StringBuilder("Minh da tim thay thong tin lien quan trong tai lieu noi bo cua Kinetic:\n");
-        for (PdfKnowledgeBaseService.KnowledgeSnippet snippet : analysis.pdfKnowledgeContext().snippets().stream().limit(2).toList()) {
-            answer.append("\n- Tham khao ")
-                .append(snippet.sourceName())
-                .append(" (trang ")
-                .append(snippet.pageNumber())
-                .append(").");
+        List<String> bullets = buildPdfFallbackBullets(analysis);
+        StringBuilder answer = new StringBuilder("Minh tra cuu trong tai lieu PDF noi bo va tim thay:\n");
+        for (String bullet : bullets) {
+            answer.append("\n- ").append(bullet);
         }
-        answer.append("\n\nBan hay hoi cu the hon, vi du: \"pin duoc bao hanh bao lau\", \"truong hop nao khong duoc bao hanh\", hoac \"dieu kien doi tra la gi\" de minh tra loi dung muc hon.");
+        answer.append("\n\nNguon: ")
+            .append(String.join(", ", analysis.pdfKnowledgeContext().sourceLabels()));
+        if (bullets.isEmpty()) {
+            answer.append("\n\nMinh chua tim thay noi dung du cu the de ket luan. Ban co the hoi ro hon ve thoi han, dieu kien ap dung hoac truong hop khong duoc ho tro.");
+        }
         return new ChatbotResponse(answer.toString(), "pdf_knowledge", analysis.recommendations());
+    }
+
+    private List<String> buildPdfFallbackBullets(ChatbotAnalysis analysis) {
+        Set<String> queryTokens = tokenizeForFallback(analysis.normalizedMessage());
+        List<String> bullets = new ArrayList<>();
+        for (PdfKnowledgeBaseService.KnowledgeSnippet snippet : analysis.pdfKnowledgeContext().snippets()) {
+            for (String sentence : splitExcerptIntoSentences(snippet.excerpt())) {
+                String cleaned = sentence.trim();
+                if (cleaned.length() < 35 || cleaned.length() > 260) {
+                    continue;
+                }
+                if (!queryTokens.isEmpty() && scoreSentence(cleaned, queryTokens) == 0) {
+                    continue;
+                }
+                bullets.add(cleaned + " (" + snippet.sourceName() + ", trang " + snippet.pageNumber() + ")");
+                if (bullets.size() >= 4) {
+                    return bullets;
+                }
+            }
+        }
+
+        if (bullets.isEmpty()) {
+            return analysis.pdfKnowledgeContext().snippets().stream()
+                .limit(3)
+                .map(snippet -> shorten(snippet.excerpt(), 220) + " (" + snippet.sourceName() + ", trang " + snippet.pageNumber() + ")")
+                .toList();
+        }
+        return bullets;
+    }
+
+    private List<String> splitExcerptIntoSentences(String excerpt) {
+        if (excerpt == null || excerpt.isBlank()) {
+            return List.of();
+        }
+        return List.of(SENTENCE_BOUNDARY.split(excerpt));
+    }
+
+    private int scoreSentence(String sentence, Set<String> queryTokens) {
+        String normalizedSentence = sentence.toLowerCase(Locale.ROOT);
+        int score = 0;
+        for (String token : queryTokens) {
+            if (normalizedSentence.contains(token)) {
+                score++;
+            }
+        }
+        return score;
+    }
+
+    private Set<String> tokenizeForFallback(String text) {
+        if (text == null || text.isBlank()) {
+            return Set.of();
+        }
+        Set<String> tokens = new LinkedHashSet<>();
+        for (String token : text.split("[^\\p{L}\\p{N}]+")) {
+            String normalized = token.trim().toLowerCase(Locale.ROOT);
+            if (normalized.length() >= 3 && !Set.of("toi", "minh", "ban", "cho", "biet", "muon", "ve", "cua").contains(normalized)) {
+                tokens.add(normalized);
+            }
+        }
+        return tokens;
+    }
+
+    private String shorten(String text, int maxLength) {
+        if (text == null) {
+            return "";
+        }
+        String normalized = text.replaceAll("\\s+", " ").trim();
+        if (normalized.length() <= maxLength) {
+            return normalized;
+        }
+        int boundary = normalized.lastIndexOf(' ', maxLength);
+        return normalized.substring(0, boundary > 80 ? boundary : maxLength).trim() + "...";
     }
 
     private String sanitizeAiAnswer(String text) {

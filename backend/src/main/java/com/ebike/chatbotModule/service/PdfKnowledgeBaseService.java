@@ -170,6 +170,7 @@ public class PdfKnowledgeBaseService {
     private ScoredChunk scoreChunk(PdfChunk chunk, String normalizedQuery, Set<String> queryTokens) {
         double score = 0;
         int overlapCount = 0;
+        String normalizedSourceName = normalize(chunk.sourceName());
 
         if (chunk.normalizedText().contains(normalizedQuery)) {
             score += 12;
@@ -180,6 +181,9 @@ public class PdfKnowledgeBaseService {
                 overlapCount++;
                 score += token.length() >= 5 ? 2.5 : 1.5;
             }
+            if (normalizedSourceName.contains(token)) {
+                score += 1.25;
+            }
         }
 
         if (overlapCount == queryTokens.size()) {
@@ -188,7 +192,29 @@ public class PdfKnowledgeBaseService {
             score += 2;
         }
 
+        score += scoreDomainPhrase(normalizedQuery, chunk.normalizedText(), normalizedSourceName, "bao hanh", 8);
+        score += scoreDomainPhrase(normalizedQuery, chunk.normalizedText(), normalizedSourceName, "doi tra", 7);
+        score += scoreDomainPhrase(normalizedQuery, chunk.normalizedText(), normalizedSourceName, "hau mai", 5);
+        score += scoreDomainPhrase(normalizedQuery, chunk.normalizedText(), normalizedSourceName, "thanh toan", 7);
+        score += scoreDomainPhrase(normalizedQuery, chunk.normalizedText(), normalizedSourceName, "tra gop", 6);
+        score += scoreDomainPhrase(normalizedQuery, chunk.normalizedText(), normalizedSourceName, "sac pin", 7);
+        score += scoreDomainPhrase(normalizedQuery, chunk.normalizedText(), normalizedSourceName, "an toan", 5);
+
         return new ScoredChunk(chunk, score);
+    }
+
+    private double scoreDomainPhrase(String query, String text, String sourceName, String phrase, double weight) {
+        if (!query.contains(phrase)) {
+            return 0;
+        }
+        double score = 0;
+        if (text.contains(phrase)) {
+            score += weight;
+        }
+        if (sourceName.contains(phrase)) {
+            score += weight / 2;
+        }
+        return score;
     }
 
     private String buildSourceName(String filename) {
