@@ -45,6 +45,17 @@ const mapCheckoutErrorToFields = (message: string) => {
   return errors;
 };
 
+const DISTRICT_DISPLAY_NAMES: Record<string, string> = {
+  "Go Vap": "Gò Vấp",
+  "Quan 1": "Quận 1",
+  "Quan 3": "Quận 3",
+  "Quan 7": "Quận 7",
+  "Tan Binh": "Tân Bình",
+  "Thu Duc": "Thủ Đức"
+};
+
+const formatDistrictName = (district: string) => DISTRICT_DISPLAY_NAMES[district] ?? district;
+
 const CheckoutPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -189,7 +200,10 @@ const CheckoutPage = () => {
   const total = orderQuote?.totalAmount ?? fallbackSubtotal;
 
   const districts = useMemo(
-    () => Array.from(new Set(showrooms.map((showroom) => showroom.district))).sort((left, right) => left.localeCompare(right, "vi")),
+    () =>
+      Array.from(new Set(showrooms.map((showroom) => showroom.district))).sort((left, right) =>
+        formatDistrictName(left).localeCompare(formatDistrictName(right), "vi")
+      ),
     [showrooms]
   );
 
@@ -622,7 +636,7 @@ const CheckoutPage = () => {
                   <option value="">{loadingShowrooms ? "Đang tải quận..." : "Chọn quận / huyện"}</option>
                   {districts.map((district) => (
                     <option key={district} value={district}>
-                      {district}
+                      {formatDistrictName(district)}
                     </option>
                   ))}
                 </select>
