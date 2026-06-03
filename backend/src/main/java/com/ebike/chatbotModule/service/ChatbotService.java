@@ -65,6 +65,10 @@ public class ChatbotService {
             return new ChatbotResponse(aiAnswer, "ai_rag_light", analysis.recommendations());
         }
 
+        if (shouldPreferRuleBasedFallback(analysis.ruleBasedResponse())) {
+            return analysis.ruleBasedResponse();
+        }
+
         if (analysis.pdfKnowledgeContext().hasSnippets()) {
             return buildPdfFallbackResponse(analysis);
         }
@@ -106,12 +110,14 @@ public class ChatbotService {
         if (recommendations.isEmpty() && isFollowUpPriceQuestion(normalizedMessage)) {
             recommendations = recentRecommendationsByChatId.getOrDefault(chatId, List.of());
         }
+        Product mentionedProduct = findMentionedProduct(normalizedMessage);
         String showroomContext = buildShowroomContext(normalizedMessage);
         String orderPaymentContext = buildOrderPaymentContext(normalizedMessage);
         PdfKnowledgeBaseService.PdfKnowledgeContext pdfKnowledgeContext = pdfKnowledgeBaseService.findRelevantContext(userMessage);
         ChatbotResponse ruleBasedResponse = buildRuleBasedResponse(
             faqMatch,
             recommendations,
+            mentionedProduct,
             showroomContext,
             orderPaymentContext,
             isFollowUpPriceQuestion(normalizedMessage)
@@ -137,10 +143,19 @@ public class ChatbotService {
     private ChatbotResponse buildRuleBasedResponse(
         FaqEntry faqMatch,
         List<ChatbotRecommendationDto> recommendations,
+        Product mentionedProduct,
         String showroomContext,
         String orderPaymentContext,
         boolean priceQuestion
     ) {
+        if (mentionedProduct != null) {
+            return new ChatbotResponse(
+                buildProductDetailAnswer(mentionedProduct),
+                "product_detail",
+                recommendations.isEmpty() ? List.of(toRecommendation(mentionedProduct, "khớp với mẫu xe bạn hỏi")) : recommendations
+            );
+        }
+
         if (faqMatch != null && !recommendations.isEmpty()) {
             return new ChatbotResponse(
                 faqMatch.answer() + " Dựa trên câu hỏi của bạn, đây là vài mẫu xe phù hợp để tham khảo.",
@@ -186,6 +201,17 @@ public class ChatbotService {
             "fallback",
             List.of()
         );
+    }
+
+    private boolean shouldPreferRuleBasedFallback(ChatbotResponse response) {
+        return response != null && Set.of(
+            "product_detail",
+            "product_recommendation",
+            "faq+product_recommendation",
+            "showroom_context",
+            "order_payment_context",
+            "price_followup_missing_context"
+        ).contains(response.matchedIntent());
     }
 
     private String buildRecommendationAnswer(List<ChatbotRecommendationDto> recommendations) {
@@ -276,6 +302,72 @@ public class ChatbotService {
                 scoredProduct.reason()
             ))
             .toList();
+    }
+
+    private Product findMentionedProduct(String message) {
+        String normalizedMessage = normalizeFallbackText(message);
+        return productRepository.findAll().stream()
+            .filter(product -> Boolean.TRUE.equals(product.getActive()))
+            .filter(product -> {
+                String productName = normalizeFallbackText(product.getName());
+                String productSlug = normalizeFallbackText(product.getSlug()).replace("-", " ");
+                return (!productName.isBlank() && normalizedMessage.contains(productName))
+                    || (!productSlug.isBlank() && normalizedMessage.contains(productSlug));
+            })
+            .max(Comparator.comparingInt(product -> normalizeFallbackText(product.getName()).length()))
+            .orElse(null);
+    }
+
+    private ChatbotRecommendationDto toRecommendation(Product product, String reason) {
+        return new ChatbotRecommendationDto(
+            product.getId(),
+            product.getName(),
+            product.getSlug(),
+            product.getPrice(),
+            reason
+        );
+    }
+
+    private String buildProductDetailAnswer(Product product) {
+        StringBuilder answer = new StringBuilder();
+        answer.append(product.getName())
+            .append(" hiện có giá khoảng ")
+            .append(formatCurrency(product.getPrice()))
+            .append(".");
+
+        if (product.getDescription() != null && !product.getDescription().isBlank()) {
+            answer.append("\n- Mô tả: ").append(product.getDescription().trim());
+        }
+
+        ProductSpecification specification = product.getSpecification();
+        if (specification != null) {
+            List<String> specs = new ArrayList<>();
+            if (specification.getMaxRangeKm() != null) {
+                specs.add("quãng đường tối đa khoảng " + specification.getMaxRangeKm().stripTrailingZeros().toPlainString() + " km");
+            }
+            if (specification.getMaxSpeedKmh() != null) {
+                specs.add("tốc độ tối đa khoảng " + specification.getMaxSpeedKmh().stripTrailingZeros().toPlainString() + " km/h");
+            }
+            if (specification.getMotorPowerWatts() != null) {
+                specs.add("động cơ " + specification.getMotorPowerWatts() + "W");
+            }
+            if (specification.getBatteryCapacityAh() != null && specification.getBatteryVoltageV() != null) {
+                specs.add("pin " + specification.getBatteryVoltageV().stripTrailingZeros().toPlainString() + "V "
+                    + specification.getBatteryCapacityAh().stripTrailingZeros().toPlainString() + "Ah");
+            }
+            if (specification.getChargingTimeHours() != null) {
+                specs.add("sạc khoảng " + specification.getChargingTimeHours().stripTrailingZeros().toPlainString() + " giờ");
+            }
+            if (specification.getWarrantyMonths() != null) {
+                specs.add("bảo hành khoảng " + specification.getWarrantyMonths() + " tháng");
+            }
+            if (!specs.isEmpty()) {
+                answer.append("\n- Thông số chính: ").append(String.join(", ", specs)).append(".");
+            }
+        }
+
+        answer.append("\nBạn muốn mình so sánh mẫu này với xe giá tương đương hay xem thêm màu/biến thể không?");
+        return answer.toString();
     }
 
     private ScoredProduct scoreProduct(Product product, String message) {
@@ -625,6 +717,7 @@ public class ChatbotService {
         String sanitized = text
             .replace("\r", "")
             .replace("**", "")
+            .replaceAll("(?m)^\\s*[*#]+\\s*$\\n?", "")
             .replaceAll("[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]", "")
             .replaceAll("\\n{3,}", "\n\n")
             .trim();
