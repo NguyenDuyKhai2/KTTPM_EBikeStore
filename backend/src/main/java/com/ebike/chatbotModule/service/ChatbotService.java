@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -570,7 +571,7 @@ public class ChatbotService {
     }
 
     private int scoreSentence(String sentence, Set<String> queryTokens) {
-        String normalizedSentence = sentence.toLowerCase(Locale.ROOT);
+        String normalizedSentence = normalizeFallbackText(sentence);
         int score = 0;
         for (String token : queryTokens) {
             if (normalizedSentence.contains(token)) {
@@ -585,13 +586,24 @@ public class ChatbotService {
             return Set.of();
         }
         Set<String> tokens = new LinkedHashSet<>();
-        for (String token : text.split("[^\\p{L}\\p{N}]+")) {
+        for (String token : normalizeFallbackText(text).split("[^\\p{L}\\p{N}]+")) {
             String normalized = token.trim().toLowerCase(Locale.ROOT);
             if (normalized.length() >= 3 && !Set.of("toi", "minh", "ban", "cho", "biet", "muon", "ve", "cua").contains(normalized)) {
                 tokens.add(normalized);
             }
         }
         return tokens;
+    }
+
+    private String normalizeFallbackText(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+        return Normalizer.normalize(text, Normalizer.Form.NFD)
+            .replaceAll("\\p{M}+", "")
+            .replace('đ', 'd')
+            .replace('Đ', 'D')
+            .toLowerCase(Locale.ROOT);
     }
 
     private String shorten(String text, int maxLength) {

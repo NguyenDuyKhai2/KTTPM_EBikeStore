@@ -22,5 +22,6 @@ class PdfKnowledgeBaseServiceTest {
         assertThat(context.hasSnippets()).isTrue();
         assertThat(context.snippets().get(0).sourceName()).contains("bao hanh");
         assertThat(context.combinedContext()).containsIgnoringCase("bao hanh");
+        assertThat(context.combinedContext()).doesNotContain("Ã", "áº", "á»", "â");
     }
 }

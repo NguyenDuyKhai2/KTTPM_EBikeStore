@@ -4,6 +4,7 @@ import com.ebike.chatbotModule.config.PdfKnowledgeProperties;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -229,17 +230,38 @@ public class PdfKnowledgeBaseService {
         if (text == null || text.isBlank()) {
             return "";
         }
-        String mergedLines = text.replace("\r", "")
+        String mergedLines = repairMojibake(text).replace("\r", "")
             .replaceAll("(?<!\\n)\\n(?!\\n)", " ")
             .replaceAll("\\n{2,}", " ");
         return MULTI_SPACE.matcher(mergedLines).replaceAll(" ").trim();
+    }
+
+    private String repairMojibake(String text) {
+        if (countMojibakeSignals(text) == 0) {
+            return text;
+        }
+        String repaired = new String(text.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+        return countMojibakeSignals(repaired) < countMojibakeSignals(text) ? repaired : text;
+    }
+
+    private int countMojibakeSignals(String text) {
+        int count = 0;
+        String[] signals = {"Ã", "Ä", "Æ", "áº", "á»", "â", "Â"};
+        for (String signal : signals) {
+            int index = text.indexOf(signal);
+            while (index >= 0) {
+                count++;
+                index = text.indexOf(signal, index + signal.length());
+            }
+        }
+        return count;
     }
 
     private String normalize(String text) {
         if (text == null || text.isBlank()) {
             return "";
         }
-        String withoutMarks = Normalizer.normalize(text, Normalizer.Form.NFD)
+        String withoutMarks = Normalizer.normalize(repairMojibake(text), Normalizer.Form.NFD)
             .replaceAll("\\p{M}+", "")
             .replace('đ', 'd')
             .replace('Đ', 'D');
